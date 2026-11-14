@@ -8,6 +8,7 @@ version = "0.1.0"
 description = "Scripts for taking Legend Entertainment's games apart: their programs, overlays and data files."
 readme = "README.md"
 requires-python = ">=3.9"
+license = "GPL-3.0-or-later"
 dependencies = []
 
 [project.optional-dependencies]
