@@ -2,9 +2,10 @@
 
 The games are PC programs, and Legendary has a PC for them to run on: `src/Legendary.Pc`, an
 x86 processor, the EGA, VGA and CGA, the timer and interrupt hardware, the speaker, FM and
-MT-32 sound, and a BIOS and DOS answered in C#. It has no window of its own yet. What it's for
-so far is to run a game where it can be watched, so that what these notes say a program does
-can be checked against what it does.
+MT-32 sound, and a BIOS and DOS answered in C#. It has no window of its own:
+`src/Legendary.Player` gives it one, with the keyboard, the mouse and sound, and the tests run
+it with none. Besides playing the games, it is a place to run one where it can be watched, so
+that what these notes say a program does can be checked against what it does.
 
 It began as a copy of the core of [Excavate](https://github.com/jeffnyman/excavate), which
 plays other DOS games, and Excavate's began as a copy of Confederation's. It is copied whole.

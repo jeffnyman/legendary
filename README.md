@@ -15,7 +15,7 @@ question of what a player is stays open until more of the games is understood.
 
 | Game | Year | Short name | Where it stands |
 |---|---|---|---|
-| *Spellcasting 101: Sorcerers Get All the Girls* | 1990 | `sc101` | Plays on Legendary's PC, in tests. Its program and overlays are read, its text unpacked, its objects, vocabulary, grammar and routines listed, and its pictures, music and sounds unpacked; [notes](docs/spellcasting-101.md) |
+| *Spellcasting 101: Sorcerers Get All the Girls* | 1990 | `sc101` | Plays, with the speaker's sound. Its program and overlays are read, its text unpacked, its objects, vocabulary, grammar and routines listed, and its pictures, music and sounds unpacked; [notes](docs/spellcasting-101.md) |
 | *Timequest* | 1991 | `tquest` | Built as *Spellcasting 101* is: its overlays are read, and its text unpacked |
 | *Spellcasting 201: The Sorcerer's Appliance* | 1991 | `sc201` | Not yet tried; linked with .RTLink, not PLINK86 |
 | *Gateway* | 1992 | `gateway` | Not yet tried |
@@ -24,13 +24,39 @@ question of what a player is stays open until more of the games is understood.
 | *Gateway II: Homeworld* | 1993 | `gateway2` | Not yet tried |
 | *Mission Critical* | 1995 | `mcritic` | Not yet tried; a 32-bit program, and another kind of game |
 
-None of the games are included: Legendary reads copies you have.
+None of the games are included: Legendary reads, and plays, copies you have.
+
+## Playing
+
+With the [.NET 10 SDK](https://dotnet.microsoft.com/download):
+
+```
+dotnet run --project src/Legendary.Player -c Release -- "<the game's folder>"
+```
+
+The game's folder is the one with its programs in it, `S101.EXE` and `S101MAIN.EXE` for
+*Spellcasting 101*. A folder given once is remembered, and the game is then played by its
+short name:
+
+```
+dotnet run --project src/Legendary.Player -c Release -- sc101
+```
+
+With no game named, a menu lists them. `--help` lists the options, and `--args "cga"` hands
+the game [a word it knows](docs/spellcasting-101.md#what-the-launcher-is-told).
+
+The keyboard is the PC's, key for key. A click in the window gives the game the mouse, and
+Ctrl+F10 takes it back. F11 is full screen, F12 full speed on and off, and Ctrl+F5 and Ctrl+F9
+save and load the whole machine's state. The game's folder is never written to: what a game
+saves goes to a folder of its own in your application data.
 
 ## What's here
 
+- **`src/Legendary.Player`** is the player: a window, the keyboard, the mouse and sound around
+  the PC, by SDL3. It began as a copy of Excavate's.
 - **`src/Legendary.Pc`** is [a PC for the games to run on](docs/the-pc.md), in C#: a copy of
   Excavate's core. *Spellcasting 101* plays on it, from its title through commands typed
-  at it, in tests. It has no window yet.
+  at it.
 - **`src/Legendary.Core`** reads the games' files, in C#. So far: a DOS program's MZ header, and
   a program linked by PLINK86, with its overlays loaded into the memory it would have, the
   packed text of a string file, the pictures of a picture file and their regions, the songs of a music file, and a

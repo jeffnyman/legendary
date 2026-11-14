@@ -15,7 +15,8 @@ and are not included in this repository: Legendary works on copies you have.
 
 - **Excavate**, copyright Jeff Nyman, under the GNU General Public License, version 3. The PC
   the games run on (`src/Legendary.Pc`) began as a copy of its core, and through it derives
-  from the two that follow.
+  from the two that follow; the player (`src/Legendary.Player`) began as a copy of its
+  player.
 - **DOSBox**, copyright the DOSBox Team, under the GNU General Public License, version 2 or
   later. Much of the machine's logic is ported from it, including the OPL emulator
   (`src/Legendary.Pc/Sound/DbOplChip.cs`).
