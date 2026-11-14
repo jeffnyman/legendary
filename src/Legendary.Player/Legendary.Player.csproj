@@ -14,6 +14,7 @@
   </Target>
   <ItemGroup>
     <InternalsVisibleTo Include="Legendary.Player.Tests" />
+    <ProjectReference Include="..\Legendary.Core\Legendary.Core.csproj" />
     <ProjectReference Include="..\Legendary.Pc\Legendary.Pc.csproj" />
     <PackageReference Include="ppy.SDL3-CS" />
   </ItemGroup>

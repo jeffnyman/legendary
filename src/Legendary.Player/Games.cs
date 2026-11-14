@@ -80,6 +80,10 @@ internal sealed record CrackedBytes(string Program, int Offset, byte[] Cracked, 
 /// Programs to run before it, each of which stays in memory for it to use: a sound card's
 /// driver, as its box said to load first. One that isn't in its folder is passed over.
 /// </param>
+/// <param name="World">
+/// Where it keeps its world in memory, for the player to show while it's played; null for a
+/// game not yet taken apart.
+/// </param>
 /// <param name="Hint">
 /// Something to know before playing, said as its program starts, from its folder and its save
 /// folder: null for nothing to say.
@@ -88,7 +92,7 @@ internal sealed record KnownGame(
     string Key, string Title, int Year, string[] Markers, string? Program, int Cycles, string Note,
     VideoAdapter Video = VideoAdapter.Vga, DiskSet? Disks = null, bool MouseJoystick = false, CrackedBytes[]? Cracks = null,
     Func<string, IReadOnlyList<GameDocument>>? Documents = null, Func<string, string, string?>? Hint = null,
-    string[]? Drivers = null);
+    string[]? Drivers = null, Legendary.Core.Worlds.WorldMap? World = null);
 
 /// <summary>A game to play: its folder, the program in it to run, and how fast to run it.</summary>
 /// <param name="Folder">The game's folder, which becomes drive C:.</param>
@@ -137,7 +141,7 @@ internal static class Games
         // collection has a run.bat beside it too, which is the collection's and is left alone
         new("sc101", "Spellcasting 101: Sorcerers Get All the Girls", 1990, ["S101MAIN.EXE"], "S101.EXE", At,
             "starts and plays, on the EGA or CGA, with AdLib music and the speaker's sounds; not yet played through",
-            Drivers: ["SOUND.COM"]),
+            Drivers: ["SOUND.COM"], World: Legendary.Core.Worlds.WorldMap.Spellcasting101),
         new("tquest", "Timequest", 1991, ["TIMEMAIN.EXE"], "TQ.EXE", At, Untried),
         new("sc201", "Spellcasting 201: The Sorcerer's Appliance", 1991, ["S201MAIN.EXE"], "S201.EXE", At, Untried),
         new("gateway", "Gateway", 1992, ["GATEMAIN.EXE"], "GATE.EXE", At, Untried),

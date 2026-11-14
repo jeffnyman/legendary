@@ -55,6 +55,7 @@ internal static class Program
         string settingsPath = Settings.DefaultPath;
         double? seconds = null;
         bool headless = false;
+        bool watch = false;
         bool list = false;
         bool remember = false;
         bool forget = false;
@@ -163,6 +164,9 @@ internal static class Program
                     break;
                 case "--headless":
                     headless = true;
+                    break;
+                case "--watch":
+                    watch = true;
                     break;
                 case "--documents":
                     // a number, or all, may follow; anything else is the game's name or an option
@@ -390,10 +394,30 @@ internal static class Program
             }
         }
 
+        // the game's world, said on the terminal as it changes
+        WorldWatch? watching = null;
+        if (watch)
+        {
+            watching = game.Known?.World is { } map
+                ? new WorldWatch(machine, map, Console.Out)
+                : throw new UsageException($"--watch needs a game whose world is known, which {game.Title}'s isn't yet");
+        }
+
         bool running;
         try
         {
-            if (headless)
+            if (headless && watching is not null)
+            {
+                // a sixtieth of a second at a time, with a look after each
+                long slice = machine.InstructionsPerSecond / 60;
+                running = true;
+                for (long left = (long)(seconds!.Value * machine.InstructionsPerSecond); running && left > 0; left -= slice)
+                {
+                    running = machine.Run(Math.Min(slice, left));
+                    watching.Look();
+                }
+            }
+            else if (headless)
             {
                 running = machine.Run((long)(seconds!.Value * machine.InstructionsPerSecond));
             }
@@ -412,6 +436,7 @@ internal static class Program
                     MouseJoystick = game.Known?.MouseJoystick ?? false,
                     StatePath = statePath,
                     Icon = GameIcons.For(game),
+                    EachFrame = watching is null ? null : watching.Look,
                 };
 
                 using var player = new SdlPlayer(machine, options);
@@ -562,6 +587,9 @@ internal static class Program
               --seconds <n>      stop after n seconds of the game's time
               --screenshot <f>   save the picture as a PNG when stopping
               --headless         no window: run --seconds seconds and stop
+              --watch            say the game's world on the terminal as it changes: the time,
+                                 the turn, the room and what is in it, and each action (for a
+                                 game whose world is known: Spellcasting 101)
               --documents [n]    list the documents a game keeps, rather than play it, or show the
                                  one numbered n, or all of them (no game here keeps any yet)
 

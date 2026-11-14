@@ -39,6 +39,9 @@ internal sealed class PlayerOptions
 
     /// <summary>The window's icon, the game's, at its sizes; none, and it's the system's own.</summary>
     public IReadOnlyList<IconImage> Icon { get; init; } = [];
+
+    /// <summary>Something to do after each frame of the machine's time; null for nothing.</summary>
+    public Action? EachFrame { get; init; }
 }
 
 /// <summary>
@@ -231,6 +234,7 @@ internal sealed unsafe class SdlPlayer : IDisposable
         long due = (long)(_frames * (double)_machine.InstructionsPerSecond / FrameRate);
         bool running = _machine.Run(due - _instructions);
         _instructions = due;
+        _options.EachFrame?.Invoke();
         if (_machine.Floppy != _floppyShown)
         {
             // the game asked for a disk, and it was put in for the player
