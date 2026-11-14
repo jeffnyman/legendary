@@ -92,6 +92,12 @@ public sealed class World
     public (int Action, int Object, int SecondObject) PerformArguments(int stack) =>
         (_read(stack + 4), Word(stack + 6), Word(stack + 8));
 
+    /// <summary>
+    /// Where the main loop's <c>setjmp</c> returns, a linear address: the program is there,
+    /// with something other than 0 in AX, when a routine has jumped out of an action.
+    /// </summary>
+    public int JumpBackAddress => Linear(Map.PerformSegment, Map.JumpBackOffset);
+
     /// <summary>The linear address of one of the map's places where a routine has answered.</summary>
     public int AnswerAddress(AnswerPoint point)
     {

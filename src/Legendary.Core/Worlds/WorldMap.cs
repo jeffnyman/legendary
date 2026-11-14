@@ -61,6 +61,12 @@ public sealed record AnswerPoint(ushort Offset, Asked Asked);
 /// </param>
 /// <param name="DepthOffset">In the data, how many actions are being performed, one inside another.</param>
 /// <param name="Answers">Where, in that routine, each routine it asks has answered, in the order it asks them.</param>
+/// <param name="JumpBackOffset">
+/// In that routine's segment, where the main loop's <c>setjmp</c> returns, with AX saying how:
+/// 0 when the loop has just set it, and otherwise what a routine that jumped back there gave
+/// <c>longjmp</c>. 1 is an action given up and started over as another, and more than 1 an
+/// action that is done.
+/// </param>
 /// <param name="GrammarSegment">The segment with the grammar's two tables.</param>
 /// <param name="FormsOffset">There, the forms a command can take, ten bytes each.</param>
 /// <param name="SecondsOffset">
@@ -78,6 +84,7 @@ public sealed record WorldMap(
     ushort RoomOffset, ushort ActorOffset, ushort MovesOffset, ushort ClockOffset,
     ushort ActionSegment, ushort ActionOffset, ushort ObjectOffset, ushort SecondObjectOffset,
     ushort PerformSegment, ushort PerformOffset, ushort DepthOffset, IReadOnlyList<AnswerPoint> Answers,
+    ushort JumpBackOffset,
     ushort GrammarSegment, ushort FormsOffset, ushort SecondsOffset, string VocabularyFile,
     IReadOnlyDictionary<int, string> ActionNames,
     IReadOnlyDictionary<int, RecordLayout> Layouts)
@@ -97,6 +104,7 @@ public sealed record WorldMap(
             new(0x128D, Asked.Object), new(0x12AB, Asked.Object), new(0x12E6, Asked.Object), new(0x1304, Asked.Object),
             new(0x1320, Asked.Action),
         ],
+        JumpBackOffset: 0x2916,
         GrammarSegment: 0x2B6A, FormsOffset: 0x00D1, SecondsOffset: 0x0F81, VocabularyFile: "VOCAB.DAT",
         ActionNames: new Dictionary<int, string> { [197] = "go" },
         Layouts: new Dictionary<int, RecordLayout>

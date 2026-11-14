@@ -53,6 +53,7 @@ internal sealed class WorldWatch(Machine machine, WorldMap map, TextWriter outpu
 
             output.WriteLine($"world: the game is in memory, loaded at {_world.LoadSegment:X4}h, with {map.ObjectCount} objects");
             machine.Cpu.Watch((uint)_world.PerformAddress, Performing);
+            machine.Cpu.Watch((uint)_world.JumpBackAddress, JumpedBack);
             foreach (var point in map.Answers)
             {
                 machine.Cpu.Watch((uint)_world.AnswerAddress(point), () => Answered(point));
@@ -98,6 +99,28 @@ internal sealed class WorldWatch(Machine machine, WorldMap map, TextWriter outpu
         var (action, first, second) = world.PerformArguments((cpu.Ss * 16) + (ushort)cpu.Esp);
         string inside = new(' ', 2 * Math.Clamp(world.PerformDepth, 0, 8));
         output.WriteLine($"world:   {inside}action {action}: {Said(world, action, first, second)}");
+    }
+
+    // the main loop's setjmp has returned: by a routine's longjmp, when AX isn't 0. Such an
+    // action is never answered, because the routine that jumped didn't go back to who asked it
+    private void JumpedBack()
+    {
+        if (_world is not { IsThere: true })
+        {
+            return;
+        }
+
+        switch ((ushort)machine.Cpu.Eax)
+        {
+            case 0:
+                break;
+            case 1:
+                output.WriteLine("world:     given up by a routine, which starts over with another action");
+                break;
+            default:
+                output.WriteLine("world:     ended by a routine that jumped back to the main loop: done");
+                break;
+        }
     }
 
     // a routine the game asked about the action has answered: said when it's the answer that

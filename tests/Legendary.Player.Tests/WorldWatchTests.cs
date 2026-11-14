@@ -122,18 +122,22 @@ public sealed class WorldWatchTests : IDisposable
 
         // CLIMB CHIMNEY, which the chimney's routine starts over as entering the fireplace: both
         // are performed, and both are said, in their order. The first is never answered: the
-        // routine that started over didn't come back to say anything
+        // routine that started over jumped back to the main loop
         int climb = Array.IndexOf(lines, "world:   action 25: climb chimney (185)");
         Assert.True(climb > 5);
-        Assert.Equal("world:   action 27: climb in fireplace (62)", lines[climb + 1]);
-        Assert.Equal("world:     answered by fireplace (62), asked as the object: 1", lines[climb + 2]);
-        Assert.Equal("world: 3:45 pm, turn 2, in Bedchamber (1)", lines[climb + 3]);
+        Assert.Equal("world:     given up by a routine, which starts over with another action", lines[climb + 1]);
+        Assert.Equal("world:   action 27: climb in fireplace (62)", lines[climb + 2]);
+        Assert.Equal("world:     answered by fireplace (62), asked as the object: 1", lines[climb + 3]);
+        Assert.Equal("world: 3:45 pm, turn 2, in Bedchamber (1)", lines[climb + 4]);
 
         // going north: the action, then the room as the game moves you, then the turn counted
+        // and going isn't answered either: the routine that moves you, once it has and the new
+        // room is drawn, jumps back too, done
         int go = Array.IndexOf(lines, "world:   action 197: go");
         Assert.True(go > climb);
         Assert.Equal("world: 3:45 pm, turn 2, in Potty Chamber (2)", lines[go + 1]);
         Assert.Equal("world:   here: you (153) [cloak (82)], tiny door (66)", lines[go + 2]);
+        Assert.Equal("world:     ended by a routine that jumped back to the main loop: done", lines[go + 3]);
         Assert.Equal("world: 3:50 pm, turn 3, in Potty Chamber (2)", lines[^2]);
 
         // three commands, four actions, and nothing said twice
