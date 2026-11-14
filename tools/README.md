@@ -37,6 +37,7 @@ python -m legendary_tools loads <the game's folder>
 python -m legendary_tools objects <the game's folder> [<number>] [--tree] [--saved]
 python -m legendary_tools grammar <the game's folder> [<verb>]
 python -m legendary_tools actions <the game's folder> [<number>]
+python -m legendary_tools sentence <the game's folder>
 ```
 
 - **`exe`** prints each program's MZ header: its image, what's in the file after it, the memory
@@ -97,6 +98,13 @@ python -m legendary_tools dis ../../legend/sc101/game 3670:054e
   [docs/spellcasting-101.md](../docs/spellcasting-101.md#from-an-action-to-what-happens), and
   `dis` at a routine's address shows it. It reads *Spellcasting 101* only.
 
+- **`sentence`** prints the grammar the parser matches a command against, rule by rule, with
+  the names the program has for the rules: `<noun_phrase> ::= <pe_article>
+  <pe_adjective_phrase> <noun>`. `grammar` is which verbs go with which prepositions; this is
+  what a command is at all. It is in
+  [docs/spellcasting-101.md](../docs/spellcasting-101.md#the-parser), and reads *Spellcasting
+  101* only.
+
 ## The data files
 
 ```
@@ -123,6 +131,8 @@ python -m legendary_tools vocab <the game's folder>
   overlays loaded. `src/Legendary.Core/Programs` is the same in C#.
 - **`handlers.py`**: the routine of each object and each action, read from the switches in the
   code that call them.
+- **`sentence.py`**: the rules of the parser's grammar and the ways each can go, found by the
+  names the program keeps for them.
 - **`grammar.py`**: the table of the forms a command can take, and the second table of the
   ways each goes on to a second object.
 - **`objects.py`**: the table of objects, the types, each record's tree fields and a room's

@@ -15,6 +15,7 @@ from .loads import StringNames, find_loader, find_loads
 from .mz import MzExecutable
 from .objects import DIRECTIONS, Exit, GameObject, ObjectTable, SavedState, is_pointer
 from .plink86 import Image, Plink86Program
+from .sentence import read_sentence_grammar
 
 
 def _program(folder: GameFolder) -> Plink86Program:
@@ -423,6 +424,20 @@ def grammar(args: argparse.Namespace) -> None:
         print(f"\n{len(forms)} forms", file=sys.stderr)
 
 
+def sentence(args: argparse.Namespace) -> None:
+    """The grammar the parser matches a command against, rule by rule, as its writers had it."""
+    ways = read_sentence_grammar(_program(GameFolder(args.folder)))
+    rules: dict[str, list[list[str]]] = {}
+    for way in ways:
+        rules.setdefault(way.rule, []).append(way.symbols)
+    width = max(len(rule) for rule in rules)
+    for rule, made in rules.items():
+        for index, symbols in enumerate(made):
+            start = f"{rule:{width}} ::=" if index == 0 else f"{'':{width}}   |"
+            print(f"{start} {' '.join(symbols) or '(nothing)'}")
+        print()
+
+
 def strings(args: argparse.Namespace) -> None:
     """The table of string blocks that starts ...STR.DAT, or the words its text is packed with."""
     folder = GameFolder(args.folder)
@@ -506,6 +521,7 @@ def main() -> None:
     )
     command(grammar).add_argument("verb", nargs="?", help="only this verb's forms")
     command(loads)
+    command(sentence)
     sub = command(objects)
     sub.add_argument("number", type=int, nargs="?", help="only this object, in full")
     sub.add_argument("--tree", action="store_true", help="the rooms and holders, with what's in each")
