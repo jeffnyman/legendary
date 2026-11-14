@@ -110,9 +110,95 @@ its thunk, so tables of routines work wherever the routines are.
 *Timequest*, a year later, is built the same way, with 768 thunks. From *Spellcasting 201* on,
 the games are linked with .RTLink instead.
 
+## The objects
+
+The game's world is 427 objects, numbered from 1: its rooms, its things, its people, and the
+ideas a player can talk about. The program has a table of them, in its own segment at `2929`,
+with six bytes for each: its type, a zero, and a far pointer to its record. The count is at
+`4517:34E4`.
+
+There are eight types, and a table of three bytes for each, from `4517:34CC`: how many places
+an object of the type can be in, how many lists of other objects it can hold, and the size of
+its record. What each type is for is inferred from the objects that have it.
+
+| Type | Objects | Bytes | Places | Lists | Such as |
+|---|---|---|---|---|---|
+| 1 | 59 | 28 | 0 | 1 | Rooms: Bedchamber, Potty Chamber, Rooftop, to Stunning Climax |
+| 2 | 199 | 36 | 1 | 2 | Things that are somewhere and can hold things: writing desk, fireplace, cloak |
+| 3 | 5 | 14 | 0 | 0 | Ideas: animal, number, love, sex, sleep |
+| 4 | 10 | 22 | 0 | 2 | What's everywhere: room, you, floor, notes, lock, students |
+| 5 | 34 | 22 | 0 | 2 | Scenery: crack, cobweb, your house, tree, mountain |
+| 6 | 12 | 26 | 2 | 2 | What's between two rooms: shed door, trap door, chimney, moat |
+| 7 | 32 | 32 | 1 | 3 | People: you, Miss Beancounter, the registrar |
+| 8 | 76 | 22 | 1 | 0 | Things that hold nothing: rat, hole, dead branch, bridge |
+
+Every record starts with the same 14 bytes. Offsets here and below are in hex:
+
+| Offset | What |
+|---|---|
+| 0 | A far pointer to the name |
+| 4 | A far pointer to a second name, or zero: `me` for `you`, `Miss B'counter` for `Miss Beancounter` |
+| 8 | Flags, a bit each, numbered from 1 at the low bit of the first byte |
+| 0A | Two words, not yet understood |
+
+and the rest depends on the type. The program never reads a record directly. It has a routine
+for each field, taking an object's number, which looks up the type and goes to the offset that
+type keeps the field at; the routines are together in the root from `01B9:30A1`, and they are
+where the layouts here come from.
+
+### The tree
+
+Objects are in one another, as Infocom's are. An object that can be somewhere has three
+fields: the number of the object it's in, which of that object's lists it's on, and the number
+of the next object on that list. An object that can hold others has the number of the first
+object on each of its lists.
+
+| Type | In | Which list | Next | First on each list |
+|---|---|---|---|---|
+| 1 | | | | 0E |
+| 2 | 12 | 14 | 16 | 18, 1A |
+| 4, 5 | | | | 0E, 10 |
+| 6 | 0E, 10 | | | 12, 14 |
+| 7 | 0E | 10 | 12 | 14, 16, 18 |
+| 8 | 0E | 10 | 12 | |
+
+As the game starts, the Bedchamber's list is the rat, you, the pile of hay, the two windows,
+the fireplace, the writing desk and the door. The fire is on the fireplace's first list, the
+love note and the application on the desk's, and the cloak is on your second list, of three.
+A person's lists are, by that, what they hold and what they wear, and a thing's are what's in
+it and on it, but which is which isn't settled.
+
+Infocom's objects had one list each. The lists here, and the two places of a door, are what
+this system adds.
+
+With the tree, the exit's routine at the top of these notes can be read in full. Object 153
+is you, 62 the fireplace and 185 the chimney, and `01B9:0D5D` asks whether one object is in
+another:
+
+```c
+if (why != 15)
+    return 3;
+if (is_in(YOU, FIREPLACE)) {
+    some_flag = 1;
+    perform(25, CHIMNEY, 0);
+} else
+    print(strs[25]);    /* If you want to climb the chimney, then say so. */
+return 0;
+```
+
+The names are made up, `why` for an argument whose meaning isn't known yet; the numbers and
+the shape are the program's. The flag it sets is a byte at `4517:3BD7`, one of the variables
+the game saves.
+
+Other routines found on the way: `01B9:1694` tests a flag of an object and `01B9:16E8` sets
+one, `01B9:344C` gives the object an object is in, `01B9:3659` the first on one of its lists,
+and `01B9:37F6` the next on the list it's on.
+
 ## A room's exits
 
-After the fireplace message and its neighbors, at `2701:0123`, is a table the data points to:
+A room's record ends with a count of its exits, a byte at offset 16, and a far pointer to
+them at offset 18. The Bedchamber has six, after the fireplace message and its neighbors at
+`2701:0123`:
 
 ```
 2701:0123  01 01 c6 09 17 45
@@ -123,12 +209,17 @@ After the fireplace message and its neighbors, at `2701:0123`, is a table the da
            09 04 92 01 1c 2f
 ```
 
-Six bytes a row: a number, a kind, and a far pointer. With kind 3 the pointer is to a message:
-`2701:0000` is the fireplace one, and `2701:0031`, `If you want to jump out the window, then
-say so.` With kind 4 it is to a thunk, `2F1C:0192`, the routine above. With kinds 1 and 2 it is
-into the data, at `4517`. So, inferred: a row is an exit, the number its direction, and the
-kinds are a room to go to, a message that says why not, and a routine that decides. Those are
-ZIL's exits.
+Six bytes a row: a direction, a kind, and a far pointer. There are four kinds, and they are
+the four ZIL had:
+
+| Kind | The pointer is to | For the Bedchamber |
+|---|---|---|
+| 1 | A word with a room's number | Direction 1 goes to the Potty Chamber |
+| 2 | Two words, a room's number and a door's | Direction 7 goes to the Alley by the door |
+| 3 | A message, said in place of going | Directions 3, 5 and 10: `If you want to enter the fireplace, then say so.` |
+| 4 | A routine, by its thunk, which decides | Direction 9 runs the routine above, in overlay 3 |
+
+Which direction each number is isn't worked out.
 
 ## The files
 
@@ -139,7 +230,7 @@ ZIL's exits.
 | `S101MAIN.OVL` | The 13 overlays of code |
 | `S101STR.DAT` | Text, packed, in 69 blocks: 1,204 strings |
 | `VOCAB.DAT` | The vocabulary: 1,736 words |
-| `RESTART.DAT` | The world as the game starts |
+| `RESTART.DAT` | The world as the game starts: every object's record, and 91 variables |
 | `S101_C*.PIC`, `S101_E*.PIC` | Pictures; by their names and sizes, for the CGA and the EGA |
 | `S101_R*.RGN` | Not yet looked at; by the name, regions of the pictures |
 | `S101_M*.MUS`, `S101.BNK` | Music, and the AdLib instruments it plays on |
@@ -253,16 +344,34 @@ and the file is read 2,048 bytes at a time.
 `VOCAB.DAT` is a byte, then the words in order, each ending in a zero, from `-'n'` to `zoe`,
 and then 13,890 bytes about them that aren't read yet.
 
-`RESTART.DAT` is memory as it was, written to a file: the game's objects, with far pointers in
-them. The pointers have segments like `5338` and `3522`, which are the data segment `4517` and
-the messages' `2701` with `0E21` added to each: the program was loaded there on the day the
-file was made. How the game uses them when it loads somewhere else is still to be found.
+### The world as the game starts
+
+`RESTART.DAT` is what the game saves, written once by its makers before a move was made. The
+routine at `01B9:1C7D` writes it, and a saved game, and, inferred, what UNDO goes back to,
+which it keeps in memory instead. It has four parts, and they come to the file's 13,463 bytes
+exactly:
+
+| Bytes | What |
+|---|---|
+| 4 | The four bytes at `4517:0488`, not yet understood |
+| 12,862 | The record of every object, in the table's order |
+| 595 | 91 saved variables: the program has a table at `2660:0370` of the pieces of its data that are part of the game's state, a far pointer and a size for each, most of them a byte or a word |
+| 2 | A count, here 0, with six bytes to follow for each it counts; inferred, things due to happen later |
+
+The records in the file are the ones in the program, byte for byte, except their far pointers:
+all 590 have a segment `0E21` higher. `5338` is the data segment `4517`, and `3522` the
+messages' `2701`, as they were when the program was loaded at `0E21` on the day the file was
+made. So the file holds nothing the program doesn't, and what RESTART does is put the records
+back. How the pointers are made right when the program loads somewhere else is still to be
+found.
 
 ## Still to do
 
 - What picks the block in the three calls that take it from a table, and where blocks 19, 39
   and 40 are loaded.
 - The rest of `VOCAB.DAT`, and the parser that reads it.
-- The objects: what `RESTART.DAT` and the data hold for each room and thing.
+- The rest of an object's record: the two words every record has, the flags' meanings, and
+  the fields past the tree. Which list is which, and which direction is which.
+- How the far pointers in a saved state are made right, and what its last part counts.
 - Where the system ends and the game begins among the root's segments and the overlays.
 - The pictures, the regions, the music and the sounds.
