@@ -54,6 +54,11 @@ public sealed partial class Intel386
     private bool[]? _plainRead;
     [NotSaved]
     private bool[]? _plainWrite;
+    // addresses to say when the program gets to, and whom to tell: the host's, not the machine's
+    [NotSaved]
+    private uint[] _watched = [];
+    [NotSaved]
+    private Action[] _reached = [];
     private readonly uint[] _regs = new uint[8];
     private readonly ushort[] _selectors = new ushort[6];
 
@@ -264,12 +269,26 @@ public sealed partial class Intel386
         {
             try
             {
-                do
+                if (_watched.Length == 0)
                 {
-                    Begin();
-                    Execute();
+                    do
+                    {
+                        Begin();
+                        Execute();
+                    }
+                    while (Instructions + Repetitions - start < steps && !Stopping && !Halted && !(InterruptWaiting && InterruptsEnabled));
                 }
-                while (Instructions + Repetitions - start < steps && !Stopping && !Halted && !(InterruptWaiting && InterruptsEnabled));
+                else
+                {
+                    // the same, with a look at where each instruction is before it's run
+                    do
+                    {
+                        TellIfWatched();
+                        Begin();
+                        Execute();
+                    }
+                    while (Instructions + Repetitions - start < steps && !Stopping && !Halted && !(InterruptWaiting && InterruptsEnabled));
+                }
 
                 break;
             }
@@ -284,6 +303,38 @@ public sealed partial class Intel386
         }
 
         return Instructions + Repetitions - start;
+    }
+
+    /// <summary>
+    /// Has something called each time the program is about to run the instruction at an
+    /// address, a linear one: before the instruction, with the registers and the stack as it
+    /// will find them. It's for looking, and what's called shouldn't change the machine. Watching
+    /// costs a comparison an instruction for each address; with none watched, nothing.
+    /// </summary>
+    public void Watch(uint address, Action reached)
+    {
+        ArgumentNullException.ThrowIfNull(reached);
+        _watched = [.. _watched, address];
+        _reached = [.. _reached, reached];
+    }
+
+    /// <summary>Stops watching every address.</summary>
+    public void WatchNothing()
+    {
+        _watched = [];
+        _reached = [];
+    }
+
+    private void TellIfWatched()
+    {
+        uint address = _bases[CS] + _eip;
+        for (int i = 0; i < _watched.Length; i++)
+        {
+            if (_watched[i] == address)
+            {
+                _reached[i]();
+            }
+        }
     }
 
     /// <summary>The start of an instruction: where it is, and the prefixes' defaults.</summary>
