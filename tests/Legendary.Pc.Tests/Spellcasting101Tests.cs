@@ -439,4 +439,48 @@ public sealed class Spellcasting101Tests : IDisposable
         Assert.DoesNotContain(_log, line => line.Contains("rotten3.rs", StringComparison.OrdinalIgnoreCase));
         Assert.Equal(2, _log.Count(line => line.StartsWith("21/3D open", StringComparison.Ordinal) && line.Contains("S101_m1.mus", StringComparison.OrdinalIgnoreCase)));
     }
+
+    /// <summary>
+    /// The game has no pointer of its own: it asks the mouse's driver to show its arrow and to
+    /// hide it. While it waits for typing at its prompt the arrow is hidden, and a click (or Tab)
+    /// takes it to its menus and brings the arrow up, anywhere on the EGA's 350 rows.
+    /// </summary>
+    [Fact]
+    public void With_a_mouse_a_click_at_the_prompt_brings_up_the_drivers_arrow()
+    {
+        if (Start(mouse: true) is not { } machine)
+        {
+            return;
+        }
+
+        PressEnter(machine);
+        Type(machine, "n");
+
+        // the game's first two pages, "Another red letter day..." and "Chapter One: Escape!",
+        // each wait for a key, and so does the room's description when it has filled its window
+        Type(machine, " ");
+        Type(machine, " ");
+        Type(machine, " ");
+
+        uint[] screen = new uint[640 * 350];
+        uint[] typing = new uint[640 * 350];
+        machine.Render(typing);
+
+        // over the text window, where a click picks nothing
+        machine.MoveMouse(-10_000, 10_000);
+        machine.MoveMouse(400, -98);
+        Run(machine, 0.5);
+        machine.Render(screen);
+        Assert.Equal(typing[(301 * 640) + 401], screen[(301 * 640) + 401]);
+
+        machine.SetMouseButton(0, true);
+        Run(machine, 0.2);
+        machine.SetMouseButton(0, false);
+        Run(machine, 0.5);
+        Screenshot.WritePng(machine, Shot("s101-arrow.png"));
+        machine.Render(screen);
+        Assert.Equal(0x000000u, screen[(301 * 640) + 400] & 0xFFFFFF);
+        Assert.Equal(0xFFFFFFu, screen[(301 * 640) + 401] & 0xFFFFFF);
+        Assert.Equal(0xFFFFFFu, screen[(305 * 640) + 402] & 0xFFFFFF);
+    }
 }
