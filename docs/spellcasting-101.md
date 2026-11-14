@@ -349,7 +349,9 @@ the string file, checks there's memory enough, and then goes around once for eac
    command names several.
 7. Unless the action takes no turn, the room's routine is asked once more, with 7 as the
    reason; the routine at `1272:018C` runs, by its place the game's timers; and the count of
-   moves at `4517:0046` goes up by one.
+   moves at `4517:0046` goes up by one. The word after it, at `4517:0048`, is the game's clock,
+   in steps of five minutes from midnight: [run](the-pc.md#the-notes-checked), it starts at
+   187, which is 3:35 in the afternoon, and goes up by one a move.
 8. If performing answered 2, the rest of the line is dropped. Otherwise it goes back to step 2
    for the line's next command, and to step 1 when there are no more.
 

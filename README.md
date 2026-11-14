@@ -15,7 +15,7 @@ question of what a player is stays open until more of the games is understood.
 
 | Game | Year | Short name | Where it stands |
 |---|---|---|---|
-| *Spellcasting 101: Sorcerers Get All the Girls* | 1990 | `sc101` | Starts on Legendary's PC. Its program and overlays are read, its text unpacked, its objects, vocabulary, grammar and routines listed, and its pictures, music and sounds unpacked; [notes](docs/spellcasting-101.md) |
+| *Spellcasting 101: Sorcerers Get All the Girls* | 1990 | `sc101` | Plays on Legendary's PC, in tests. Its program and overlays are read, its text unpacked, its objects, vocabulary, grammar and routines listed, and its pictures, music and sounds unpacked; [notes](docs/spellcasting-101.md) |
 | *Timequest* | 1991 | `tquest` | Built as *Spellcasting 101* is: its overlays are read, and its text unpacked |
 | *Spellcasting 201: The Sorcerer's Appliance* | 1991 | `sc201` | Not yet tried; linked with .RTLink, not PLINK86 |
 | *Gateway* | 1992 | `gateway` | Not yet tried |
@@ -29,8 +29,8 @@ None of the games are included: Legendary reads copies you have.
 ## What's here
 
 - **`src/Legendary.Pc`** is [a PC for the games to run on](docs/the-pc.md), in C#: a copy of
-  Excavate's core. *Spellcasting 101* starts on it, to its title and into the game. It has no
-  window yet.
+  Excavate's core. *Spellcasting 101* plays on it, from its title through commands typed
+  at it, in tests. It has no window yet.
 - **`src/Legendary.Core`** reads the games' files, in C#. So far: a DOS program's MZ header, and
   a program linked by PLINK86, with its overlays loaded into the memory it would have, the
   packed text of a string file, the pictures of a picture file and their regions, the songs of a music file, and a
