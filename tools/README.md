@@ -108,13 +108,18 @@ python -m legendary_tools dis ../../legend/sc101/game 3670:054e
 ## The data files
 
 ```
+python -m legendary_tools music <the game's folder> [--out <folder>]
 python -m legendary_tools pictures <the game's folder> [--out <folder>]
 python -m legendary_tools regions <the game's folder>
+python -m legendary_tools sounds <the game's folder> [--out <folder>]
 python -m legendary_tools strings <the game's folder> [--words]
 python -m legendary_tools text <the game's folder> [<block>]
 python -m legendary_tools vocab <the game's folder>
 ```
 
+- **`music`** lists the songs in each `.MUS` file: each one's size and which of its two
+  formats it's in, with a MIDI file's track names. With `--out`, it writes each to the folder
+  as it is, a `.mid` or a `.rol` file, which other programs play.
 - **`pictures`** lists the pictures in each `.PIC` file: each one's number, size, the way it's
   packed, whether it has a palette, and how many places it's drawn at. With `--out`, it
   writes every picture to the folder as a PNG file, named for its file and number, as
@@ -125,6 +130,11 @@ python -m legendary_tools vocab <the game's folder>
   that's there. The objects are named when the program's table of them can be read, which is
   for *Spellcasting 101*. It is in
   [docs/spellcasting-101.md](../docs/spellcasting-101.md#what-is-where-in-a-picture).
+- **`sounds`** lists the `.RS` files: each sound's length, how many times each of its bytes
+  is played, and so how long it lasts. With `--out`, it writes each to the folder as a WAV
+  file. Both are in
+  [docs/spellcasting-101.md](../docs/spellcasting-101.md#the-music-and-the-sounds), and both
+  read *Timequest* too.
 - **`strings`** prints the table that starts `...STR.DAT`: each block's size unpacked, its size
   packed, its count of strings, and where it is in the file. With `--words`, it lists the 128
   words the text is packed with, each with its code.
@@ -154,6 +164,8 @@ python -m legendary_tools vocab <the game's folder>
 - **`pictures.py`**: the directory of a picture file, the four ways its pixels are packed,
   and a picture as a PNG file. `src/Legendary.Core/Pictures` is the same in C#, without the
   PNG.
+- **`sound.py`**: the songs of a music file, and a RealSound file as a WAV file.
+  `src/Legendary.Core/Sound` has both in C#, without the WAV.
 - **`regions.py`**: the regions of a region file. `src/Legendary.Core/Pictures` has it in C#.
 - **`data.py`**: the data files, as far as they're understood: the string file, unpacked, and
   the vocabulary. `src/Legendary.Core/Text` has the string file in C#.

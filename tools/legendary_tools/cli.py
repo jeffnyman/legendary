@@ -18,6 +18,7 @@ from .pictures import HUFFMAN, LZW, RAW_PLANE, RAW_PLANES, PictureFile
 from .plink86 import Image, Plink86Program
 from .regions import read_regions
 from .sentence import read_sentence_grammar
+from .sound import read_songs, read_sound
 
 
 def _program(folder: GameFolder) -> Plink86Program:
@@ -503,6 +504,44 @@ def regions(args: argparse.Namespace) -> None:
                 )
 
 
+def _write(folder: str, name: str, contents: bytes) -> None:
+    os.makedirs(folder, exist_ok=True)
+    with open(os.path.join(folder, name), "wb") as file:
+        file.write(contents)
+
+
+def music(args: argparse.Namespace) -> None:
+    """The songs in the game's .MUS files: listed, or written to a folder as .mid and .rol files."""
+    folder = GameFolder(args.folder)
+    for path in folder.ending(".mus"):
+        name = os.path.splitext(os.path.basename(path))[0].lower()
+        print(os.path.basename(path))
+        for song in read_songs(folder.read(path)):
+            kind = "MIDI, for the MT-32" if song.midi else ".ROL, for the AdLib"
+            names = ", ".join(dict.fromkeys(song.names()))
+            print(f"  {song.number:2}  {len(song.data):5} bytes  {kind}" + (f": {names}" if names else ""))
+            if args.out:
+                _write(args.out, f"{name}_{song.number:02}.{song.extension}", song.data)
+    if args.out:
+        print(f"written to {args.out}")
+
+
+def sounds(args: argparse.Namespace) -> None:
+    """The sounds in the game's .RS files: listed, or written to a folder as WAV files."""
+    folder = GameFolder(args.folder)
+    for path in folder.ending(".rs"):
+        sound = read_sound(folder.read(path))
+        times = f"{sound.repeat} time{'s' if sound.repeat > 1 else ''}"
+        print(
+            f"{os.path.basename(path):14} {len(sound.widths):6} bytes, each played {times}:"
+            f" {sound.seconds:5.1f} seconds at {sound.rate:5.0f} a second"
+        )
+        if args.out:
+            _write(args.out, os.path.splitext(os.path.basename(path))[0].lower() + ".wav", sound.wav())
+    if args.out:
+        print(f"written to {args.out}")
+
+
 def strings(args: argparse.Namespace) -> None:
     """The table of string blocks that starts ...STR.DAT, or the words its text is packed with."""
     folder = GameFolder(args.folder)
@@ -586,6 +625,10 @@ def main() -> None:
     )
     command(grammar).add_argument("verb", nargs="?", help="only this verb's forms")
     command(loads)
+    command(music).add_argument(
+        "--out", metavar="FOLDER", help="write each song there as a .mid or .rol file"
+    )
+    command(sounds).add_argument("--out", metavar="FOLDER", help="write each sound there as a WAV file")
     command(pictures).add_argument("--out", metavar="FOLDER", help="write each picture there as a PNG file")
     command(regions)
     command(sentence)
