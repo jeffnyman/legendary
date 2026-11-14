@@ -14,9 +14,13 @@ number and then the preposition's, which it searches by halves:
 The second table has six bytes for each way a form can go on to a second object: the
 preposition before it, flags for it, a byte not yet understood, and the action.
 
-Of a form's flags, and a second object's, two are known. 20 is that the object should be in
-the actor's hands, and is taken first when it isn't, with "[Taking the cloak first.]"; 10 is
-that it must be somewhere about the actor, and the command is refused when it isn't.
+A form's flags, and a second object's, are for finding the object. The low four say where it
+may be: 1 in the actor's hands, 2 in something the actor has, 4 in the place the actor is, 8 in
+something there; none of them is anywhere in the game at all. 40 is that there may be several
+objects. 20 is that the object should be in the actor's hands, and is taken first when it
+isn't, with "[Taking the cloak first.]"; 10 is that it must be somewhere about the actor, and
+the command is refused when it isn't. They are the bits of ZIL's syntax: HELD, CARRIED,
+ON-GROUND, IN-ROOM, MANY, TAKE and HAVE.
 
 Before the forms, from the start of their segment, is a byte for each action. Its bit 1 is
 that the action takes no turn: the game's clock doesn't move for it.
@@ -61,9 +65,29 @@ class Form:
     seconds: list[Second] = field(default_factory=list)
 
 
+HELD, CARRIED, ON_GROUND, IN_ROOM, MANY = 0x01, 0x02, 0x04, 0x08, 0x40
 TAKEN_FIRST = 0x20  # the object is taken first when the actor doesn't have it in hand
 MUST_BE_HELD = 0x10  # the object must be somewhere about the actor
 NO_TURN = 0x01  # of an action's byte: the action takes no turn
+
+
+def describe_flags(flags: int) -> str:
+    """An object's flags in words: where it may be found, and what's asked of it."""
+    places = [
+        name
+        for bit, name in (
+            (HELD, "held"),
+            (CARRIED, "carried"),
+            (ON_GROUND, "here"),
+            (IN_ROOM, "in things here"),
+        )
+        if flags & bit
+    ]
+    parts = [", ".join(places) or "anywhere"]
+    for bit, name in ((MANY, "several"), (TAKEN_FIRST, "taken first"), (MUST_BE_HELD, "must be had")):
+        if flags & bit:
+            parts.append(name)
+    return "; ".join(parts)
 
 
 def _tables(program: Plink86Program) -> tuple[bytes, int, int, int]:

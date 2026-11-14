@@ -37,6 +37,9 @@ _TYPES = re.compile(rb"\x8e\x06(..)\x26\x8a\x87(..)\x2a\xe4\x3b\x46", re.DOTALL)
 # mov es,[segment variable] / mov si,es:[bx+list] / or si,si: a word from an object's list
 _WORD_LIST = re.compile(rb"\x8e\x06(..)\x26\x8b\xb7(..)\x0b\xf6", re.DOTALL)
 
+# shl si,cl / mov es,[segment variable] / mov ax,es:[si+list]: an entry of one of a room's rows
+_ROOM_ROW = re.compile(rb"\xd3\xe6\x8e\x06(..)\x26\x8b\x84(..)", re.DOTALL)
+
 # Microsoft C's notice is 8 bytes into the segment DS has
 _NOTICE = b"MS Run-Time Library"
 
@@ -53,11 +56,13 @@ class Layout:
     lists: int | None = None  # the first object on each of its own lists, a word each
     exit_count: int | None = None  # a room's exits: a byte, and a far pointer to them
     exits: int | None = None
+    also_here: int | None = None  # a room's: where its row starts in the list of what's also there
+    seen_from: int | None = None  # and in the list of the places that can be seen into from it
 
 
 # Spellcasting 101's, from its routines that read and write each field for each type
 LAYOUTS = {
-    1: Layout(28, lists=0x0E, exit_count=0x16, exits=0x18),
+    1: Layout(28, lists=0x0E, exit_count=0x16, exits=0x18, also_here=0x12, seen_from=0x14),
     2: Layout(36, flag_bytes=6, places=0x12, relation=0x14, next=0x16, lists=0x18),
     3: Layout(14),
     4: Layout(22, lists=0x0E),
@@ -116,6 +121,10 @@ class GameObject:
     next: int | None = None
     lists: list[int] = field(default_factory=list)
     exits: list[Exit] = field(default_factory=list)
+    # a room's: objects that are there without being in it, each with whether it is for now,
+    # and the places whose contents can be seen from it, the same
+    also_here: list[tuple[int, bool]] = field(default_factory=list)
+    seen_from: list[tuple[int, bool]] = field(default_factory=list)
 
     def word(self, at: int) -> int:
         return struct.unpack_from("<H", self.record, at)[0]
@@ -166,6 +175,13 @@ class ObjectTable:
             for match in _WORD_LIST.finditer(root)
         ]
         self._word_lists = [self._data_word(variable) * 16 + offset for variable, offset in lists[:2]]
+
+        # the two lists a room has a row in, in the order the code that finds objects reads them
+        rows = dict.fromkeys(
+            (int.from_bytes(match[1], "little"), int.from_bytes(match[2], "little"))
+            for match in _ROOM_ROW.finditer(root)
+        )
+        self._room_rows = [self._data_word(variable) * 16 + offset for variable, offset in rows][:2]
 
         self.table_segment = self._data_word(table_variable)
         self.count = self._word(self._data_word(count_variable), count_offset)
@@ -241,6 +257,9 @@ class ObjectTable:
             found.next = found.word(layout.next)
         if layout.lists is not None:
             found.lists = [found.word(layout.lists + 2 * index) for index in range(entry.lists)]
+        if layout.also_here is not None and layout.seen_from is not None and len(self._room_rows) == 2:
+            found.also_here = self._row(self._room_rows[0], found.word(layout.also_here))
+            found.seen_from = self._row(self._room_rows[1], found.word(layout.seen_from))
         if layout.exits is not None and layout.exit_count is not None:
             exits_offset, exits_segment = struct.unpack_from("<HH", record, layout.exits)
             at = exits_segment * 16 + exits_offset
@@ -251,6 +270,15 @@ class ObjectTable:
                         *reversed(struct.unpack_from("<HH", memory, at + 6 * row + 2)),
                     )
                 )
+        return found
+
+    def _row(self, table: int, start: int) -> list[tuple[int, bool]]:
+        """A room's row of a list: four bytes each, an object and whether it counts, to a zero."""
+        found = []
+        at = table + 4 * (start - 1)
+        while start and (number := self.image.word(at)):
+            found.append((number, self.image.memory[at + 2] != 0))
+            at += 4
         return found
 
     def _list(self, table: int, start: int) -> list[int]:

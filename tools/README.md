@@ -76,8 +76,8 @@ python -m legendary_tools dis ../../legend/sc101/game 3670:054e
 - **`objects`** lists the game's objects as it starts, from the program's memory: each
   one's number, type, flags, names, and what it's in. It starts with the types. With a number,
   it prints that object in full: its flags, the nouns and adjectives it's called by, its routine,
-  where it is, what's on each of its lists, a room's
-  exits with the direction and where each goes, and its record in words, with the far pointers in brackets. With
+  where it is, what's on each of its lists, what's also in a room without being in its tree, a
+  room's exits with the direction and where each goes, and its record in words, with the far pointers in brackets. With
   `--tree`, it prints each room and holder with what's in it, and in that. With `--saved`, it
   prints the parts of `RESTART.DAT` and their sizes, which come to the file's. How the objects
   are kept is in [docs/spellcasting-101.md](../docs/spellcasting-101.md#the-objects). It reads
@@ -85,9 +85,9 @@ python -m legendary_tools dis ../../legend/sc101/game 3670:054e
 
 - **`grammar`** lists the forms a command can take, from the program's tables: for each verb
   and the preposition after it, the action made with no object, with one, and with a second
-  after each preposition it allows, as `drop OBJECT in OBJECT: action 51`. Each line starts
-  with the form's flags, and a second object's line ends with its flags and a byte not yet
-  understood. With a verb, it lists that verb's forms. It needs `VOCAB.DAT` for the words, and
+  after each preposition it allows, as `drop OBJECT in OBJECT: action 51`. Each line ends
+  with where the object, and the second, may be looked for and what's asked of it, from the
+  form's flags. With a verb, it lists that verb's forms. It needs `VOCAB.DAT` for the words, and
   reads *Spellcasting 101* and *Timequest*. How the table is kept is in
   [docs/spellcasting-101.md](../docs/spellcasting-101.md#the-grammar).
 

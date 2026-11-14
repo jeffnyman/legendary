@@ -9,7 +9,7 @@ import sys
 
 from . import data
 from .game import GameFolder
-from .grammar import NO_TURN, Form, action_flags, read_grammar
+from .grammar import NO_TURN, Form, action_flags, describe_flags, read_grammar
 from .handlers import action_routines, object_routines
 from .loads import StringNames, find_loader, find_loads
 from .mz import MzExecutable
@@ -288,6 +288,14 @@ def _show_object(program: Plink86Program, table: ObjectTable, found: GameObject)
     for index, first in enumerate(found.lists):
         members = ", ".join(_named(table, member.number) for member in table.on_list(first))
         print(f"  list {index}: {members or 'empty'}")
+    for label, row_of in (("also here", found.also_here), ("seen from here", found.seen_from)):
+        if row_of:
+            print(
+                f"  {label}: "
+                + ", ".join(
+                    _named(table, number) + ("" if counts else " (not for now)") for number, counts in row_of
+                )
+            )
     for row in found.exits:
         target = _exit_target(program, table, row)
         direction = DIRECTIONS[row.direction] if row.direction < len(DIRECTIONS) else str(row.direction)
@@ -410,16 +418,19 @@ def grammar(args: argparse.Namespace) -> None:
         if args.verb and word(form.verb) != args.verb:
             continue
         start = " ".join(part for part in (word(form.verb) or "(no verb)", word(form.preposition)) if part)
+        first = f"  (the object {describe_flags(form.flags)})"
         made = []
         if form.action_alone:
             made.append(f"{start}: action {form.action_alone}")
         if form.action_with_object:
-            made.append(f"{start} OBJECT: action {form.action_with_object}")
+            made.append(f"{start} OBJECT: action {form.action_with_object}{first}")
         for second in form.seconds:
             line = " ".join(part for part in (start, "OBJECT", word(second.preposition), "OBJECT") if part)
-            made.append(f"{line}: action {second.action}  [{second.flags:02x} {second.unknown}]")
+            made.append(
+                f"{line}: action {second.action}{first[:-1]}, the second {describe_flags(second.flags)})"
+            )
         for line in made or [f"{start}: no action"]:
-            print(f"{form.flags:02x}  {line}")
+            print(line)
     if not args.verb:
         print(f"\n{len(forms)} forms", file=sys.stderr)
 
