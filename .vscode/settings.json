@@ -1,0 +1,5 @@
+{
+  // the project's own ruff settings (tools/pyproject.toml) come before the editor's, so that
+  // formatting on save gives what `ruff format` does
+  "ruff.configurationPreference": "filesystemFirst"
+}

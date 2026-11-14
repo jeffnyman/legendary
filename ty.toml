@@ -1,0 +1,9 @@
+# For ty run from here, as an editor does with the whole repository open: the Python is all in
+# tools, and its packages (Capstone, for one) are in the environment uv makes there. From
+# tools itself, ty reads tools/pyproject.toml instead.
+[src]
+include = ["tools"]
+
+[environment]
+python = "tools/.venv"
+python-version = "3.9"
