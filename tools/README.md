@@ -35,6 +35,7 @@ python -m legendary_tools dump <the game's folder> <address> [<bytes>] [--overla
 python -m legendary_tools dis <the game's folder> <address> [<instructions>] [--overlay N]...
 python -m legendary_tools loads <the game's folder>
 python -m legendary_tools objects <the game's folder> [<number>] [--tree] [--saved]
+python -m legendary_tools grammar <the game's folder> [<verb>]
 ```
 
 - **`exe`** prints each program's MZ header: its image, what's in the file after it, the memory
@@ -72,12 +73,20 @@ python -m legendary_tools dis ../../legend/sc101/game 3670:054e
 
 - **`objects`** lists the game's objects as it starts, from the program's memory: each
   one's number, type, flags, names, and what it's in. It starts with the types. With a number,
-  it prints that object in full: its flags, where it is, what's on each of its lists, a room's
+  it prints that object in full: its flags, the nouns and adjectives it's called by, where it is, what's on each of its lists, a room's
   exits with where each goes, and its record in words, with the far pointers in brackets. With
   `--tree`, it prints each room and holder with what's in it, and in that. With `--saved`, it
   prints the parts of `RESTART.DAT` and their sizes, which come to the file's. How the objects
   are kept is in [docs/spellcasting-101.md](../docs/spellcasting-101.md#the-objects). It reads
   *Spellcasting 101* only: the code that finds the tables isn't *Timequest*'s.
+
+- **`grammar`** lists the forms a command can take, from the program's tables: for each verb
+  and the preposition after it, the action made with no object, with one, and with a second
+  after each preposition it allows, as `drop OBJECT in OBJECT: action 51`. Each line starts
+  with the form's flags, and a second object's line ends with its flags and a byte not yet
+  understood. With a verb, it lists that verb's forms. It needs `VOCAB.DAT` for the words, and
+  reads *Spellcasting 101* and *Timequest*. How the table is kept is in
+  [docs/spellcasting-101.md](../docs/spellcasting-101.md#the-grammar).
 
 ## The data files
 
@@ -95,19 +104,22 @@ python -m legendary_tools vocab <the game's folder>
   `\n` and `\t`. It reads *Spellcasting 101* and *Timequest*; the later games pack their text
   another way. How the packing works is in
   [docs/spellcasting-101.md](../docs/spellcasting-101.md#the-text).
-- **`vocab`** lists the words that start `VOCAB.DAT`, numbered in the file's order.
+- **`vocab`** lists the vocabulary in `VOCAB.DAT`: each word's number, its parts of speech,
+  and, for a synonym, the word it stands for and as what.
 
 ## The modules
 
 - **`mz.py`**: a DOS program's MZ header, image and relocations.
 - **`plink86.py`**: PLINK86's table of overlays, the thunks, and the program's memory with
   overlays loaded. `src/Legendary.Core/Programs` is the same in C#.
+- **`grammar.py`**: the table of the forms a command can take, and the second table of the
+  ways each goes on to a second object.
 - **`objects.py`**: the table of objects, the types, each record's tree fields and a room's
   exits, and the parts of a saved state.
 - **`loads.py`**: finding the routine that loads a string block and the calls to it, and from
   them the block behind an array.
 - **`data.py`**: the data files, as far as they're understood: the string file, unpacked, and
-  the vocabulary's words. `src/Legendary.Core/Text` has the string file in C#.
+  the vocabulary. `src/Legendary.Core/Text` has the string file in C#.
 - **`game.py`**: finding a game's files, whatever case their names are in.
 - **`cli.py`**: the commands.
 

@@ -9,9 +9,10 @@ import sys
 
 from . import data
 from .game import GameFolder
+from .grammar import read_grammar
 from .loads import StringNames, find_loader, find_loads
 from .mz import MzExecutable
-from .objects import GameObject, ObjectTable, SavedState, is_pointer
+from .objects import Exit, GameObject, ObjectTable, SavedState, is_pointer
 from .plink86 import Image, Plink86Program
 
 
@@ -244,14 +245,36 @@ def _named(table: ObjectTable, number: int) -> str:
     return f"{number} {table.get(number).name}" if 1 <= number <= table.count else str(number)
 
 
+def _exit_target(program: Plink86Program, table: ObjectTable, row: Exit) -> str:
+    """Where an exit's pointer goes, by its kind."""
+    target = f"{row.segment:04x}:{row.offset:04x}"
+    thunk = program.thunk_at(row.segment, row.offset)
+    if thunk:
+        target += f", a routine in overlay {thunk.overlay}"
+    elif row.kind in (1, 2):
+        at = row.segment * 16 + row.offset
+        target += f", to {_named(table, table.image.word(at))}"
+        if row.kind == 2:
+            target += f" by {_named(table, table.image.word(at + 2))}"
+    elif row.kind == 3:
+        memory = table.image.memory
+        start = row.segment * 16 + row.offset
+        target += ": " + _shown(memory[start : memory.index(b"\0", start)].decode("latin-1"), 60)
+    return target
+
+
 def _show_object(program: Plink86Program, table: ObjectTable, found: GameObject) -> None:
     entry = table.types[found.type]
     print(f"object {found.number}: {found.name}" + (f" ({found.second_name})" if found.second_name else ""))
     print(f"  type {found.type}, {entry.size} bytes at {found.segment:04x}:{found.offset:04x}")
     print(
-        f"  flags {found.flags:04x}: "
-        + (" ".join(str(flag) for flag in range(1, 17) if found.has_flag(flag)) or "none")
+        "  flags: "
+        + (" ".join(str(flag) for flag in range(1, found.flag_count + 1) if found.has_flag(flag)) or "none")
     )
+    if table.words:
+        for label, numbers in (("nouns", found.nouns), ("adjectives", found.adjectives)):
+            if numbers:
+                print(f"  {label}: " + ", ".join(table.words[number - 1].text for number in numbers))
     for place in found.places:
         print(
             f"  in {_named(table, place)}"
@@ -263,19 +286,7 @@ def _show_object(program: Plink86Program, table: ObjectTable, found: GameObject)
         members = ", ".join(_named(table, member.number) for member in table.on_list(first))
         print(f"  list {index}: {members or 'empty'}")
     for row in found.exits:
-        target = f"{row.segment:04x}:{row.offset:04x}"
-        thunk = program.thunk_at(row.segment, row.offset)
-        if thunk:
-            target += f", a routine in overlay {thunk.overlay}"
-        elif row.kind in (1, 2):
-            at = row.segment * 16 + row.offset
-            target += f", to {_named(table, table.image.word(at))}"
-            if row.kind == 2:
-                target += f" by {_named(table, table.image.word(at + 2))}"
-        elif row.kind == 3:
-            memory = table.image.memory
-            start = row.segment * 16 + row.offset
-            target += ": " + _shown(memory[start : memory.index(b"\0", start)].decode("latin-1"), 60)
+        target = _exit_target(program, table, row)
         print(f"  exit {row.direction:2}, kind {row.kind}: {target}")
     words = []
     at = 0
@@ -293,7 +304,8 @@ def objects(args: argparse.Namespace) -> None:
     """The game's objects as it starts: all of them, one in full, or the rooms with what's in them."""
     folder = GameFolder(args.folder)
     program = _program(folder)
-    table = ObjectTable(program)
+    vocabulary = folder.find("vocab.dat")
+    table = ObjectTable(program, data.vocabulary(folder.read(vocabulary)) if vocabulary else None)
     if args.number is not None:
         _show_object(program, table, table.get(args.number))
         return
@@ -340,6 +352,33 @@ def objects(args: argparse.Namespace) -> None:
         print(f"{found.number:4}  {found.type}  {found.flags:04x}  {name:44}  {where}")
 
 
+def grammar(args: argparse.Namespace) -> None:
+    """The forms a command can take: each verb, its prepositions and objects, and the action made."""
+    folder = GameFolder(args.folder)
+    words = data.vocabulary(folder.read(folder.one("vocab.dat")))
+    forms = read_grammar(_program(folder), words)
+
+    def word(number: int) -> str:
+        return words[number - 1].text if number else ""
+
+    for form in forms:
+        if args.verb and word(form.verb) != args.verb:
+            continue
+        start = " ".join(part for part in (word(form.verb) or "(no verb)", word(form.preposition)) if part)
+        made = []
+        if form.action_alone:
+            made.append(f"{start}: action {form.action_alone}")
+        if form.action_with_object:
+            made.append(f"{start} OBJECT: action {form.action_with_object}")
+        for second in form.seconds:
+            line = " ".join(part for part in (start, "OBJECT", word(second.preposition), "OBJECT") if part)
+            made.append(f"{line}: action {second.action}  [{second.flags:02x} {second.unknown}]")
+        for line in made or [f"{start}: no action"]:
+            print(f"{form.flags:02x}  {line}")
+    if not args.verb:
+        print(f"\n{len(forms)} forms", file=sys.stderr)
+
+
 def strings(args: argparse.Namespace) -> None:
     """The table of string blocks that starts ...STR.DAT, or the words its text is packed with."""
     folder = GameFolder(args.folder)
@@ -373,13 +412,14 @@ def text(args: argparse.Namespace) -> None:
 
 
 def vocab(args: argparse.Namespace) -> None:
-    """The words that start VOCAB.DAT, in the file's order."""
+    """The vocabulary in VOCAB.DAT: each word, its parts of speech, and the word it stands for."""
     folder = GameFolder(args.folder)
-    contents = folder.read(folder.one("vocab.dat"))
-    words, end = data.vocabulary(contents)
-    for number, word in enumerate(words):
-        print(f"{number:4}  {word}")
-    print(f"\n{len(words)} words, ending at {end:#x} of {len(contents):#x}", file=sys.stderr)
+    words = data.vocabulary(folder.read(folder.one("vocab.dat")))
+    for word in words:
+        line = f"{word.number:4}  {word.text:18}  {data.parts_of_speech(word.parts)}"
+        if word.synonym:
+            line += f"; for {words[word.synonym - 1].text} as {data.parts_of_speech(word.synonym_parts)}"
+        print(line)
 
 
 def main() -> None:
@@ -417,6 +457,7 @@ def main() -> None:
     sub = command(dis, overlay="many")
     sub.add_argument("address", help="segment:offset, in hex")
     sub.add_argument("count", type=int, nargs="?", default=40, help="how many instructions (40)")
+    command(grammar).add_argument("verb", nargs="?", help="only this verb's forms")
     command(loads)
     sub = command(objects)
     sub.add_argument("number", type=int, nargs="?", help="only this object, in full")

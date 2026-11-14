@@ -83,18 +83,41 @@ class StringFile:
         return strings
 
 
-def vocabulary(data: bytes) -> tuple[list[str], int]:
+# a word's parts of speech, a bit each
+PARTS = {1: "verb", 2: "noun", 4: "adjective", 8: "preposition", 16: "article", 32: "direction"}
+
+
+def parts_of_speech(bits: int) -> str:
+    """The parts of speech in a word's bits, by name; a word with none is one of the parser's own."""
+    return ", ".join(name for bit, name in PARTS.items() if bits & bit) or "special"
+
+
+@dataclass(frozen=True)
+class Word:
+    """A word of the vocabulary."""
+
+    number: int  # from 1, as the program numbers them
+    text: str
+    parts: int  # its parts of speech
+    synonym: int  # the word it stands for, or 0
+    synonym_parts: int  # the parts of speech it stands for that word as
+
+
+def vocabulary(data: bytes) -> list[Word]:
     """
-    The words that start VOCAB.DAT, in the file's order, and where they end. A byte comes
-    first, then each word and a zero; what follows the words isn't read yet.
+    VOCAB.DAT: the size of the words' text, the text, each word ending in a zero, then a count
+    and eight bytes for each word: where its text starts, its parts of speech, the number of a
+    word it is a synonym of, and the parts of speech it is that word's synonym as.
     """
+    (size,) = struct.unpack_from("<H", data, 0)
+    (count,) = struct.unpack_from("<H", data, 2 + size)
+    if 2 + size + 2 + 8 * count != len(data):
+        raise ValueError("the vocabulary's words don't end where its file does")
     words = []
-    at = 1
-    while at < len(data):
-        end = data.find(b"\0", at)
-        word = data[at:end]
-        if end < 0 or not word or not all(0x20 <= byte < 0x7F for byte in word):
-            break
-        words.append(word.decode("ascii"))
-        at = end + 1
-    return words, at
+    for number in range(1, count + 1):
+        start, parts, synonym, synonym_parts = struct.unpack_from(
+            "<HHHH", data, 2 + size + 2 + 8 * (number - 1)
+        )
+        text = data[2 + start : data.index(b"\0", 2 + start)].decode("ascii")
+        words.append(Word(number, text, parts, synonym, synonym_parts))
+    return words

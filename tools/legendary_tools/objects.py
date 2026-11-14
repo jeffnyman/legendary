@@ -24,6 +24,7 @@ import re
 import struct
 from dataclasses import dataclass, field
 
+from .data import Word
 from .plink86 import Image, Plink86Program
 
 # mov es,[segment variable] / mov al,es:[si-6]: an object's type, with SI six times its number
@@ -32,6 +33,9 @@ _TABLE = re.compile(rb"\x8e\x06(..)\x26\x8a\x84\xfa\xff", re.DOTALL)
 _COUNT = re.compile(rb"\x8e\x06(..)\x26\xa1(..)\x39\x46\x06", re.DOTALL)
 # mov es,[segment variable] / mov al,es:[bx+entry] / sub ah,ah / cmp ax,[bp...]: a type's entry
 _TYPES = re.compile(rb"\x8e\x06(..)\x26\x8a\x87(..)\x2a\xe4\x3b\x46", re.DOTALL)
+
+# mov es,[segment variable] / mov si,es:[bx+list] / or si,si: a word from an object's list
+_WORD_LIST = re.compile(rb"\x8e\x06(..)\x26\x8b\xb7(..)\x0b\xf6", re.DOTALL)
 
 # Microsoft C's notice is 8 bytes into the segment DS has
 _NOTICE = b"MS Run-Time Library"
@@ -42,6 +46,7 @@ class Layout:
     """Where a type's record has what, after the 14 bytes every record starts with."""
 
     size: int
+    flag_bytes: int = 2  # the flags, from offset 8
     places: int | None = None  # the objects it's in, a word each
     relation: int | None = None  # a byte: which of its parent's lists it's on
     next: int | None = None  # the next object on that list
@@ -53,7 +58,7 @@ class Layout:
 # Spellcasting 101's, from its routines that read and write each field for each type
 LAYOUTS = {
     1: Layout(28, lists=0x0E, exit_count=0x16, exits=0x18),
-    2: Layout(36, places=0x12, relation=0x14, next=0x16, lists=0x18),
+    2: Layout(36, flag_bytes=6, places=0x12, relation=0x14, next=0x16, lists=0x18),
     3: Layout(14),
     4: Layout(22, lists=0x0E),
     5: Layout(22, lists=0x0E),
@@ -84,7 +89,10 @@ class GameObject:
     record: bytes
     name: str
     second_name: str | None
-    flags: int  # the 16 bits after the names: flag 1 is the lowest
+    flags: int  # the first 16 bits after the names: flag 1 is the lowest
+    flag_count: int = 16
+    nouns: list[int] = field(default_factory=list)  # the words that name it, by number
+    adjectives: list[int] = field(default_factory=list)  # the words that tell it from others
     places: list[int] = field(default_factory=list)
     relation: int | None = None
     next: int | None = None
@@ -112,7 +120,8 @@ class TypeEntry:
 class ObjectTable:
     """The objects, read from the program's memory as it is before the game changes it."""
 
-    def __init__(self, program: Plink86Program):
+    def __init__(self, program: Plink86Program, words: list[Word] | None = None):
+        self.words = words
         self.image = program.image()
         memory = self.image.memory
         root = memory[: len(program.mz.image)]
@@ -131,6 +140,14 @@ class ObjectTable:
             for variable, offset in entries
             if int.from_bytes(variable, "little") == types_variable
         )
+
+        # the two lists of words: mov es,[variable] / mov si,es:[bx+list] / or si,si, for the
+        # nouns and then for the adjectives
+        lists = [
+            (int.from_bytes(match[1], "little"), int.from_bytes(match[2], "little"))
+            for match in _WORD_LIST.finditer(root)
+        ]
+        self._word_lists = [self._data_word(variable) * 16 + offset for variable, offset in lists[:2]]
 
         self.table_segment = self._data_word(table_variable)
         self.count = self._word(self._data_word(count_variable), count_offset)
@@ -190,6 +207,13 @@ class ObjectTable:
         layout = LAYOUTS.get(kind)
         if layout is None or layout.size != size:
             return found
+        found.flag_count = 8 * layout.flag_bytes
+        if len(self._word_lists) == 2:
+            # after the flags, where its nouns start in the list of all nouns, counted from 1,
+            # and the same for its adjectives; each object's words end at a zero
+            at = 8 + layout.flag_bytes
+            found.nouns = self._list(self._word_lists[0], found.word(at))
+            found.adjectives = self._list(self._word_lists[1], found.word(at + 2))
         entry = self.types[kind]
         if layout.places is not None:
             found.places = [found.word(layout.places + 2 * index) for index in range(entry.places)]
@@ -209,6 +233,14 @@ class ObjectTable:
                         *reversed(struct.unpack_from("<HH", memory, at + 6 * row + 2)),
                     )
                 )
+        return found
+
+    def _list(self, table: int, start: int) -> list[int]:
+        found = []
+        at = table + 2 * (start - 1)
+        while start and (word := self.image.word(at)):
+            found.append(word)
+            at += 2
         return found
 
     def get(self, number: int) -> GameObject:
