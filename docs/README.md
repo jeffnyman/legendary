@@ -9,6 +9,7 @@ hold.
   word and then by Huffman's codes, and all of it unpacked, with each string named only by its
   place in an array a block is loaded into; a vocabulary of 1,736 words with their parts of speech and synonyms, and a grammar of 376
   forms that turns a command into one of 207 actions, each performed by asking the room's,
-  the actor's and the objects' own routines before the action's, in Infocom's order; and a world of 427 objects in eight
+  the actor's and the objects' own routines before the action's, in Infocom's order, from a main loop that takes
+  what's needed first and runs the clock after; and a world of 427 objects in eight
   types, kept in a tree as Infocom's were but with several lists to a parent, with its first
   state in a file.

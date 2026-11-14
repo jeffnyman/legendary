@@ -262,7 +262,7 @@ halves.
 |---|---|
 | 0 | The verb |
 | 2 | The preposition after the verb, or zero |
-| 4 | Flags, kept with the sentence; not yet understood, but they differ with the kind of object a form takes |
+| 4 | Flags for the object, kept with the sentence. Two are known: 20 is that it should be in the actor's hands, and 10 that it must be about the actor |
 | 5 | The action when the command has no object, or zero when it must have one |
 | 6 | The action when it has one object |
 | 7 | Where the form's entries start in a second table, and then how many it has |
@@ -290,8 +290,52 @@ all action 2. This is ZIL's `SYNTAX` table, and an action is what ZIL called a v
 number the rest of the game is written against. `climb OBJECT` is action 25, which is what the
 fireplace's exit performs on the chimney.
 
-What has been read of the parser is its tables. How it takes a line apart, what it does when
-a noun could be several objects, and how `all`, `it` and `then` work, is still to do.
+Before the forms, from the start of their segment at `2B6A:0000`, is a byte for each of the
+209 actions. Its bit 1 is that the action takes no turn, which 29 don't: SAVE, RESTORE,
+SCRIPT, VERBOSE and the like, and also LOOK and INVENTORY.
+
+## A turn
+
+The game's main routine is at `0C35:1AE8`, some 4,000 bytes of it. It sets up the screen, opens
+the string file, checks there's memory enough, and then goes around once for each command:
+
+1. It prints the prompt and reads a line, into `3B00:4FB6`.
+2. It takes the next command off the line, with the routine at `11C5:0266`. A line can have
+   several.
+3. If the command starts with AGAIN, OOPS or UNDO, a routine for each deals with it.
+4. It parses the command, with the routine at `0000:030B`, and searches the grammar for its
+   verb and preposition, which gives the action. A direction typed alone becomes a number,
+   kept in a byte at `3B00:0059`.
+5. For each object, it checks the grammar's flags. With flag 20, an object that isn't in the
+   actor's hands is taken first, and the game says `[Taking the cloak first.]`. With flag 10,
+   an object that isn't somewhere about the actor ends the command with a message put
+   together from pieces, `aren't holding` among them.
+6. It [performs the action](#from-an-action-to-what-happens), once for each object when the
+   command names several.
+7. Unless the action takes no turn, the room's routine is asked once more, with 7 as the
+   reason; the routine at `1272:018C` runs, by its place the game's timers; and the count of
+   moves at `4517:0046` goes up by one.
+8. If performing answered 2, the rest of the line is dropped. Otherwise it goes back to step 2
+   for the next command, and to step 1 when there are no more.
+
+Before it performs, it marks the place with `setjmp`, which is where a routine that starts
+over with another action comes back to.
+
+The words the main routine knows by sight are in the data as numbers, in the vocabulary's
+order, from `4517:006E`: `again`, `all`, `and`, `but`, the directions, `of`, `oops`, `then`,
+`to` and `undo`. They were written in when the program was built, which is presumably why it
+checks the vocabulary's file as it loads and can say `Error: vocabulary data mismatch`.
+
+The directions' numbers come from the main routine's tests of those words:
+
+| 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 |
+|---|---|---|---|---|---|---|---|---|---|---|---|
+| north | northeast | east | southeast | south | southwest | west | northwest | up | down | in | out |
+
+The parser itself, the routine at `0000:030B` and the code around it that takes the words
+apart and chooses among objects, hasn't been read. Its messages say what it can do: ask
+`[Which ... do you mean, ... or ...?]`, and say `[There seems to be a verb missing in that
+sentence.]`.
 
 ## From an action to what happens
 
@@ -397,12 +441,13 @@ the four ZIL had:
 
 | Kind | The pointer is to | For the Bedchamber |
 |---|---|---|
-| 1 | A word with a room's number | Direction 1 goes to the Potty Chamber |
-| 2 | Two words, a room's number and a door's | Direction 7 goes to the Alley by the door |
-| 3 | A message, said in place of going | Directions 3, 5 and 10: `If you want to enter the fireplace, then say so.` |
-| 4 | A routine, by its thunk, which decides | Direction 9 runs the routine above, in overlay 3 |
+| 1 | A word with a room's number | North goes to the Potty Chamber |
+| 2 | Two words, a room's number and a door's | West goes to the Alley by the door |
+| 3 | A message, said in place of going | East, south and down: `If you want to enter the fireplace, then say so.` |
+| 4 | A routine, by its thunk, which decides | Up runs the routine above, in overlay 3 |
 
-Which direction each number is isn't worked out.
+The directions are numbered [as the main routine has them](#a-turn): 1 is north, 3 east, 7
+west, 9 up.
 
 ## The files
 
@@ -551,10 +596,11 @@ found.
 
 - What picks the block in the three calls that take it from a table, and where blocks 19, 39
   and 40 are loaded.
-- What a routine's answer means beyond zero and not zero, and the reasons from 7 to 14.
-- The parser's code: how it takes a line apart and chooses among objects. The flags of the
-  grammar's forms.
-- The rest of an object's record: the flags' meanings, and the fields past the tree. Which list is which, and which direction is which.
+- What a routine's answer means beyond zero, and 2 from performing; the reasons from 8 to 14.
+- The parser's code: how it takes a line apart and chooses among objects. The rest of the
+  flags of the grammar's forms, and of the actions' bytes.
+- The timers.
+- The rest of an object's record: the flags' meanings, and the fields past the tree. Which of a thing's lists is which.
 - How the far pointers in a saved state are made right, and what its last part counts.
 - Where the system ends and the game begins among the root's segments and the overlays.
 - The pictures, the regions, the music and the sounds.
