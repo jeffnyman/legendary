@@ -1,0 +1,12 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <Description>A DOS PC for Legend Entertainment's games to run on: an x86 CPU, the EGA, VGA and CGA, the timer and interrupt hardware, the PC speaker, FM, MT-32 and Sound Blaster sound, and the BIOS and DOS answered directly in C#, with no user interface of its own. It began as a copy of Excavate's core.</Description>
+    <!-- optimized in Debug too: the CPU runs millions of instructions a second -->
+    <Optimize>true</Optimize>
+    <!-- every public member is documented: a missing comment fails the build -->
+    <NoWarn>$(NoWarn.Replace('CS1591', ''))</NoWarn>
+  </PropertyGroup>
+  <ItemGroup>
+    <InternalsVisibleTo Include="Legendary.Pc.Tests" />
+  </ItemGroup>
+</Project>

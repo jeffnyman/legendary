@@ -1,0 +1,6 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\Legendary.Pc\Legendary.Pc.csproj" />
+    <ProjectReference Include="..\..\src\Legendary.Core\Legendary.Core.csproj" />
+  </ItemGroup>
+</Project>
