@@ -254,10 +254,7 @@ public sealed class Spellcasting101Tests : IDisposable
         Type(machine, "n");
 
         // the game's first two pages, "Another red letter day..." and "Chapter One: Escape!",
-        // each wait for a key, and so does the room's description when it has filled its window
-        Type(machine, " ");
-        Type(machine, " ");
-        Type(machine, " ");
+        // are up as the first command is typed: its first key ends them, and is kept
         Screenshot.WritePng(machine, Shot("s101-bedchamber.png"));
 
         ushort load = LoadSegment();
@@ -447,9 +444,75 @@ public sealed class Spellcasting101Tests : IDisposable
     }
 
     /// <summary>
+    /// The game's first two pages, "Another red letter day..." and "Chapter One: Escape!", are
+    /// each up for a time, and the room follows them with no key pressed. A letter ends them
+    /// early and isn't used up: both pages go, the prompt for more that the room's description
+    /// would stop at doesn't stop, and the letter is the first of the command. (A space is used
+    /// up, and ends only the page it's pressed at.)
+    /// </summary>
+    [Fact]
+    public void A_key_at_the_first_page_ends_the_pages_and_is_typed_at_the_prompt()
+    {
+        if (Start() is not { } machine)
+        {
+            return;
+        }
+
+        PressEnter(machine);
+        Type(machine, "n");
+        ushort load = LoadSegment();
+        ushort data = (ushort)(load + DataSegment);
+        uint[] screen = new uint[640 * 350];
+        bool Page()
+        {
+            // where the room's picture goes, the page is black
+            machine.Render(screen);
+            return (screen[(100 * 640) + 450] & 0xFFFFFF) == 0;
+        }
+
+        Assert.True(Page());
+        Type(machine, "w");
+        Assert.False(Page());
+        Assert.Equal(0, machine.ReadWord(data, 0x46));
+
+        // WAIT is the action of "wait", and the turn is taken: a whole word got to the parser
+        Type(machine, "ait\n");
+        Assert.Equal(1, machine.ReadWord(data, 0x46));
+    }
+
+    /// <summary>
+    /// The pages go by themselves: the first is up for some 35 seconds and the second for some
+    /// 20, and with no key at all the room is there in about a minute.
+    /// </summary>
+    [Fact]
+    public void The_first_pages_pass_with_no_key_pressed()
+    {
+        if (Start() is not { } machine)
+        {
+            return;
+        }
+
+        PressEnter(machine);
+        Type(machine, "n");
+        uint[] screen = new uint[640 * 350];
+        bool Page()
+        {
+            // where the room's picture goes, a page is black
+            machine.Render(screen);
+            return (screen[(100 * 640) + 450] & 0xFFFFFF) == 0;
+        }
+
+        Run(machine, 20);
+        Assert.True(Page());
+        Run(machine, 50);
+        Assert.False(Page());
+        Assert.Equal(0, machine.ReadWord((ushort)(LoadSegment() + DataSegment), 0x46));
+    }
+
+    /// <summary>
     /// With no mouse the game is played as with one, by the keyboard: it takes the PC to have no
     /// mouse's driver from where INT 33h points, and then asks the interrupt nothing. It opens
-    /// on its first page, which waits for a key, and starts its own music under it.
+    /// on its first page, which stays up, and starts its own music under it.
     /// </summary>
     /// <remarks>
     /// When INT 33h pointed at something, the game took it for a driver that had found no mouse,
@@ -500,8 +563,8 @@ public sealed class Spellcasting101Tests : IDisposable
         PressEnter(machine);
         Type(machine, "n");
 
-        // the game's first two pages, "Another red letter day..." and "Chapter One: Escape!",
-        // each wait for a key, and so does the room's description when it has filled its window
+        // a space ends only what it's pressed at: the game's first page, "Another red letter
+        // day...", its second, "Chapter One: Escape!", and the room's prompt for more
         Type(machine, " ");
         Type(machine, " ");
         Type(machine, " ");
