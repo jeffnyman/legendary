@@ -1,0 +1,42 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "legendary-tools"
+version = "0.1.0"
+description = "Scripts for taking Legend Entertainment's games apart: their programs, overlays and data files."
+readme = "README.md"
+requires-python = ">=3.9"
+dependencies = []
+
+[project.optional-dependencies]
+# only the dis command needs it
+disasm = ["capstone>=5"]
+
+[dependency-groups]
+# for checking the scripts: ruff check, ruff format --check, ty check
+dev = ["ruff>=0.8", "ty", "capstone>=5"]
+
+[project.scripts]
+legendary-tools = "legendary_tools.cli:main"
+
+[tool.setuptools]
+packages = ["legendary_tools"]
+
+[tool.ruff]
+line-length = 110
+# said outright, so that an editor's own setting for it doesn't stand in
+indent-width = 4
+target-version = "py39"
+
+[tool.ruff.lint]
+# pycodestyle, pyflakes, import order, naming, newer idioms, likely bugs, simplifications,
+# comprehensions, pathlib-free returns, and ruff's own
+select = ["E", "W", "F", "I", "N", "UP", "B", "SIM", "C4", "RET", "PL", "RUF"]
+ignore = [
+    "PLR2004", # numbers in the code: a file format is its numbers, and the comments say what they are
+]
+
+[tool.ty.environment]
+python-version = "3.9"
