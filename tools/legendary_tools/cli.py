@@ -11,6 +11,7 @@ from . import data
 from .game import GameFolder
 from .loads import StringNames, find_loader, find_loads
 from .mz import MzExecutable
+from .objects import GameObject, ObjectTable, SavedState, is_pointer
 from .plink86 import Image, Plink86Program
 
 
@@ -238,6 +239,107 @@ def loads(args: argparse.Namespace) -> None:
     print(f"\nblocks no call names by number: {', '.join(missing) or 'none'}")
 
 
+def _named(table: ObjectTable, number: int) -> str:
+    """An object's number and name, or its number alone when it isn't an object's."""
+    return f"{number} {table.get(number).name}" if 1 <= number <= table.count else str(number)
+
+
+def _show_object(program: Plink86Program, table: ObjectTable, found: GameObject) -> None:
+    entry = table.types[found.type]
+    print(f"object {found.number}: {found.name}" + (f" ({found.second_name})" if found.second_name else ""))
+    print(f"  type {found.type}, {entry.size} bytes at {found.segment:04x}:{found.offset:04x}")
+    print(
+        f"  flags {found.flags:04x}: "
+        + (" ".join(str(flag) for flag in range(1, 17) if found.has_flag(flag)) or "none")
+    )
+    for place in found.places:
+        print(
+            f"  in {_named(table, place)}"
+            + (f", on its list {found.relation}" if found.relation is not None else "")
+        )
+    if found.next:
+        print(f"  next on that list: {_named(table, found.next)}")
+    for index, first in enumerate(found.lists):
+        members = ", ".join(_named(table, member.number) for member in table.on_list(first))
+        print(f"  list {index}: {members or 'empty'}")
+    for row in found.exits:
+        target = f"{row.segment:04x}:{row.offset:04x}"
+        thunk = program.thunk_at(row.segment, row.offset)
+        if thunk:
+            target += f", a routine in overlay {thunk.overlay}"
+        elif row.kind in (1, 2):
+            at = row.segment * 16 + row.offset
+            target += f", to {_named(table, table.image.word(at))}"
+            if row.kind == 2:
+                target += f" by {_named(table, table.image.word(at + 2))}"
+        elif row.kind == 3:
+            memory = table.image.memory
+            start = row.segment * 16 + row.offset
+            target += ": " + _shown(memory[start : memory.index(b"\0", start)].decode("latin-1"), 60)
+        print(f"  exit {row.direction:2}, kind {row.kind}: {target}")
+    words = []
+    at = 0
+    while at < len(found.record):
+        if is_pointer(table.image, found, at):
+            words.append(f"[{found.word(at + 2):04x}:{found.word(at):04x}]")
+            at += 4
+        else:
+            words.append(f"{found.word(at):04x}")
+            at += 2
+    print("  record: " + " ".join(words))
+
+
+def objects(args: argparse.Namespace) -> None:
+    """The game's objects as it starts: all of them, one in full, or the rooms with what's in them."""
+    folder = GameFolder(args.folder)
+    program = _program(folder)
+    table = ObjectTable(program)
+    if args.number is not None:
+        _show_object(program, table, table.get(args.number))
+        return
+    if args.tree:
+        inside: set[int] = set()
+
+        def show(found: GameObject, depth: int) -> None:
+            if found.number in inside:
+                return
+            inside.add(found.number)
+            print(f"{'  ' * depth}{found.number} {found.name}")
+            for index, first in enumerate(found.lists):
+                members = [member for member in table.on_list(first) if member.number not in inside]
+                if members and len(found.lists) > 1:
+                    print(f"{'  ' * (depth + 1)}(list {index})")
+                for member in members:
+                    show(member, depth + 1)
+
+        for found in table.objects:
+            if not found.places and found.lists and any(found.lists):
+                show(found, 0)
+        return
+    if args.saved:
+        state = SavedState(program, table)
+        file = folder.read(folder.one("restart.dat"))
+        timers = state.timers_in(file)
+        print(f"{4:6}  bytes that start it")
+        print(f"{state.objects_size:6}  in the records of {table.count} objects")
+        print(f"{state.variables_size:6}  in {len(state.variables)} saved variables")
+        print(f"{2 + 6 * timers:6}  in a count, {timers}, and six bytes for each it counts")
+        print(f"{state.size(timers):6}  in all; RESTART.DAT is {len(file)}")
+        return
+    print(
+        "types: "
+        + "; ".join(
+            f"{entry.type}: {entry.size} bytes, {entry.places} places, {entry.lists} lists"
+            for entry in sorted(table.types.values(), key=lambda entry: entry.type)
+        )
+    )
+    print()
+    for found in table.objects:
+        where = ", ".join(_named(table, place) for place in found.places if place)
+        name = found.name + (f" ({found.second_name})" if found.second_name else "")
+        print(f"{found.number:4}  {found.type}  {found.flags:04x}  {name:44}  {where}")
+
+
 def strings(args: argparse.Namespace) -> None:
     """The table of string blocks that starts ...STR.DAT, or the words its text is packed with."""
     folder = GameFolder(args.folder)
@@ -316,6 +418,10 @@ def main() -> None:
     sub.add_argument("address", help="segment:offset, in hex")
     sub.add_argument("count", type=int, nargs="?", default=40, help="how many instructions (40)")
     command(loads)
+    sub = command(objects)
+    sub.add_argument("number", type=int, nargs="?", help="only this object, in full")
+    sub.add_argument("--tree", action="store_true", help="the rooms and holders, with what's in each")
+    sub.add_argument("--saved", action="store_true", help="what RESTART.DAT has, by its parts")
     command(strings).add_argument(
         "--words", action="store_true", help="list the words the text is packed with, not the blocks"
     )

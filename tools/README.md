@@ -34,6 +34,7 @@ python -m legendary_tools refs <the game's folder> <segment>
 python -m legendary_tools dump <the game's folder> <address> [<bytes>] [--overlay N]...
 python -m legendary_tools dis <the game's folder> <address> [<instructions>] [--overlay N]...
 python -m legendary_tools loads <the game's folder>
+python -m legendary_tools objects <the game's folder> [<number>] [--tree] [--saved]
 ```
 
 - **`exe`** prints each program's MZ header: its image, what's in the file after it, the memory
@@ -69,6 +70,15 @@ address from `thunks` and no overlay, `dis` loads the overlay that routine is in
 python -m legendary_tools dis ../../legend/sc101/game 3670:054e
 ```
 
+- **`objects`** lists the game's objects as it starts, from the program's memory: each
+  one's number, type, flags, names, and what it's in. It starts with the types. With a number,
+  it prints that object in full: its flags, where it is, what's on each of its lists, a room's
+  exits with where each goes, and its record in words, with the far pointers in brackets. With
+  `--tree`, it prints each room and holder with what's in it, and in that. With `--saved`, it
+  prints the parts of `RESTART.DAT` and their sizes, which come to the file's. How the objects
+  are kept is in [docs/spellcasting-101.md](../docs/spellcasting-101.md#the-objects). It reads
+  *Spellcasting 101* only: the code that finds the tables isn't *Timequest*'s.
+
 ## The data files
 
 ```
@@ -92,6 +102,8 @@ python -m legendary_tools vocab <the game's folder>
 - **`mz.py`**: a DOS program's MZ header, image and relocations.
 - **`plink86.py`**: PLINK86's table of overlays, the thunks, and the program's memory with
   overlays loaded. `src/Legendary.Core/Programs` is the same in C#.
+- **`objects.py`**: the table of objects, the types, each record's tree fields and a room's
+  exits, and the parts of a saved state.
 - **`loads.py`**: finding the routine that loads a string block and the calls to it, and from
   them the block behind an array.
 - **`data.py`**: the data files, as far as they're understood: the string file, unpacked, and
