@@ -309,6 +309,10 @@ internal static class Program
         var machine = new Machine(game.Folder, saves, game.Video)
         {
             InstructionsPerSecond = (profile.Cycles ?? game.Cycles) * 1000,
+
+            // a hard disk of the games' day, 200 KB a second: one of them, at least, depends on
+            // a file's taking time to read
+            DiskBytesPerSecond = 200_000,
             Log = log is null ? null : log.WriteLine,
             Mouse = (profile.Mouse ?? true) && !headless,
             Composite = profile.Composite ?? false,

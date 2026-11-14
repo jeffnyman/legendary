@@ -31,14 +31,17 @@ public sealed class Spellcasting101Tests : IDisposable
     }
 
     /// <summary>The launcher started at an AT's pace, from midnight, and left to draw its title.</summary>
-    private Machine? Start(string arguments = "", bool adLib = false)
+    private Machine? Start(string arguments = "", bool adLib = false, bool mouse = false, int disk = 0)
     {
         if (TestData.Game("sc101/game") is not { } folder)
         {
             return null;
         }
 
-        var machine = new Machine(folder, _saves) { Log = _log.Add, InstructionsPerSecond = 3_000_000, TickCount = 0 };
+        var machine = new Machine(folder, _saves)
+        {
+            Log = _log.Add, InstructionsPerSecond = 3_000_000, TickCount = 0, Mouse = mouse, DiskBytesPerSecond = disk,
+        };
         if (adLib)
         {
             machine.LoadCommands("SOUND.COM", "S101.EXE");
@@ -329,28 +332,111 @@ public sealed class Spellcasting101Tests : IDisposable
         Assert.False(machine.Exited);
     }
 
-    /// <summary>
-    /// The recorded sounds are the speaker's, whatever plays the music. Three turns of waiting
-    /// bring Joey Rottenwood up the stairs, and his laugh is ROTTEN3.RS, played by RealSound.
-    /// </summary>
-    [Fact]
-    public void Rottenwoods_laugh_is_a_recording_on_the_speaker()
+    // a hard disk of the game's day, by what gets through DOS: 200 KB a second
+    private const int HardDisk = 200_000;
+
+    /// <summary>How many tenths of a second, of the next so many, have sound in them.</summary>
+    private static int LoudTenths(Machine machine, int tenths)
     {
-        if (Start(adLib: true) is not { } machine)
+        int loud = 0;
+        for (int i = 0; i < tenths; i++)
         {
-            return;
+            Loudness();
+            Run(machine, 0.1);
+            if (Loudness() > 300)
+            {
+                loud++;
+            }
+        }
+
+        return loud;
+    }
+
+    /// <summary>
+    /// Plays to where Joey Rottenwood laughs, as a player with a mouse and an AdLib card would:
+    /// into the game, some seconds doing nothing, three turns of waiting, and a key, held a tenth
+    /// of a second, at each of the two prompts for more that the scene stops at. The laugh comes
+    /// after the second.
+    /// </summary>
+    private Machine? ToTheLaugh(int disk, double idle)
+    {
+        if (Start(adLib: true, mouse: true, disk: disk) is not { } machine)
+        {
+            return null;
         }
 
         PressEnter(machine);
         Type(machine, "n");
+        Run(machine, idle);
         Type(machine, "wait\n");
         Type(machine, "wait\n");
-        Assert.DoesNotContain(_log, line => line.Contains("rotten3.rs", StringComparison.OrdinalIgnoreCase));
+        Type(machine, "wait\n");
+        for (int prompt = 0; prompt < 2; prompt++)
+        {
+            machine.PressKey(Enter);
+            Run(machine, 0.1);
+            machine.ReleaseKey(Enter);
+            if (prompt == 0)
+            {
+                Run(machine, 4);
+            }
+        }
 
-        Loudness();
-        Type(machine, "wait\n");
+        return machine;
+    }
+
+    /// <summary>
+    /// The recorded sounds are the speaker's, whatever plays the music: Joey Rottenwood's laugh
+    /// is ROTTEN3.RS, played by RealSound, all 2.8 seconds of it.
+    /// </summary>
+    /// <remarks>
+    /// It is heard only on a disk that takes time. The game's player stops a sound at any
+    /// interrupt from the keyboard, a key let go as much as a key pressed, and the laugh is
+    /// started by a key, at a prompt for more. On a PC of 1990 the file was a fraction of a second
+    /// coming off the disk, the key was up again by then, and nobody knew.
+    /// </remarks>
+    [Fact]
+    public void Rottenwoods_laugh_is_a_recording_on_the_speaker()
+    {
+        if (ToTheLaugh(HardDisk, idle: 70) is not { } machine)
+        {
+            return;
+        }
+
+        int loud = LoudTenths(machine, 40);
         Screenshot.WritePng(machine, Shot("s101-rottenwood.png"));
         Assert.Contains(_log, line => line.Contains("rotten3.rs", StringComparison.OrdinalIgnoreCase));
-        Assert.True(Loudness() > 100, "The laugh is silent.");
+        Assert.InRange(loud, 25, 32);
+    }
+
+    /// <summary>On a disk that takes no time, the key that starts the laugh ends it as it's let go.</summary>
+    [Fact]
+    public void On_a_disk_that_takes_no_time_the_laugh_is_cut_off_by_its_own_key()
+    {
+        if (ToTheLaugh(disk: 0, idle: 70) is not { } machine)
+        {
+            return;
+        }
+
+        Assert.Contains(_log, line => line.Contains("rotten3.rs", StringComparison.OrdinalIgnoreCase));
+        Assert.InRange(LoudTenths(machine, 40), 0, 2);
+    }
+
+    /// <summary>
+    /// The game plays no recording while a song is playing: both want the PC's timer. The
+    /// song that starts the game lasts most of a minute, and a player who gets to Rottenwood
+    /// sooner hears the music and not the laugh, as on the PC.
+    /// </summary>
+    [Fact]
+    public void While_the_opening_music_plays_the_laugh_is_left_out()
+    {
+        if (ToTheLaugh(HardDisk, idle: 5) is not { } machine)
+        {
+            return;
+        }
+
+        Run(machine, 4);
+        Assert.DoesNotContain(_log, line => line.Contains("rotten3.rs", StringComparison.OrdinalIgnoreCase));
+        Assert.Equal(2, _log.Count(line => line.StartsWith("21/3D open", StringComparison.Ordinal) && line.Contains("S101_m1.mus", StringComparison.OrdinalIgnoreCase)));
     }
 }
