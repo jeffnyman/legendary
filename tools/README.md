@@ -62,12 +62,19 @@ python -m legendary_tools dis ../../legend/sc101/game 3670:054e
 ## The data files
 
 ```
-python -m legendary_tools strings <the game's folder>
+python -m legendary_tools strings <the game's folder> [--words]
+python -m legendary_tools text <the game's folder> [<block>]
 python -m legendary_tools vocab <the game's folder>
 ```
 
 - **`strings`** prints the table that starts `...STR.DAT`: each block's size unpacked, its size
-  packed, and its count of strings. The text itself isn't unpacked yet.
+  packed, its count of strings, and where it is in the file. With `--words`, it lists the 128
+  words the text is packed with, each with its code.
+- **`text`** unpacks the text: every block's strings, or one block's, a string to a line, each
+  after its block and its number in it, as `2.0`. Line ends and tabs in a string are written
+  `\n` and `\t`. It reads *Spellcasting 101* and *Timequest*; the later games pack their text
+  another way. How the packing works is in
+  [docs/spellcasting-101.md](../docs/spellcasting-101.md#the-text).
 - **`vocab`** lists the words that start `VOCAB.DAT`, numbered in the file's order.
 
 ## The modules
@@ -75,7 +82,8 @@ python -m legendary_tools vocab <the game's folder>
 - **`mz.py`**: a DOS program's MZ header, image and relocations.
 - **`plink86.py`**: PLINK86's table of overlays, the thunks, and the program's memory with
   overlays loaded. `src/Legendary.Core/Programs` is the same in C#.
-- **`data.py`**: the data files, as far as they're understood.
+- **`data.py`**: the data files, as far as they're understood: the string file, unpacked, and
+  the vocabulary's words. `src/Legendary.Core/Text` has the string file in C#.
 - **`game.py`**: finding a game's files, whatever case their names are in.
 - **`cli.py`**: the commands.
 

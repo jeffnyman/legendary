@@ -162,18 +162,37 @@ def dis(args: argparse.Namespace) -> None:
 
 
 def strings(args: argparse.Namespace) -> None:
-    """The table of string blocks that starts ...STR.DAT."""
+    """The table of string blocks that starts ...STR.DAT, or the words its text is packed with."""
     folder = GameFolder(args.folder)
-    contents = folder.read(folder.one("str.dat"))
-    blocks = data.string_blocks(contents)
-    print("block  unpacked  packed  strings")
-    for block in blocks:
-        print(f"{block.number:5}  {block.unpacked_size:8}  {block.packed_size:6}  {block.strings:7}")
+    file = data.StringFile(folder.read(folder.one("str.dat")))
+    if args.words:
+        for number, word in enumerate(file.words, 128):
+            print(f"{number:3}  {word!r}")
+        return
+    print("block  unpacked  packed  strings  at")
+    for block in file.blocks:
+        print(
+            f"{block.number:5}  {block.unpacked_size:8}  {block.packed_size:6}  {block.strings:7}"
+            f"  {block.offset:#07x}"
+        )
     print(
-        f"\n{len(blocks)} blocks, {sum(block.strings for block in blocks)} strings,"
-        f" {sum(block.unpacked_size for block in blocks)} bytes packed into"
-        f" {sum(block.packed_size for block in blocks)}; the file is {len(contents)}"
+        f"\n{len(file.blocks)} blocks, {sum(block.strings for block in file.blocks)} strings,"
+        f" {sum(block.unpacked_size for block in file.blocks)} bytes packed into"
+        f" {sum(block.packed_size for block in file.blocks)},"
+        f" with a tree of {len(file.tree)} nodes and {len(file.words)} words"
     )
+
+
+def text(args: argparse.Namespace) -> None:
+    """The text in ...STR.DAT: every block's strings, or one block's."""
+    folder = GameFolder(args.folder)
+    file = data.StringFile(folder.read(folder.one("str.dat")))
+    blocks = file.blocks if args.block is None else [file.block(args.block)]
+    for block in blocks:
+        for number, string in enumerate(file.strings(block)):
+            # one string to a line, with its line ends and tabs as C writes them
+            shown = string.replace("\\", "\\\\").replace("\n", "\\n").replace("\t", "\\t")
+            print(f"{block.number}.{number}  {shown}")
 
 
 def vocab(args: argparse.Namespace) -> None:
@@ -221,7 +240,10 @@ def main() -> None:
     sub = command(dis, overlay="many")
     sub.add_argument("address", help="segment:offset, in hex")
     sub.add_argument("count", type=int, nargs="?", default=40, help="how many instructions (40)")
-    command(strings)
+    command(strings).add_argument(
+        "--words", action="store_true", help="list the words the text is packed with, not the blocks"
+    )
+    command(text).add_argument("block", type=int, nargs="?", help="only this block's")
     command(vocab)
 
     args = parser.parse_args()
