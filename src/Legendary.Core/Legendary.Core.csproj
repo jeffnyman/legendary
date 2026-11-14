@@ -1,0 +1,10 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <Description>Reads Legend Entertainment's games: their programs, overlays and data files.</Description>
+    <!-- every public member is documented: a missing comment fails the build -->
+    <NoWarn>$(NoWarn.Replace('CS1591', ''))</NoWarn>
+  </PropertyGroup>
+  <ItemGroup>
+    <InternalsVisibleTo Include="Legendary.Core.Tests" />
+  </ItemGroup>
+</Project>

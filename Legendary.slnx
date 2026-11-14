@@ -1,0 +1,8 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/Legendary.Core/Legendary.Core.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/Legendary.Core.Tests/Legendary.Core.Tests.csproj" />
+  </Folder>
+</Solution>
