@@ -65,7 +65,8 @@ public sealed class WorldWatchTests : IDisposable
         var machine = new Machine(folder, _saves) { InstructionsPerSecond = 3_000_000 };
         machine.Load("S101.EXE", "");
         var said = new StringWriter { NewLine = "\n" };
-        var watch = new WorldWatch(machine, WorldMap.Spellcasting101, said);
+        var words = Legendary.Core.Text.Vocabulary.Read(File.ReadAllBytes(Directory.EnumerateFiles(folder).First(file => Path.GetFileName(file).Equals("vocab.dat", StringComparison.OrdinalIgnoreCase))));
+        var watch = new WorldWatch(machine, WorldMap.Spellcasting101, said, words);
 
         // a sixtieth of a second at a time, with a look after each, as the player does it
         void Run(double seconds)
@@ -104,13 +105,13 @@ public sealed class WorldWatchTests : IDisposable
         Assert.EndsWith(", with 427 objects", lines[0], StringComparison.Ordinal);
         Assert.Equal("world: 3:35 pm, turn 0, in Bedchamber (1)", lines[1]);
         Assert.StartsWith("world:   here: rat (352), you (153) [", lines[2], StringComparison.Ordinal);
-        Assert.Contains("world:   action 60 on rat (352)", lines);
+        Assert.Contains("world:   action 60: examine rat (352)", lines);
         Assert.Contains("world: 3:40 pm, turn 1, in Bedchamber (1)", lines);
 
         // going north, the room changes as the game moves you, and the turn is counted after
         Assert.Contains("world: 3:40 pm, turn 1, in Potty Chamber (2)", lines);
         Assert.Contains("world:   here: you (153) [cloak (82)], tiny door (66)", lines);
-        Assert.Contains("world:   action 197", lines);
+        Assert.Contains("world:   action 197: go", lines);
         Assert.Equal("world: 3:45 pm, turn 2, in Potty Chamber (2)", lines[^2]);
     }
 }

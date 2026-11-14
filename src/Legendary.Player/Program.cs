@@ -1,4 +1,5 @@
 using System.Reflection;
+using Legendary.Core.Text;
 using Legendary.Pc;
 using Legendary.Player.Sdl;
 
@@ -398,8 +399,9 @@ internal static class Program
         WorldWatch? watching = null;
         if (watch)
         {
+            // with the game's words, when its folder has them, to name its actions
             watching = game.Known?.World is { } map
-                ? new WorldWatch(machine, map, Console.Out)
+                ? new WorldWatch(machine, map, Console.Out, Games.FileIn(game.Folder, map.VocabularyFile) is { } vocabulary ? Vocabulary.Read(File.ReadAllBytes(vocabulary)) : null)
                 : throw new UsageException($"--watch needs a game whose world is known, which {game.Title}'s isn't yet");
         }
 
