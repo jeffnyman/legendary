@@ -22,6 +22,7 @@ finds what the others didn't need. *Spellcasting 101* found four:
 | Had DOS parse a file's name into a file control block, INT 21h function 29h, as Microsoft C does for a program it starts | Parses it |
 | Needed AdLib's driver in memory before it, for its music | Loads `.COM` programs, lets a program stay resident, and runs one program after another |
 | Counted, without knowing it, on a file's taking time to read | Can give its disk a speed |
+| Looked at where INT 33h points, to see whether a mouse's driver is loaded at all | With no mouse, points it at the BIOS's `IRET`, as a PC with no driver has it |
 | Left its pointer to the mouse's driver to draw, INT 33h functions 1 and 2 | Draws Microsoft's arrow over the picture when the driver has been asked to show it, and gives the mouse the rows of the mode it's in |
 | Freed its memory by hand, through the list of lists, and had DOS load the game over it as an overlay, INT 21h function 4Bh with 3 | Gives the first memory block's segment before the list of lists, joins free blocks that are side by side before it resizes one, and loads overlays |
 
@@ -75,6 +76,23 @@ The driver also thought every screen had 200 rows, as the CGA's and the VGA's 32
 The game's EGA screen has 350, and the mouse couldn't reach the bottom of it, where the
 prompt is. A reset now gives the mouse the rows of the mode: 350 for modes 0Fh and 10h, 480
 for 11h and 12h, and 200 for the others.
+
+## No mouse, and no driver either
+
+With no mouse, the game went past its own first two pages without waiting, and played none
+of its music. This PC answered INT 33h whether it had a mouse or not, and with none said so
+in the way a driver does that has looked for its mouse and not found one. That isn't a PC
+with no mouse. Nobody loaded a mouse's driver on a PC without one, and there INT 33h points
+at nothing, or at an `IRET`.
+
+The game [looks at the vector](spellcasting-101.md#the-mouse) before it calls. Finding one
+that wasn't an `IRET`, it took the driver for real, was told there was no mouse, and went on
+asking it for the buttons anyway. The PC, having no mouse, left the registers alone, and
+what was in BX from before read as a button held down: a click, at every page that waits for
+a key or a click. Why the music went with it hasn't been followed; it came back with the pages.
+
+Now the PC with no mouse has INT 33h pointing at the BIOS's `IRET`, the game sees no driver,
+and it is played by the keyboard as it was meant to be: the pages wait, and the music plays.
 
 ## The notes, checked
 

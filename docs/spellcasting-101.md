@@ -978,15 +978,21 @@ pointer is up:
 | 01h | The pointer is on the screen |
 | 02h | No mouse's driver: the pointer is the game's, moved without one |
 | 04h | A mouse, with the game drawing the pointer: the word `xmouse` |
-| 08h | Something else whose pointer the driver draws, and which is picked with as 02h is; not yet followed |
+| 08h | A driver that says it has no mouse. The game asks it for the pointer and the buttons all the same |
 | 10h | A mouse, with the driver drawing the pointer |
 
-`167E:0002` sets it at the start, from whether INT 33h answers. With an ordinary driver the
-game draws nothing for the mouse. `167E:02CF` shows the pointer and `167E:0407` hides it, by
+`167E:0002` sets it at the start. It first reads where INT 33h points: nowhere, or at an
+`IRET`, is a PC with no driver, and the word is 2. Otherwise it calls the driver's functions
+20h and 0, to turn it on and reset it, and an answer other than FFFFh, with no `xmouse`
+said, makes the word 8. What that case was for isn't known: the driver has said there is no
+mouse, and the game goes on asking it for buttons. With a mouse the word is 10h, or 4 with
+`xmouse`.
+
+With an ordinary driver the game draws nothing for the mouse. `167E:02CF` shows the pointer and `167E:0407` hides it, by
 the driver's functions 1 and 2, and the game hides it around everything it draws, as a driver
 of the day needed: the arrow was in the video card's memory with the picture. With `xmouse`,
-or with no driver, the same two routines save what is under the pointer and draw one; the word is there,
-presumably, for a driver that couldn't draw on an EGA. `167E:059B` gives where the mouse is and
+or with no driver, the same two routines save what is under the pointer and draw one; the
+word is there, presumably, for a driver that couldn't draw on an EGA. `167E:059B` gives where the mouse is and
 whether a button is down, and `167E:0618` whether it has moved, from the driver's count of
 its steps.
 
