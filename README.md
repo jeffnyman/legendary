@@ -30,7 +30,7 @@ None of the games are included: Legendary reads copies you have.
 
 - **`src/Legendary.Core`** reads the games' files, in C#. So far: a DOS program's MZ header, and
   a program linked by PLINK86, with its overlays loaded into the memory it would have, the
-  packed text of a string file, and the pictures of a picture file.
+  packed text of a string file, the pictures of a picture file, and their regions.
 - **`tools`** has the same in Python, as commands to explore a game with: the overlays, the
   ways into them, memory in hex and as instructions, the text, the objects, the grammar, and
   the pictures as PNG files. See [tools/README.md](tools/README.md).

@@ -628,7 +628,7 @@ west, 9 up.
 | `VOCAB.DAT` | The vocabulary: 1,736 words, each with its parts of speech and its synonym |
 | `RESTART.DAT` | The world as the game starts: every object's record, and 91 variables |
 | `S101_C*.PIC`, `S101_E*.PIC` | [The pictures](#the-pictures), for the CGA and the EGA: 362 in each set |
-| `S101_R*.RGN` | Not yet looked at; by the name, regions of the pictures |
+| `S101_R*.RGN` | [What is where in each picture](#what-is-where-in-a-picture), for the mouse |
 | `S101_M*.MUS`, `S101.BNK` | Music, and the AdLib instruments it plays on |
 | `*.RS`, `MUSIC.RS` | Sounds; by the name, RealSound |
 
@@ -820,6 +820,32 @@ them take.
 All 724 pictures unpack, each to exactly its width times its height. The
 [tools](../tools/README.md) write them as PNG files.
 
+### What is where in a picture
+
+`S101_R1.RGN` to `S101_R6.RGN` go with the picture files of the same numbers, and say what
+the mouse is pointing at. A file starts with a directory of six bytes for each of the
+picture file's pictures, to where the first picture's regions start:
+
+| Offset | What |
+|---|---|
+| 0 | Where the picture's regions start in the file, or zero when it has none |
+| 2 | An object's number, or zero: by its use, what the rest of the picture is |
+| 4 | How many regions it has |
+
+A region is six bytes: an object's number, and a rectangle as four bytes, its left, top, right
+and bottom. Across is counted in pairs of pixels, so that a picture 379 pixels wide fits in a
+byte; down is in the EGA's rows.
+
+79 pictures have regions, 906 in all. A room's picture has its things: the Bedchamber's, which
+is picture 45 of the first file, has sixteen, with the floor across the bottom, the door in the
+middle, and the rat where its shadow is on the wall. A map has its rooms: picture 44, the map
+the game starts with, has the Bedchamber, the Potty Chamber, the Rooftop, the Alley and the
+Tool Shed, each where it is drawn.
+
+The object in the directory ties some rooms to their pictures: the Bedchamber is object 1,
+and picture 45's entry has 1. Most entries have zero, though, and one has a thing, the tiny
+door. How the game picks the picture for a room is still to be found.
+
 ## Still to do
 
 - What picks the block in the three calls that take it from a table, and where blocks 19, 39
@@ -831,4 +857,4 @@ All 724 pictures unpack, each to exactly its width times its height. The
 - How the far pointers in a saved state are made right, and what its last part counts.
 - Where the system ends and the game begins among the root's segments and the overlays.
 - How the game names a picture, and the word in a picture's entry that isn't understood.
-- The regions, the music and the sounds.
+- The music and the sounds.

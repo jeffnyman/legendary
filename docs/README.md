@@ -15,4 +15,5 @@ hold.
   what's needed first and runs the clock after; and a world of 427 objects in eight
   types, kept in a tree as Infocom's were but with several lists to a parent, with its first
   state in a file; and 362 pictures, each drawn for the EGA and again for the CGA, packed by
-  an LZW of pixels and by Huffman's codes.
+  an LZW of pixels and by Huffman's codes, with the rectangles of each that the mouse can
+  point at.
