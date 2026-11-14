@@ -15,7 +15,7 @@ question of what a player is stays open until more of the games is understood.
 
 | Game | Year | Short name | Where it stands |
 |---|---|---|---|
-| *Spellcasting 101: Sorcerers Get All the Girls* | 1990 | `sc101` | Its program and overlays are read, its text unpacked, its objects, vocabulary, grammar and routines listed, and its pictures unpacked; [notes](docs/spellcasting-101.md) |
+| *Spellcasting 101: Sorcerers Get All the Girls* | 1990 | `sc101` | Its program and overlays are read, its text unpacked, its objects, vocabulary, grammar and routines listed, and its pictures, music and sounds unpacked; [notes](docs/spellcasting-101.md) |
 | *Timequest* | 1991 | `tquest` | Built as *Spellcasting 101* is: its overlays are read, and its text unpacked |
 | *Spellcasting 201: The Sorcerer's Appliance* | 1991 | `sc201` | Not yet tried; linked with .RTLink, not PLINK86 |
 | *Gateway* | 1992 | `gateway` | Not yet tried |
@@ -30,10 +30,11 @@ None of the games are included: Legendary reads copies you have.
 
 - **`src/Legendary.Core`** reads the games' files, in C#. So far: a DOS program's MZ header, and
   a program linked by PLINK86, with its overlays loaded into the memory it would have, the
-  packed text of a string file, the pictures of a picture file, and their regions.
+  packed text of a string file, the pictures of a picture file and their regions, the songs of a music file, and a
+  RealSound recording.
 - **`tools`** has the same in Python, as commands to explore a game with: the overlays, the
-  ways into them, memory in hex and as instructions, the text, the objects, the grammar, and
-  the pictures as PNG files. See [tools/README.md](tools/README.md).
+  ways into them, memory in hex and as instructions, the text, the objects, the grammar, the
+  pictures as PNG files, and the sounds as WAV files. See [tools/README.md](tools/README.md).
 - **`docs`** has what was found, and how.
 
 ## Building

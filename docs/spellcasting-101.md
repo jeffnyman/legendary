@@ -629,8 +629,8 @@ west, 9 up.
 | `RESTART.DAT` | The world as the game starts: every object's record, and 91 variables |
 | `S101_C*.PIC`, `S101_E*.PIC` | [The pictures](#the-pictures), for the CGA and the EGA: 362 in each set |
 | `S101_R*.RGN` | [What is where in each picture](#what-is-where-in-a-picture), for the mouse |
-| `S101_M*.MUS`, `S101.BNK` | Music, and the AdLib instruments it plays on |
-| `*.RS`, `MUSIC.RS` | Sounds; by the name, RealSound |
+| `S101_M*.MUS`, `S101.BNK` | [The music](#the-music), as MIDI and as AdLib's `.ROL`, and the AdLib instruments |
+| `*.RS`, `MUSIC.RS` | [The sounds](#the-sounds): RealSound, for the PC's speaker |
 
 ### The text
 
@@ -846,6 +846,63 @@ The object in the directory ties some rooms to their pictures: the Bedchamber is
 and picture 45's entry has 1. Most entries have zero, though, and one has a thing, the tiny
 door. How the game picks the picture for a room is still to be found.
 
+## The music and the sounds
+
+Nothing here needed working out from nothing. The music is in two formats other programs
+wrote and others can read, and the sounds are in a third that was licensed.
+
+### The music
+
+`S101_M1.MUS` to `S101_M6.MUS` have 23 songs, each kept twice. A file starts with 30 entries
+of ten bytes, and a byte:
+
+| Offset | What |
+|---|---|
+| 0 | Where the song starts in the file, four bytes; zero for no song |
+| 4 | Its length |
+| 6 | 1 or 0, for which of the two formats it is |
+| 8 | A word the two of a pair share, not yet understood |
+
+With 1, the song is a Standard MIDI File, whole, from its `MThd` on. It is for a Roland MT-32,
+and its tracks are named for the MT-32's sounds: `SYN BASS 3`, `BOTTLEBLOW`, `HONKYTONK
+PIANO`. With 0, it is a `.ROL` file, as AdLib's Visual Composer saved it, for an AdLib card.
+The instruments a `.ROL` names are in `S101.BNK`, which is AdLib's instrument bank as AdLib's
+own tools made it, and the playing is done by `SOUND.COM`, AdLib's driver, which the game
+asks to be loaded before it.
+
+So the songs were written once and arranged twice, and the game ships the arrangers' files
+as they were.
+
+### The sounds
+
+The `.RS` files are RealSound: recorded sound for the PC's speaker, by a method Access
+Software made and Legend licensed. There are 23, from a bip to 26 seconds of music for the
+title, `MUSIC.RS`, for a PC with no sound card at all.
+
+A file is 32 bytes and then the sound:
+
+| Offset | What |
+|---|---|
+| 0 | `STEVE` |
+| 5 | How many times each byte is played: 1, 2 or 4 |
+| 6 | 72 |
+| 7 | The count of the sound's bytes, four bytes |
+
+The rest of the 32 is whatever was in memory when the file was written: in some, a few bytes
+of a program's code. Most of the files end with 288 bytes more than their count.
+
+The speaker has two states, in and out, and no levels between. RealSound gets levels from it
+by time: it sends a pulse 16,572 times a second, faster than can be heard, and how long each
+pulse lasts is how far the speaker's cone gets before it's let go. The game's player, at
+`24AF:0028`, sets the PC's timer to interrupt every 72 ticks, and at each interrupt gives the
+speaker's own timer the next byte of the sound as the pulse's length. So a byte is from 0 to
+72, and a zero ends the sound. Playing each byte for 2 pulses or for 4 halves or quarters the
+speed, which is the header's count: the sounds are at 16,572, 8,286 and 4,143 bytes a second.
+
+The [tools](../tools/README.md) write the songs out as `.mid` and `.rol` files, and the
+sounds as WAV files, a pulse's length as a level. The WAV files are made as the player's code
+says they should be; they haven't been listened to.
+
 ## Still to do
 
 - What picks the block in the three calls that take it from a table, and where blocks 19, 39
@@ -857,4 +914,4 @@ door. How the game picks the picture for a room is still to be found.
 - How the far pointers in a saved state are made right, and what its last part counts.
 - Where the system ends and the game begins among the root's segments and the overlays.
 - How the game names a picture, and the word in a picture's entry that isn't understood.
-- The music and the sounds.
+- The word a pair of songs shares, and which song and which sound go with what in the game.
