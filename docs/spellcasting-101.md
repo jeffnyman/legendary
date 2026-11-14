@@ -300,11 +300,11 @@ The game's main routine is at `0C35:1AE8`, some 4,000 bytes of it. It sets up th
 the string file, checks there's memory enough, and then goes around once for each command:
 
 1. It prints the prompt and reads a line, into `3B00:4FB6`.
-2. It takes the next command off the line, with the routine at `11C5:0266`. A line can have
-   several.
-3. If the command starts with AGAIN, OOPS or UNDO, a routine for each deals with it.
-4. It parses the command, with the routine at `0000:030B`, and searches the grammar for its
-   verb and preposition, which gives the action. A direction typed alone becomes a number,
+2. It looks at the line's next word. If it is AGAIN, OOPS or UNDO, a routine for each deals
+   with it.
+3. It [parses the next command](#the-parser) on the line, by the routine at `0C35:0793`. A
+   line can have several.
+4. It searches the grammar for the command's verb and preposition, which gives the action. A direction typed alone becomes a number,
    kept in a byte at `3B00:0059`.
 5. For each object, it checks the grammar's flags. With flag 20, an object that isn't in the
    actor's hands is taken first, and the game says `[Taking the cloak first.]`. With flag 10,
@@ -316,7 +316,7 @@ the string file, checks there's memory enough, and then goes around once for eac
    reason; the routine at `1272:018C` runs, by its place the game's timers; and the count of
    moves at `4517:0046` goes up by one.
 8. If performing answered 2, the rest of the line is dropped. Otherwise it goes back to step 2
-   for the next command, and to step 1 when there are no more.
+   for the line's next command, and to step 1 when there are no more.
 
 Before it performs, it marks the place with `setjmp`, which is where a routine that starts
 over with another action comes back to.
@@ -332,10 +332,128 @@ The directions' numbers come from the main routine's tests of those words:
 |---|---|---|---|---|---|---|---|---|---|---|---|
 | north | northeast | east | southeast | south | southwest | west | northwest | up | down | in | out |
 
-The parser itself, the routine at `0000:030B` and the code around it that takes the words
-apart and chooses among objects, hasn't been read. Its messages say what it can do: ask
-`[Which ... do you mean, ... or ...?]`, and say `[There seems to be a verb missing in that
-sentence.]`.
+## The parser
+
+The parser is in three layers, and the middle one is a surprise: the game has a grammar of
+English commands in it as data, written out rule by rule, with the names its writers gave the
+rules.
+
+### Words into tokens
+
+The routine at `11C5:0266` takes the next word off the line and says what kind of thing it
+is. It skips blanks; a word is letters, up to a blank or one of `. , ; ! ? "`, and is looked
+up in the vocabulary. What it gives back is a token: a code for the kind, and with it the
+word's number.
+
+| What was typed | Token |
+|---|---|
+| `,` `.` `;` | One each |
+| `and`, `then`, `all`, `but`, `to` | One each: the words the grammar names |
+| The end of the line | One |
+| A number | The word `_integer`, with its value kept beside it |
+| A time, as `10:30` | The word `_time`, with its minutes |
+| Something in quotation marks | The word `_string` |
+| Any other word | By its part of speech |
+
+A word of several parts of speech is one token or another by what came before it: the routine
+keeps the last token at `4517:7850`. That is how a word like `board`, a verb and a noun, can be
+either.
+
+### Tokens into a sentence
+
+The routine at `130E:005E` gathers a command's tokens, to a full stop, a semicolon, `then`, an
+`and` with a verb after it, or the end of the line. Then it hands them to a matcher, at
+`135C:0072`, with a rule to match them against.
+
+The matcher knows nothing of English. It is given a grammar: rules, each with the ways it can
+go, each way a row of other rules, parts of speech and tokens. It tries a rule's ways in
+order, keeps what it's in the middle of on two stacks, and backs up to the next way when one
+fails. The grammar is in the program's data from `4517:7CD8`, and this is all of it, as the
+[tools](../tools/README.md) print it:
+
+```
+<sentence_gotten>       ::= <intro> <verb> <pe_prep> <pe_object_pair> <sentence_terminator>
+
+<intro>                 ::= <direct_address_object>
+                          | <inf_intro>
+                          | (nothing)
+<direct_address_object> ::= <object> <comma>
+<inf_intro>             ::= <verb> <pe_prep> <object> <to>
+
+<pe_object_pair>        ::= <obj_spec> <pe_prep> <pe_obj_spec>
+                          | (nothing)
+<pe_obj_spec>           ::= <obj_spec>
+                          | (nothing)
+<pe_prep>               ::= <prep>
+                          | (nothing)
+
+<obj_spec>              ::= <str>
+                          | <all_but_list>
+                          | <obj_list> <obj_conjunction> <all_but_list>
+                          | <obj_list>
+<all_but_list>          ::= <all_item> <but> <obj_list>
+<all_item>              ::= <all_object>
+<all_object>            ::= <all> <pe_object>
+<pe_object>             ::= <object>
+                          | (nothing)
+<obj_list>              ::= <obj_list_item> <obj_conjunction> <obj_list>
+                          | <obj_list_item>
+<obj_list_item>         ::= <all_object>
+                          | <object>
+<obj_conjunction>       ::= <comma> <and>
+                          | <comma>
+                          | <and>
+
+<object>                ::= <noun_phrase>
+<noun_phrase>           ::= <pe_article> <pe_adjective_phrase> <noun>
+<pe_article>            ::= <art>
+                          | (nothing)
+<pe_adjective_phrase>   ::= <adjective_phrase>
+                          | (nothing)
+<adjective_phrase>      ::= <adj_list>
+<adj_list>              ::= <adj>
+                          | <adj> <adj_list>
+
+<sentence_terminator>   ::= <standard_terminator>
+                          | .
+                          | <then>
+                          | <semi>
+                          | <and>
+<standard_terminator>   ::= . <eol>
+                          | <eol>
+
+<obj_gotten>            ::= <obj_spec> <standard_terminator>
+<adj_gotten>            ::= <adjective_phrase> <standard_terminator>
+```
+
+Twenty-five rules and 46 ways. `pe_` is, by every rule that has it, "possibly empty". A
+command is an introduction, a verb, perhaps a preposition, perhaps objects, and an end. The
+introduction is how the player speaks to someone, `JOEY, GIVE ME THE BOX` or `ASK JOEY TO
+GIVE ME THE BOX`. The objects are one, a list with commas and `and`, `ALL`, `ALL BUT THE
+CLOAK`, or `ALL THE SPELLS`; and then, after a preposition, perhaps the same again. A noun
+phrase is an article or none, adjectives or none, and a noun.
+
+There are three rules to start from, and which is used goes by what the game is waiting for.
+`<sentence_gotten>` is a command. The other two, by their names, are for what the player
+types when the game has asked a question: `<obj_gotten>` for an object, when it has asked
+what, and `<adj_gotten>` for an adjective alone, when it has asked which.
+
+The data is plain. A rule, a part of speech and a token are each ten bytes: a kind, a far
+pointer to the name, and two words, which for a part of speech have its bit and for a token
+its code. A way is a far pointer to its name, which is the rule's with a number after it
+(`<obj_spec3>`), one to its rule, one to a row of far pointers to what it's made of, and a
+count. A list of every way, in the rules' order, is how a rule's ways are found. Nothing
+read so far uses the names. Presumably they were left in by whatever made the tables out of
+the grammar the writers typed, and they are why the grammar can be read here just as it was.
+
+### A sentence into objects
+
+The third layer takes what matched and makes it the action and the objects: it searches
+[the grammar of verbs](#the-grammar), finds the objects each noun phrase could be by
+[their nouns and adjectives](#what-an-object-is-called), and asks when there are several or
+none. Its messages are in segment `0000`, where the routine at `0000:030B` and its neighbors
+print them: `[There seems to be a verb missing in that sentence.]`, `[Which ... do you mean,
+... or ...?]`, `[What do you want to ...?]`. How it chooses among objects hasn't been read.
 
 ## From an action to what happens
 
@@ -597,8 +715,8 @@ found.
 - What picks the block in the three calls that take it from a table, and where blocks 19, 39
   and 40 are loaded.
 - What a routine's answer means beyond zero, and 2 from performing; the reasons from 8 to 14.
-- The parser's code: how it takes a line apart and chooses among objects. The rest of the
-  flags of the grammar's forms, and of the actions' bytes.
+- The parser's last layer: how it chooses among the objects a noun phrase could be. The rest
+  of the flags of the grammar's forms, and of the actions' bytes.
 - The timers.
 - The rest of an object's record: the flags' meanings, and the fields past the tree. Which of a thing's lists is which.
 - How the far pointers in a saved state are made right, and what its last part counts.
