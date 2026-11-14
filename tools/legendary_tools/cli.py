@@ -16,6 +16,7 @@ from .mz import MzExecutable
 from .objects import DIRECTIONS, Exit, GameObject, ObjectTable, SavedState, is_pointer
 from .pictures import HUFFMAN, LZW, RAW_PLANE, RAW_PLANES, PictureFile
 from .plink86 import Image, Plink86Program
+from .regions import read_regions
 from .sentence import read_sentence_grammar
 
 
@@ -478,6 +479,30 @@ def pictures(args: argparse.Namespace) -> None:
         print(f"written to {args.out}")
 
 
+def regions(args: argparse.Namespace) -> None:
+    """The regions of the pictures in the game's .RGN files: what object is where in each."""
+    folder = GameFolder(args.folder)
+    try:
+        table: ObjectTable | None = ObjectTable(_program(folder))
+    except ValueError:
+        # the objects' names are a help, and the regions can be listed by number without them
+        table = None
+
+    def named(number: int) -> str:
+        return _named(table, number) if table else str(number)
+
+    for path in folder.ending(".rgn"):
+        print(os.path.basename(path))
+        for picture in read_regions(folder.read(path)):
+            rest = f", the rest of it {named(picture.object)}" if picture.object else ""
+            print(f"  picture {picture.picture}{rest}")
+            for region in picture.regions:
+                print(
+                    f"    {region.left * 2:3},{region.top:3} to {region.right * 2 + 1:3},{region.bottom:3}"
+                    f"  {named(region.object)}"
+                )
+
+
 def strings(args: argparse.Namespace) -> None:
     """The table of string blocks that starts ...STR.DAT, or the words its text is packed with."""
     folder = GameFolder(args.folder)
@@ -562,6 +587,7 @@ def main() -> None:
     command(grammar).add_argument("verb", nargs="?", help="only this verb's forms")
     command(loads)
     command(pictures).add_argument("--out", metavar="FOLDER", help="write each picture there as a PNG file")
+    command(regions)
     command(sentence)
     sub = command(objects)
     sub.add_argument("number", type=int, nargs="?", help="only this object, in full")

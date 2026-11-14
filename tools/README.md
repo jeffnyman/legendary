@@ -109,6 +109,7 @@ python -m legendary_tools dis ../../legend/sc101/game 3670:054e
 
 ```
 python -m legendary_tools pictures <the game's folder> [--out <folder>]
+python -m legendary_tools regions <the game's folder>
 python -m legendary_tools strings <the game's folder> [--words]
 python -m legendary_tools text <the game's folder> [<block>]
 python -m legendary_tools vocab <the game's folder>
@@ -119,6 +120,11 @@ python -m legendary_tools vocab <the game's folder>
   writes every picture to the folder as a PNG file, named for its file and number, as
   `s101_e1_038.png`: the EGA's in their own colors, the CGA's in black and white. How they're
   packed is in [docs/spellcasting-101.md](../docs/spellcasting-101.md#the-pictures).
+- **`regions`** lists the regions in each `.RGN` file: for each picture that has them, the
+  object the rest of the picture is, and each rectangle, in the EGA's pixels, with the object
+  that's there. The objects are named when the program's table of them can be read, which is
+  for *Spellcasting 101*. It is in
+  [docs/spellcasting-101.md](../docs/spellcasting-101.md#what-is-where-in-a-picture).
 - **`strings`** prints the table that starts `...STR.DAT`: each block's size unpacked, its size
   packed, its count of strings, and where it is in the file. With `--words`, it lists the 128
   words the text is packed with, each with its code.
@@ -148,6 +154,7 @@ python -m legendary_tools vocab <the game's folder>
 - **`pictures.py`**: the directory of a picture file, the four ways its pixels are packed,
   and a picture as a PNG file. `src/Legendary.Core/Pictures` is the same in C#, without the
   PNG.
+- **`regions.py`**: the regions of a region file. `src/Legendary.Core/Pictures` has it in C#.
 - **`data.py`**: the data files, as far as they're understood: the string file, unpacked, and
   the vocabulary. `src/Legendary.Core/Text` has the string file in C#.
 - **`game.py`**: finding a game's files, whatever case their names are in.
