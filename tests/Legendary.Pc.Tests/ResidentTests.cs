@@ -75,4 +75,40 @@ public sealed class ResidentTests : IDisposable
         string[] loaded = [.. _log.Where(line => line.StartsWith("loaded ", StringComparison.Ordinal))];
         Assert.Equal(loaded[0].Split(" at ")[1], loaded[1].Split(" at ")[1]);
     }
+
+    /// <summary>
+    /// A disk with a speed takes the machine's time: opening a file, and then each byte read.
+    /// A file of 2,000 bytes read from a disk of 10,000 a second is a fifth of a second, and the
+    /// opening a little more; from a disk with no speed, it is no time to speak of.
+    /// </summary>
+    [Theory]
+    [InlineData(10_000, 0.23, 0.29)]
+    [InlineData(0, 0, 0.02)]
+    public void A_disk_with_a_speed_takes_time(int speed, double least, double most)
+    {
+        File.WriteAllBytes(Path.Combine(_game, "DATA.BIN"), new byte[2000]);
+
+        //   100: mov ax, 3D00h; mov dx, 121h; int 21h       open DATA.BIN
+        //   108: mov bx, ax; mov ah, 3Fh; mov cx, 2000; mov dx, 200h; int 21h
+        //   114: cmp ax, 2000; mov al, 1; jne +2; mov al, 0; mov ah, 4Ch; int 21h
+        //   121: the name
+        File.WriteAllBytes(Path.Combine(_game, "READ.COM"),
+        [
+            0xB8, 0x00, 0x3D, 0xBA, 0x21, 0x01, 0xCD, 0x21,
+            0x8B, 0xD8, 0xB4, 0x3F, 0xB9, 0xD0, 0x07, 0xBA, 0x00, 0x02, 0xCD, 0x21,
+            0x3D, 0xD0, 0x07, 0xB0, 0x01, 0x75, 0x02, 0xB0, 0x00, 0xB4, 0x4C, 0xCD, 0x21,
+            .. "DATA.BIN\0"u8,
+        ]);
+
+        var machine = new Machine(_game, _saves) { Log = _log.Add, InstructionsPerSecond = 1_000_000, DiskBytesPerSecond = speed };
+        machine.Load("READ.COM");
+        for (int i = 0; i < 100 && !machine.Exited; i++)
+        {
+            machine.Run(10_000);
+        }
+
+        Assert.True(machine.Exited, "The program didn't end.");
+        Assert.Equal(0, machine.ExitCode);
+        Assert.InRange(machine.Time.TotalSeconds, least, most);
+    }
 }

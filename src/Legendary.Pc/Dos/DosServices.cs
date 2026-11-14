@@ -696,10 +696,75 @@ internal sealed partial class DosServices(Machine machine, DosDrive drive)
         machine.SetReturnCarry(true);
     }
 
+    // the time of the machine at which the disk will have done what a call asked of it, or a
+    // negative number when no call is waiting; and which call it is, by where it came from
+    private double _diskDoneAt = -1;
+    private (ushort Cs, uint Eip, ushort Ss, uint Esp) _diskCaller;
+
+    // how long opening a file takes on a disk that takes time: finding it in its directory
+    private const double OpenSeconds = 0.03;
+
+    /// <summary>
+    /// Makes a call that uses the disk take the disk's time, when the disk has a speed. The call
+    /// isn't answered yet: the instruction that made it is run again, with interrupts on, until
+    /// the time has passed, and then it's answered as usual. Interrupts are handled meanwhile,
+    /// and a call one of their handlers makes is answered at once.
+    /// </summary>
+    private bool WaitsForDisk(int function, Registers cpu)
+    {
+        if (machine.DiskBytesPerSecond <= 0)
+        {
+            return false;
+        }
+
+        var core = machine.Cpu;
+        var caller = (core.Cs, core.Eip, core.Ss, core.Esp);
+        double now = machine.Time.TotalSeconds;
+        if (_diskDoneAt >= 0)
+        {
+            if (caller != _diskCaller)
+            {
+                return false;
+            }
+
+            if (now >= _diskDoneAt)
+            {
+                _diskDoneAt = -1;
+                return false;
+            }
+        }
+        else
+        {
+            double seconds = function switch
+            {
+                0x3D => OpenSeconds,
+                0x3F when _files.TryGetValue(cpu.Bx, out var file) && file.Stream is { } stream
+                    => (double)Math.Clamp(stream.Length - stream.Position, 0, cpu.Cx) / machine.DiskBytesPerSecond,
+                _ => 0,
+            };
+            if (seconds <= 0)
+            {
+                return false;
+            }
+
+            (_diskCaller, _diskDoneAt) = (caller, now + seconds);
+        }
+
+        // back to the escape that made the call, three bytes, to make it again
+        core.Eip -= 3;
+        core.Eflags |= 0x200;
+        return true;
+    }
+
     public void Call()
     {
         var cpu = _registers;
         int function = cpu.Ah;
+        if (WaitsForDisk(function, cpu))
+        {
+            return;
+        }
+
         switch (function)
         {
             case 0x00: Terminate(0); break;

@@ -185,6 +185,15 @@ public sealed partial class Machine : ICpuBus
     /// </summary>
     public int InstructionsPerSecond { get; set; } = 4_000_000;
 
+    /// <summary>
+    /// How fast drive C: reads, in bytes a second, or 0 for a disk that takes no time at all,
+    /// which is what it is unless this is set. With a speed, opening a file and reading from one
+    /// take the machine's time as a hard disk of the day took it, and the program waits in DOS
+    /// meanwhile with interrupts on, as it did. A game can count on that without knowing it:
+    /// what it does after a key is pressed and a file is read comes after the key is let go.
+    /// </summary>
+    public int DiskBytesPerSecond { get; set; }
+
     /// <summary>The emulated time since the machine started.</summary>
     public TimeSpan Time => TimeSpan.FromSeconds((double)_time / InstructionsPerSecond);
 
