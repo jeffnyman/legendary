@@ -580,6 +580,25 @@ up the action in progress and starts over with another, by a `longjmp` to where 
 main loop performs the player's. It's what the fireplace's exit uses to turn going up into
 climbing the chimney.
 
+The main loop's `setjmp` is at `0C35:2911`, on a buffer at `3B00:8262`, and what it gets back
+says what to do:
+
+| From `setjmp` | Who jumped | The loop then |
+|---|---|---|
+| 0 | Nobody: the loop has just set it | Performs the action the parser left |
+| 1 | The routine that starts over, `0C35:0E8D` | Performs the action that routine left in its place, with the count of actions in progress back at zero |
+| 2 | The routine that goes somewhere, `07EC:1893` | Performs nothing more: the action is done, as if answered with 1 |
+
+Going is the second kind of jump, and the reason a watch on the routines that are asked never
+sees going answered. Action 197's routine, at `313A:3FE0` in overlay 1, hands the direction,
+the byte at `3B00:0059`, to `07EC:1893`. That takes the room's exit that way (`07EC:16B1`,
+which reads the exit's kind and for a plain one calls `07EC:13A8` to move you and show the new
+room) and then calls `longjmp` with 2. It never returns to the action's routine, which never
+returns to the routine that performs, and whatever was being performed around it is dropped
+with them. The reason, presumably: a routine that moved the player in the middle of something
+else couldn't go on as if it were still in the old room. The count of actions in progress is left where it was,
+and is put right at the next command.
+
 ### Which routine is whose
 
 Nothing in the data says which routine is an object's or an action's. The source had a C
@@ -653,6 +672,9 @@ the four ZIL had:
 
 The directions are numbered [as the main routine has them](#a-turn): 1 is north, 3 east, 7
 west, 9 up.
+
+The routine that takes an exit, `07EC:16B1`, tests for a fifth kind, 5, as well. No exit of
+the Bedchamber's is one, and it hasn't been followed.
 
 ## The files
 

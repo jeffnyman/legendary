@@ -66,6 +66,7 @@ world:   action 60: examine rat (352)
 world:     answered by rat (352), asked as the object: 1
 world: 3:40 pm, turn 1, in Bedchamber (1)
 world:   action 25: climb chimney (185)
+world:     given up by a routine, which starts over with another action
 world:   action 27: climb in fireplace (62)
 world:     answered by fireplace (62), asked as the object: 1
 world: 3:45 pm, turn 2, in Bedchamber (1)
@@ -78,8 +79,9 @@ Every action is said, as the game gets to its routine that performs one: the PC 
 watch each time the program is there. The game then asks a row of routines about the action,
 the room's, the actor's, the objects' and at last the action's own, and stops at the first
 that answers; the watch says which that was. The rat has its own answer to being examined.
-Climbing the chimney is never answered at all, because the chimney's routine started the turn
-over and didn't come back. The room and its contents are looked at once a frame,
+Climbing the chimney is never answered at all: the chimney's routine started the turn over,
+by a jump back to the game's main loop, and the watch says that too. Going somewhere ends
+the same way, with a jump, once you've been moved. The room and its contents are looked at once a frame,
 so a turn can be seen half done, the room changed and the turn not yet counted. The watch
 reads the game's memory and changes nothing. For now it knows *Spellcasting 101*.
 
