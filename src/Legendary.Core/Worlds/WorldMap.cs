@@ -11,6 +11,28 @@ namespace Legendary.Core.Worlds;
 /// <param name="Lists">The first object on each of its own lists, a word each.</param>
 public sealed record RecordLayout(int Size, int Places = -1, int Relation = -1, int Next = -1, int Lists = -1);
 
+/// <summary>Whose routine the game has asked about an action it is performing.</summary>
+public enum Asked
+{
+    /// <summary>An object's: the object and why it's asked are the call's arguments.</summary>
+    Object,
+
+    /// <summary>The routine that comes before the action's own, for an action that has one.</summary>
+    Before,
+
+    /// <summary>The action's own routine, the stock reply, when nothing before it answered.</summary>
+    Action,
+}
+
+/// <summary>
+/// A place in the routine that performs an action where one of the routines it asks has just
+/// answered: the instruction after the call, with the answer in AX and the call's arguments
+/// still on the stack.
+/// </summary>
+/// <param name="Offset">Where it is, in the routine's segment.</param>
+/// <param name="Asked">Whose routine it was.</param>
+public sealed record AnswerPoint(ushort Offset, Asked Asked);
+
 /// <summary>
 /// Where a game keeps its world, by the addresses its program has when loaded at segment
 /// zero: what the notes found by taking the program apart, for a reader of the game's memory
@@ -38,6 +60,7 @@ public sealed record RecordLayout(int Size, int Places = -1, int Relation = -1, 
 /// arguments, a word each.
 /// </param>
 /// <param name="DepthOffset">In the data, how many actions are being performed, one inside another.</param>
+/// <param name="Answers">Where, in that routine, each routine it asks has answered, in the order it asks them.</param>
 /// <param name="GrammarSegment">The segment with the grammar's two tables.</param>
 /// <param name="FormsOffset">There, the forms a command can take, ten bytes each.</param>
 /// <param name="SecondsOffset">
@@ -54,7 +77,7 @@ public sealed record WorldMap(
     ushort DataSegment, ushort TableSegment, int ObjectCount, ushort CountOffset, ushort TypesOffset,
     ushort RoomOffset, ushort ActorOffset, ushort MovesOffset, ushort ClockOffset,
     ushort ActionSegment, ushort ActionOffset, ushort ObjectOffset, ushort SecondObjectOffset,
-    ushort PerformSegment, ushort PerformOffset, ushort DepthOffset,
+    ushort PerformSegment, ushort PerformOffset, ushort DepthOffset, IReadOnlyList<AnswerPoint> Answers,
     ushort GrammarSegment, ushort FormsOffset, ushort SecondsOffset, string VocabularyFile,
     IReadOnlyDictionary<int, string> ActionNames,
     IReadOnlyDictionary<int, RecordLayout> Layouts)
@@ -65,6 +88,15 @@ public sealed record WorldMap(
         RoomOffset: 0x42, ActorOffset: 0x44, MovesOffset: 0x46, ClockOffset: 0x48,
         ActionSegment: 0x3B00, ActionOffset: 0x58, ObjectOffset: 0x00, SecondObjectOffset: 0x56,
         PerformSegment: 0x0C35, PerformOffset: 0x0FF4, DepthOffset: 0x778C,
+        Answers:
+        [
+            // the room, what the actor is in, and the actor; the routine before the action's;
+            // what the second object is in, and it; what the first is in, and it; the action's
+            new(0x11AF, Asked.Object), new(0x11DE, Asked.Object), new(0x1218, Asked.Object), new(0x1236, Asked.Object),
+            new(0x1252, Asked.Before),
+            new(0x128D, Asked.Object), new(0x12AB, Asked.Object), new(0x12E6, Asked.Object), new(0x1304, Asked.Object),
+            new(0x1320, Asked.Action),
+        ],
         GrammarSegment: 0x2B6A, FormsOffset: 0x00D1, SecondsOffset: 0x0F81, VocabularyFile: "VOCAB.DAT",
         ActionNames: new Dictionary<int, string> { [197] = "go" },
         Layouts: new Dictionary<int, RecordLayout>

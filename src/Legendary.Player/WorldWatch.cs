@@ -53,6 +53,10 @@ internal sealed class WorldWatch(Machine machine, WorldMap map, TextWriter outpu
 
             output.WriteLine($"world: the game is in memory, loaded at {_world.LoadSegment:X4}h, with {map.ObjectCount} objects");
             machine.Cpu.Watch((uint)_world.PerformAddress, Performing);
+            foreach (var point in map.Answers)
+            {
+                machine.Cpu.Watch((uint)_world.AnswerAddress(point), () => Answered(point));
+            }
             try
             {
                 _grammar = words is null ? null : _world.ReadGrammar(words);
@@ -95,6 +99,49 @@ internal sealed class WorldWatch(Machine machine, WorldMap map, TextWriter outpu
         string inside = new(' ', 2 * Math.Clamp(world.PerformDepth, 0, 8));
         output.WriteLine($"world:   {inside}action {action}: {Said(world, action, first, second)}");
     }
+
+    // a routine the game asked about the action has answered: said when it's the answer that
+    // ends the asking, which is any but zero, and for the action's own routine whatever it is
+    private void Answered(AnswerPoint point)
+    {
+        if (_world is not { IsThere: true } world)
+        {
+            return;
+        }
+
+        var cpu = machine.Cpu;
+        int answer = (ushort)cpu.Eax;
+        if (answer == 0 && point.Asked != Asked.Action)
+        {
+            return;
+        }
+
+        string who;
+        if (point.Asked == Asked.Object)
+        {
+            var (number, why) = world.AskedArguments((cpu.Ss * 16) + (ushort)cpu.Esp);
+            who = number >= 1 && number <= map.ObjectCount ? $"{Name(world, number)}, asked as {Why(why)}" : $"object {number}";
+        }
+        else
+        {
+            who = point.Asked == Asked.Before ? "the routine before the action's" : "the action's own routine";
+        }
+
+        string inside = new(' ', 2 * Math.Clamp(world.PerformDepth, 0, 8));
+        output.WriteLine($"world:   {inside}answered by {who}: {answer}");
+    }
+
+    /// <summary>Why an object's routine is asked about an action, from the number it's asked with.</summary>
+    internal static string Why(int why) => why switch
+    {
+        1 => "where it happens",
+        2 => "the actor",
+        3 => "what the second object is in",
+        4 => "the second object",
+        5 => "what the object is in",
+        6 => "the object",
+        _ => string.Create(CultureInfo.InvariantCulture, $"{why}"),
+    };
 
     /// <summary>A time of day as the game's own status line has it, as in <c>3:35 pm</c>.</summary>
     internal static string Time(int minutes)

@@ -55,6 +55,15 @@ public sealed class WorldWatchTests : IDisposable
     public void A_time_is_said_as_the_game_says_it(int minutes, string said) => Assert.Equal(said, WorldWatch.Time(minutes));
 
     [Fact]
+    public void Why_a_routine_is_asked_is_said_in_words()
+    {
+        Assert.Equal("where it happens", WorldWatch.Why(1));
+        Assert.Equal("the second object", WorldWatch.Why(4));
+        Assert.Equal("the object", WorldWatch.Why(6));
+        Assert.Equal("15", WorldWatch.Why(15));
+    }
+
+    [Fact]
     public void It_says_the_room_and_each_turn_as_the_game_is_played()
     {
         if (Game() is not { } folder)
@@ -106,15 +115,19 @@ public sealed class WorldWatchTests : IDisposable
         Assert.EndsWith(", with 427 objects", lines[0], StringComparison.Ordinal);
         Assert.Equal("world: 3:35 pm, turn 0, in Bedchamber (1)", lines[1]);
         Assert.StartsWith("world:   here: rat (352), you (153) [", lines[2], StringComparison.Ordinal);
+        // the rat's own routine has something to say about being examined, so the asking ends there
         Assert.Equal("world:   action 60: examine rat (352)", lines[3]);
-        Assert.Equal("world: 3:40 pm, turn 1, in Bedchamber (1)", lines[4]);
+        Assert.Equal("world:     answered by rat (352), asked as the object: 1", lines[4]);
+        Assert.Equal("world: 3:40 pm, turn 1, in Bedchamber (1)", lines[5]);
 
         // CLIMB CHIMNEY, which the chimney's routine starts over as entering the fireplace: both
-        // are performed, and both are said, in their order
+        // are performed, and both are said, in their order. The first is never answered: the
+        // routine that started over didn't come back to say anything
         int climb = Array.IndexOf(lines, "world:   action 25: climb chimney (185)");
-        Assert.True(climb > 4);
+        Assert.True(climb > 5);
         Assert.Equal("world:   action 27: climb in fireplace (62)", lines[climb + 1]);
-        Assert.Equal("world: 3:45 pm, turn 2, in Bedchamber (1)", lines[climb + 2]);
+        Assert.Equal("world:     answered by fireplace (62), asked as the object: 1", lines[climb + 2]);
+        Assert.Equal("world: 3:45 pm, turn 2, in Bedchamber (1)", lines[climb + 3]);
 
         // going north: the action, then the room as the game moves you, then the turn counted
         int go = Array.IndexOf(lines, "world:   action 197: go");
@@ -125,5 +138,6 @@ public sealed class WorldWatchTests : IDisposable
 
         // three commands, four actions, and nothing said twice
         Assert.Equal(4, lines.Count(line => line.StartsWith("world:   action ", StringComparison.Ordinal)));
+        Assert.Equal(2, lines.Count(line => line.Contains("answered by", StringComparison.Ordinal)));
     }
 }

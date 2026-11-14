@@ -92,6 +92,21 @@ public sealed class World
     public (int Action, int Object, int SecondObject) PerformArguments(int stack) =>
         (_read(stack + 4), Word(stack + 6), Word(stack + 8));
 
+    /// <summary>The linear address of one of the map's places where a routine has answered.</summary>
+    public int AnswerAddress(AnswerPoint point)
+    {
+        ArgumentNullException.ThrowIfNull(point);
+        return Linear(Map.PerformSegment, point.Offset);
+    }
+
+    /// <summary>
+    /// What an object's routine was asked with, for a program at an <see cref="AnswerPoint"/>
+    /// of an object's: the object, and the number that says why it was asked, the call's
+    /// arguments, still on the stack.
+    /// </summary>
+    /// <param name="stack">The linear address of the top of the stack, SS:SP.</param>
+    public (int Object, int Why) AskedArguments(int stack) => (Word(stack), Word(stack + 2));
+
     /// <summary>
     /// Looks through a memory for the game: for Microsoft C's notice at the start of a data
     /// segment, with the game's count of objects where the map has it from there. Null when
