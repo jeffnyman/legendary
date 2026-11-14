@@ -1,4 +1,5 @@
 using System.Text;
+using Legendary.Core.Text;
 
 namespace Legendary.Core.Worlds;
 
@@ -161,6 +162,35 @@ public sealed class World
         }
 
         return found;
+    }
+
+    /// <summary>
+    /// The game's grammar, read from its two tables, with the game's words to say it in. The
+    /// tables are the program's own and don't change as the game is played.
+    /// </summary>
+    /// <exception cref="InvalidDataException">A form doesn't start with a verb: these aren't the game's words.</exception>
+    public Grammar ReadGrammar(IReadOnlyList<VocabularyWord> words)
+    {
+        ArgumentNullException.ThrowIfNull(words);
+        var forms = new List<CommandForm>();
+        int seconds = Linear(Map.GrammarSegment, Map.SecondsOffset);
+        for (int at = Linear(Map.GrammarSegment, Map.FormsOffset); at + 10 <= seconds; at += 10)
+        {
+            // the verb, the preposition, flags, the two actions, and its entries in the second table
+            int verb = Word(at);
+            if (verb > words.Count || (verb != 0 && !words[verb - 1].IsVerb))
+            {
+                throw new InvalidDataException($"The grammar's form {forms.Count + 1} doesn't start with a verb.");
+            }
+
+            int start = _read(at + 7), count = _read(at + 8);
+            forms.Add(new CommandForm(
+                verb, Word(at + 2), _read(at + 4), _read(at + 5), _read(at + 6),
+                [.. Enumerable.Range(start, count).Select(index => seconds + (6 * index))
+                    .Select(second => new SecondObjectForm(Word(second), _read(second + 2), _read(second + 4)))]));
+        }
+
+        return new Grammar(forms, words, Map.ActionNames);
     }
 
     private int Linear(ushort segment, int offset) => ((LoadSegment + segment) * 16) + offset;

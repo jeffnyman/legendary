@@ -32,11 +32,24 @@ public sealed record RecordLayout(int Size, int Places = -1, int Relation = -1, 
 /// <param name="ActionOffset">There, the action's number, a byte.</param>
 /// <param name="ObjectOffset">There, the action's object.</param>
 /// <param name="SecondObjectOffset">There, its second object.</param>
+/// <param name="GrammarSegment">The segment with the grammar's two tables.</param>
+/// <param name="FormsOffset">There, the forms a command can take, ten bytes each.</param>
+/// <param name="SecondsOffset">
+/// There, where the forms end and the ways a form goes on to a second object start, six
+/// bytes each.
+/// </param>
+/// <param name="VocabularyFile">The file with the game's words, which the grammar names by number.</param>
+/// <param name="ActionNames">
+/// Names for actions the grammar would name badly: going somewhere, which every direction's
+/// word makes, would have a direction's name.
+/// </param>
 /// <param name="Layouts">The records' layouts, by type.</param>
 public sealed record WorldMap(
     ushort DataSegment, ushort TableSegment, int ObjectCount, ushort CountOffset, ushort TypesOffset,
     ushort RoomOffset, ushort ActorOffset, ushort MovesOffset, ushort ClockOffset,
     ushort ActionSegment, ushort ActionOffset, ushort ObjectOffset, ushort SecondObjectOffset,
+    ushort GrammarSegment, ushort FormsOffset, ushort SecondsOffset, string VocabularyFile,
+    IReadOnlyDictionary<int, string> ActionNames,
     IReadOnlyDictionary<int, RecordLayout> Layouts)
 {
     /// <summary><i>Spellcasting 101: Sorcerers Get All the Girls</i> (1990).</summary>
@@ -44,6 +57,8 @@ public sealed record WorldMap(
         DataSegment: 0x4517, TableSegment: 0x2929, ObjectCount: 427, CountOffset: 0x34E4, TypesOffset: 0x34C9,
         RoomOffset: 0x42, ActorOffset: 0x44, MovesOffset: 0x46, ClockOffset: 0x48,
         ActionSegment: 0x3B00, ActionOffset: 0x58, ObjectOffset: 0x00, SecondObjectOffset: 0x56,
+        GrammarSegment: 0x2B6A, FormsOffset: 0x00D1, SecondsOffset: 0x0F81, VocabularyFile: "VOCAB.DAT",
+        ActionNames: new Dictionary<int, string> { [197] = "go" },
         Layouts: new Dictionary<int, RecordLayout>
         {
             [1] = new(28, Lists: 0x0E),
