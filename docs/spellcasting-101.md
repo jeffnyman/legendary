@@ -906,8 +906,12 @@ With 1, the song is a Standard MIDI File, whole, from its `MThd` on. It is for a
 and its tracks are named for the MT-32's sounds: `SYN BASS 3`, `BOTTLEBLOW`, `HONKYTONK
 PIANO`. With 0, it is a `.ROL` file, as AdLib's Visual Composer saved it, for an AdLib card.
 The instruments a `.ROL` names are in `S101.BNK`, which is AdLib's instrument bank as AdLib's
-own tools made it, and the playing is done by `SOUND.COM`, AdLib's driver, which the game
-asks to be loaded before it.
+own tools made it, and the playing is done by `SOUND.COM`, AdLib's driver, which the player
+runs before the game and which stays in memory, 17,648 bytes of it.
+
+The game needs no telling. Run [on Legendary's PC](the-pc.md) with the driver loaded, the
+launcher opens `S101_M1.MUS` and `S101.BNK` and plays the title's music by the FM chip;
+without the driver it opens `MUSIC.RS` and plays the title's music on the speaker.
 
 So the songs were written once and arranged twice, and the game ships the arrangers' files
 as they were.
@@ -929,6 +933,11 @@ A file is 32 bytes and then the sound:
 
 The rest of the 32 is whatever was in memory when the file was written: in some, a few bytes
 of a program's code. Most of the files end with 288 bytes more than their count.
+
+The recorded sounds are the speaker's whatever plays the music: an AdLib card of 1990 had no
+way to play a recording, and the game has no other. Three turns into the game Joey Rottenwood
+comes up the stairs, and his laugh is `ROTTEN3.RS`, on the speaker, with the AdLib's driver
+loaded or without.
 
 The speaker has two states, in and out, and no levels between. RealSound gets levels from it
 by time: it sends a pulse 16,572 times a second, faster than can be heard, and how long each

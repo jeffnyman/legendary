@@ -20,7 +20,16 @@ finds what the others didn't need. *Spellcasting 101* found four:
 | Asked the video BIOS for the VGA's state, INT 10h function 1Bh, to see whether there is a VGA and what it can do | Gives the state as a VGA has it for the mode it's in, with the table of the modes its BIOS can set |
 | Asked whether Microsoft's Hercules driver is loaded, INT 10h function EFh | Leaves the registers as they came, which says no |
 | Had DOS parse a file's name into a file control block, INT 21h function 29h, as Microsoft C does for a program it starts | Parses it |
+| Needed AdLib's driver in memory before it, for its music | Loads `.COM` programs, lets a program stay resident, and runs one program after another |
 | Freed its memory by hand, through the list of lists, and had DOS load the game over it as an overlay, INT 21h function 4Bh with 3 | Gives the first memory block's segment before the list of lists, joins free blocks that are side by side before it resizes one, and loads overlays |
+
+Music asked for more. The game's FM music is played by AdLib's own driver, `SOUND.COM`, a
+program that is run before the game, takes an interrupt, and stays in memory when it ends.
+For that the PC learned three things: to load a `.COM` program, which is a file with no header
+loaded as it is; to let a program end and stay, by INT 27h or INT 21h function 31h, and to
+load the next one above it and not over it; and to run a list of commands one after another,
+as a batch file would, without there being a file. The player gives it the list: the driver,
+when the game's folder has it, and then the game.
 
 With those, the launcher draws its title, the same pixel for pixel as Legendary's own reader
 of the picture file makes it, and the game starts, asks whether to restore a saved game, and
