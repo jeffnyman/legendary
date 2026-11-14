@@ -186,8 +186,9 @@ if (is_in(YOU, FIREPLACE)) {
 return 0;
 ```
 
-The names are made up, `why` for an argument whose meaning isn't known yet; the numbers and
-the shape are the program's. The flag it sets is a byte at `4517:3BD7`, one of the variables
+The names are made up; the numbers and the shape are the program's. `why` is
+[the reason the routine is asked](#from-an-action-to-what-happens), and `perform` here is the
+routine that starts over with a new action. The flag it sets is a byte at `4517:3BD7`, one of the variables
 the game saves.
 
 Other routines found on the way: `01B9:1694` tests a flag of an object and `01B9:16E8` sets
@@ -291,6 +292,90 @@ fireplace's exit performs on the chimney.
 
 What has been read of the parser is its tables. How it takes a line apart, what it does when
 a noun could be several objects, and how `all`, `it` and `then` work, is still to do.
+
+## From an action to what happens
+
+The parser's work ends in three numbers: an action, and up to two objects. The program keeps
+them where every routine can see them, the action in a byte at `3B00:0058` and the objects in
+words at `3B00:0000` and `3B00:0056`, and the routine at `0C35:0FF4` performs the action. It
+asks a row of routines in turn, each with a number that says why it's being asked, and stops
+at the first that answers with something other than zero:
+
+| Asked | Why |
+|---|---|
+| The room's routine | 1 |
+| The routine of what the actor is in, when that isn't the room | 1 |
+| The actor's routine | 2 |
+| The routine that comes before the action's, for the 23 actions that have one | |
+| The routine of what the second object is in | 3 |
+| The second object's routine | 4 |
+| The routine of what the first object is in | 5 |
+| The first object's routine | 6 |
+| The action's routine | |
+
+The room is the object whose number is at `4517:0042`, and the actor the one at `4517:0044`:
+the Bedchamber and you, as the game starts. A routine an exit names, like the fireplace's at
+the top of these notes, is asked with 15, which is what that routine's first test is.
+
+This is Infocom's order nearly to the letter: the actor, the room, the pre-action, the
+indirect object, the direct object, and the verb. What it means for the game's writing is the
+same too. The action's routine is the stock reply, what TAKE or CLIMB does to a thing nobody
+gave a thought to, and everything that makes a thing itself is in its own routine, which gets
+the first word.
+
+The routine remembers what was being performed and puts it back when it's done, so a routine
+can perform another action in the middle of its own: the count of them in progress is at
+`4517:778C`, and the same action on the same objects more than three deep is stopped with
+`[Warning: infinite perform recursion terminated.]`. A second routine, at `0C35:0E8D`, gives
+up the action in progress and starts over with another, by a `longjmp` to where the game's
+main loop performs the player's. It's what the fireplace's exit uses to turn going up into
+climbing the chimney.
+
+### Which routine is whose
+
+Nothing in the data says which routine is an object's or an action's. The source had a C
+`switch` for each, and the compiler made each a table of jumps in the code:
+
+- The actions' is at `06E6:081E`: 209 cases, each a call to that action's routine. All but one
+  are in overlays 1 and 2, the two that share the first place in memory and load string block
+  65, which is the stock replies. So that place holds the verbs, and the other the story.
+- The routines that come before are a smaller `switch` at `06E6:06DA`.
+- The objects' is at `0596:146A`, which goes by the object's type to one of eight more, each a
+  `switch` on the object's number. 395 of the 427 objects have a routine, each in the overlay
+  of its part of the story; yours is in the root.
+
+The [tools](../tools/README.md) read the cases out of the code, and with the grammar they
+give the whole way from a command to its routines. `CLIMB CHIMNEY` is the form `climb OBJECT`,
+action 25. The Bedchamber's routine is at `3670:0070` in overlay 3, the chimney's at
+`3670:1E43` in the same overlay, and action 25's at `313A:0AB7` in overlay 2.
+
+The chimney's routine is the first piece of the game itself to be read here. The numbers are
+the program's, and the names are from the tables above:
+
+```c
+int chimney(int why)
+{
+    if (action != CLIMB)                    /* 25 */
+        return 0;
+    if (room == ROOFTOP)                    /* object 3 */
+        print(strs[76]);                    /* You've already done that! */
+    else if (is_in(FIRE, FIREPLACE))        /* objects 63 and 62 */
+        start_over(27, FIREPLACE, 0);
+    else if (flag(ROOFTOP, 10))
+        some_routine(ROOFTOP);
+    else if (is_in_on_list(CLOAK, YOU, 1))  /* object 82, on your second list */
+        print(strs[77]);                    /* You claw your way up the chimney. It's a tight fit... */
+    else if (is_somewhere_in(CLOAK, YOU))
+        print(strs[78]);                    /* ...a protruding brick rips the... */
+    else
+        print(strs[79]);                    /* You scramble up the narrow chimney... */
+    ...
+}
+```
+
+While the fire is in the fireplace, climbing the chimney becomes action 27 on the fireplace. Without it, what
+the game says depends on the cloak: on your second list, somewhere else about you, or not
+with you. That settles a question from the tree: a person's second list is what they wear.
 
 ## A room's exits
 
@@ -466,6 +551,7 @@ found.
 
 - What picks the block in the three calls that take it from a table, and where blocks 19, 39
   and 40 are loaded.
+- What a routine's answer means beyond zero and not zero, and the reasons from 7 to 14.
 - The parser's code: how it takes a line apart and chooses among objects. The flags of the
   grammar's forms.
 - The rest of an object's record: the flags' meanings, and the fields past the tree. Which list is which, and which direction is which.
