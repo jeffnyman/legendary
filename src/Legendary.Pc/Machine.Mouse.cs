@@ -31,7 +31,7 @@ public sealed partial class Machine
     private int _events;
 
     /// <summary>
-    /// Whether a mouse and its driver are installed. Without one, <c>INT 33h</c> reports no mouse,
+    /// Whether a mouse and its driver are installed. Without one, <c>INT 33h</c> does nothing,
     /// as on a PC with none; the games then steer their pointers by keyboard or joystick. Set it
     /// before the program starts: games look for a mouse once.
     /// </summary>
@@ -41,9 +41,19 @@ public sealed partial class Machine
         set
         {
             _mouse = value;
+            SetMouseVector();
             ResetMouse();
         }
     }
+
+    /// <summary>
+    /// Points <c>INT 33h</c> at the driver, or with no mouse at the BIOS's <c>IRET</c>, where a
+    /// PC with no driver loaded has it. Programs look: Spellcasting 101 reads the vector and
+    /// the byte it points to before it calls, and takes anything but nothing or an
+    /// <c>IRET</c> for a driver, whose answers it then believes.
+    /// </summary>
+    private void SetMouseVector() =>
+        SetVector(0x33, BiosSegment, _mouse ? (ushort)(StubBase + (4 * 0x33)) : DummyReturn);
 
     /// <summary>
     /// The mouse moves, by a number of "mickeys", the mouse's own steps (a two hundredth of an

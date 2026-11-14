@@ -76,6 +76,8 @@ public sealed partial class Machine
             SetVector(vector, BiosSegment, offset);
         }
 
+        SetMouseVector();
+
         // the hardware interrupts: IRQ 0, the timer, counts the time of day and calls INT 1Ch,
         // the hook programs are meant to use, as IBM's BIOS does: with DS, AX and DX kept
         // around it, and DS on the BIOS's data. A hook that changes AX before saving it (The
