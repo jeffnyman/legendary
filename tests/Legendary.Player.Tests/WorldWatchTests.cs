@@ -98,6 +98,7 @@ public sealed class WorldWatchTests : IDisposable
         Run(8);
         Type("n");
         Type("examine rat\n");
+        Type("climb chimney\n");
         Type("n\n");
 
         string[] lines = said.ToString().Split('\n', StringSplitOptions.RemoveEmptyEntries);
@@ -105,13 +106,24 @@ public sealed class WorldWatchTests : IDisposable
         Assert.EndsWith(", with 427 objects", lines[0], StringComparison.Ordinal);
         Assert.Equal("world: 3:35 pm, turn 0, in Bedchamber (1)", lines[1]);
         Assert.StartsWith("world:   here: rat (352), you (153) [", lines[2], StringComparison.Ordinal);
-        Assert.Contains("world:   action 60: examine rat (352)", lines);
-        Assert.Contains("world: 3:40 pm, turn 1, in Bedchamber (1)", lines);
+        Assert.Equal("world:   action 60: examine rat (352)", lines[3]);
+        Assert.Equal("world: 3:40 pm, turn 1, in Bedchamber (1)", lines[4]);
 
-        // going north, the room changes as the game moves you, and the turn is counted after
-        Assert.Contains("world: 3:40 pm, turn 1, in Potty Chamber (2)", lines);
-        Assert.Contains("world:   here: you (153) [cloak (82)], tiny door (66)", lines);
-        Assert.Contains("world:   action 197: go", lines);
-        Assert.Equal("world: 3:45 pm, turn 2, in Potty Chamber (2)", lines[^2]);
+        // CLIMB CHIMNEY, which the chimney's routine starts over as entering the fireplace: both
+        // are performed, and both are said, in their order
+        int climb = Array.IndexOf(lines, "world:   action 25: climb chimney (185)");
+        Assert.True(climb > 4);
+        Assert.Equal("world:   action 27: climb in fireplace (62)", lines[climb + 1]);
+        Assert.Equal("world: 3:45 pm, turn 2, in Bedchamber (1)", lines[climb + 2]);
+
+        // going north: the action, then the room as the game moves you, then the turn counted
+        int go = Array.IndexOf(lines, "world:   action 197: go");
+        Assert.True(go > climb);
+        Assert.Equal("world: 3:45 pm, turn 2, in Potty Chamber (2)", lines[go + 1]);
+        Assert.Equal("world:   here: you (153) [cloak (82)], tiny door (66)", lines[go + 2]);
+        Assert.Equal("world: 3:50 pm, turn 3, in Potty Chamber (2)", lines[^2]);
+
+        // three commands, four actions, and nothing said twice
+        Assert.Equal(4, lines.Count(line => line.StartsWith("world:   action ", StringComparison.Ordinal)));
     }
 }

@@ -75,6 +75,24 @@ public sealed class World
     public int ActionSecondObject => Word(Linear(Map.ActionSegment, Map.SecondObjectOffset));
 
     /// <summary>
+    /// Where the routine that performs an action starts, a linear address: the program is
+    /// there each time it is about to perform one.
+    /// </summary>
+    public int PerformAddress => Linear(Map.PerformSegment, Map.PerformOffset);
+
+    /// <summary>How many actions are being performed, one inside another; 0 between them.</summary>
+    public int PerformDepth => DataWord(Map.DepthOffset);
+
+    /// <summary>
+    /// The action about to be performed and its objects, for a program that is at
+    /// <see cref="PerformAddress"/>: the routine's arguments, read from its stack, where they
+    /// are above the far address it returns to.
+    /// </summary>
+    /// <param name="stack">The linear address of the top of the stack, SS:SP.</param>
+    public (int Action, int Object, int SecondObject) PerformArguments(int stack) =>
+        (_read(stack + 4), Word(stack + 6), Word(stack + 8));
+
+    /// <summary>
     /// Looks through a memory for the game: for Microsoft C's notice at the start of a data
     /// segment, with the game's count of objects where the map has it from there. Null when
     /// the game isn't loaded.

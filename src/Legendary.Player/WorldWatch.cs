@@ -18,8 +18,10 @@ namespace Legendary.Player;
 /// it isn't this game's, they are said by number alone.
 /// </param>
 /// <remarks>
-/// It looks once a frame, which is often enough to see a turn and not always enough to see
-/// everything inside one: a command the game turns into another shows as the last of them.
+/// The room and what is in it are looked at once a frame. The actions aren't: the machine says
+/// each time the game reaches its routine that performs one, so every action is said, the ones
+/// a routine performs inside another's, set in under it, and the ones the game makes of a
+/// command as well as the command.
 /// </remarks>
 internal sealed class WorldWatch(Machine machine, WorldMap map, TextWriter output, IReadOnlyList<VocabularyWord>? words = null)
 {
@@ -31,7 +33,6 @@ internal sealed class WorldWatch(Machine machine, WorldMap map, TextWriter outpu
     private int _looks;
     private string _place = "";
     private string _here = "";
-    private string _action = "";
 
     /// <summary>Looks at the game, and says what has changed since the last look.</summary>
     public void Look()
@@ -40,6 +41,7 @@ internal sealed class WorldWatch(Machine machine, WorldMap map, TextWriter outpu
         {
             // the game ended, or a saved state without it was loaded
             _world = null;
+            machine.Cpu.WatchNothing();
         }
 
         if (_world is null)
@@ -50,6 +52,7 @@ internal sealed class WorldWatch(Machine machine, WorldMap map, TextWriter outpu
             }
 
             output.WriteLine($"world: the game is in memory, loaded at {_world.LoadSegment:X4}h, with {map.ObjectCount} objects");
+            machine.Cpu.Watch((uint)_world.PerformAddress, Performing);
             try
             {
                 _grammar = words is null ? null : _world.ReadGrammar(words);
@@ -76,15 +79,21 @@ internal sealed class WorldWatch(Machine machine, WorldMap map, TextWriter outpu
             output.WriteLine(_place = place);
             output.WriteLine(_here = here);
         }
+    }
 
-        if (world.Action != 0)
+    // the game is at its routine that performs an action, about to: which, and how deep
+    private void Performing()
+    {
+        // other code can be at the address before the game is loaded there, or after it has gone
+        if (_world is not { IsThere: true } world)
         {
-            string action = $"world:   action {world.Action}: {Said(world)}";
-            if (action != _action)
-            {
-                output.WriteLine(_action = action);
-            }
+            return;
         }
+
+        var cpu = machine.Cpu;
+        var (action, first, second) = world.PerformArguments((cpu.Ss * 16) + (ushort)cpu.Esp);
+        string inside = new(' ', 2 * Math.Clamp(world.PerformDepth, 0, 8));
+        output.WriteLine($"world:   {inside}action {action}: {Said(world, action, first, second)}");
     }
 
     /// <summary>A time of day as the game's own status line has it, as in <c>3:35 pm</c>.</summary>
@@ -100,10 +109,10 @@ internal sealed class WorldWatch(Machine machine, WorldMap map, TextWriter outpu
 
     // the action as a command that makes it, with its objects where the command has them:
     // "examine rat (352)". Without a grammar, or for an action no command makes, its objects alone
-    private string Said(World world)
+    private string Said(World world, int action, int first, int second)
     {
-        int[] objects = [.. new[] { world.ActionObject, world.ActionSecondObject }.TakeWhile(number => number >= 1 && number <= map.ObjectCount)];
-        if (_grammar?.Shape(world.Action, objects.Length) is not { } shape)
+        int[] objects = [.. new[] { first, second }.TakeWhile(number => number >= 1 && number <= map.ObjectCount)];
+        if (_grammar?.Shape(action, objects.Length) is not { } shape)
         {
             return objects.Length == 0 ? "no command makes it" : string.Join(", ", objects.Select(number => Name(world, number)));
         }

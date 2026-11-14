@@ -32,6 +32,12 @@ public sealed record RecordLayout(int Size, int Places = -1, int Relation = -1, 
 /// <param name="ActionOffset">There, the action's number, a byte.</param>
 /// <param name="ObjectOffset">There, the action's object.</param>
 /// <param name="SecondObjectOffset">There, its second object.</param>
+/// <param name="PerformSegment">The segment of the routine that performs an action.</param>
+/// <param name="PerformOffset">
+/// Where the routine starts. It is called far, with the action and its two objects as its
+/// arguments, a word each.
+/// </param>
+/// <param name="DepthOffset">In the data, how many actions are being performed, one inside another.</param>
 /// <param name="GrammarSegment">The segment with the grammar's two tables.</param>
 /// <param name="FormsOffset">There, the forms a command can take, ten bytes each.</param>
 /// <param name="SecondsOffset">
@@ -48,6 +54,7 @@ public sealed record WorldMap(
     ushort DataSegment, ushort TableSegment, int ObjectCount, ushort CountOffset, ushort TypesOffset,
     ushort RoomOffset, ushort ActorOffset, ushort MovesOffset, ushort ClockOffset,
     ushort ActionSegment, ushort ActionOffset, ushort ObjectOffset, ushort SecondObjectOffset,
+    ushort PerformSegment, ushort PerformOffset, ushort DepthOffset,
     ushort GrammarSegment, ushort FormsOffset, ushort SecondsOffset, string VocabularyFile,
     IReadOnlyDictionary<int, string> ActionNames,
     IReadOnlyDictionary<int, RecordLayout> Layouts)
@@ -57,6 +64,7 @@ public sealed record WorldMap(
         DataSegment: 0x4517, TableSegment: 0x2929, ObjectCount: 427, CountOffset: 0x34E4, TypesOffset: 0x34C9,
         RoomOffset: 0x42, ActorOffset: 0x44, MovesOffset: 0x46, ClockOffset: 0x48,
         ActionSegment: 0x3B00, ActionOffset: 0x58, ObjectOffset: 0x00, SecondObjectOffset: 0x56,
+        PerformSegment: 0x0C35, PerformOffset: 0x0FF4, DepthOffset: 0x778C,
         GrammarSegment: 0x2B6A, FormsOffset: 0x00D1, SecondsOffset: 0x0F81, VocabularyFile: "VOCAB.DAT",
         ActionNames: new Dictionary<int, string> { [197] = "go" },
         Layouts: new Dictionary<int, RecordLayout>
