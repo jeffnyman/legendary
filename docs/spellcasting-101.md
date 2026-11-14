@@ -56,9 +56,16 @@ table of the kinds ZIL had (below). It is ZIL's way of making a game, written in
 - **PLINK86**, Phoenix Software Associates' linker, cut it into overlays, to fit a game of more
   than 500K into a PC's 640K with DOS.
 
-`S101.EXE` is what the player runs. By its messages, it sets up the graphics and the sound,
-shows the title, and starts `S101MAIN.EXE`, which has a message of its own for being run by
-itself: `Please use S101.EXE to start SPELLCASTING 101.`
+`S101.EXE` is what the player runs. It sets up the graphics and the sound, shows the title,
+and at a key starts `S101MAIN.EXE`, which has a message of its own for being run by itself:
+`Please use S101.EXE to start SPELLCASTING 101.`
+
+It doesn't run the game as one program runs another, and wait. It replaces itself. Run on
+[Legendary's PC](the-pc.md), it frees every block of memory it has by writing to DOS's memory
+control blocks itself, which it finds by DOS's undocumented list of lists; makes its own
+block as large as DOS will; and has DOS load `S101MAIN.EXE` as an overlay at the very segment
+its own code is at. That is how Microsoft C starts a program in place of the one running, and
+it leaves the game the whole machine, which it needs: 347K, on a PC with 640K and DOS in it.
 
 ### The overlays
 
@@ -621,7 +628,7 @@ west, 9 up.
 
 | File | What it is |
 |---|---|
-| `S101.EXE` | The launcher: the title, and then the game, for which it stays to draw the pictures |
+| `S101.EXE` | The launcher: the title, and then the game, which it loads over itself |
 | `S101MAIN.EXE` | The root, PLINK86's loader, and the data |
 | `S101MAIN.OVL` | The 13 overlays of code |
 | `S101STR.DAT` | Text, packed, in 69 blocks: 1,204 strings |
@@ -741,9 +748,10 @@ and the file is read 2,048 bytes at a time.
 
 ### The world as the game starts
 
-`RESTART.DAT` is what the game saves, written once by its makers before a move was made. The
-routine at `01B9:1C7D` writes it, and a saved game, and, inferred, what UNDO goes back to,
-which it keeps in memory instead. It has four parts, and they come to the file's 13,463 bytes
+`RESTART.DAT` is what the game saves, before a move is made. The game writes it itself each
+time it starts, as running it shows, for RESTART to read back; the copy that came with the
+game is from the last time it was run. The routine at `01B9:1C7D` writes it, and a saved game,
+and, inferred, what UNDO goes back to, which it keeps in memory instead. It has four parts, and they come to the file's 13,463 bytes
 exactly:
 
 | Bytes | What |
@@ -757,8 +765,9 @@ The records in the file are the ones in the program, byte for byte, except their
 all 590 have a segment `0E21` higher. `5338` is the data segment `4517`, and `3522` the
 messages' `2701`, as they were when the program was loaded at `0E21` on the day the file was
 made. So the file holds nothing the program doesn't, and what RESTART does is put the records
-back. How the pointers are made right when the program loads somewhere else is still to be
-found.
+back. The pointers are right for as long as the program stays where it is, which a file
+written at each start is good for. A saved game is kept longer than that, and how its
+pointers are made right is still to be found.
 
 ## The pictures
 
@@ -767,8 +776,8 @@ The pictures are in twelve files, six for the EGA and six for the CGA: `S101_E1.
 number for number, drawn twice: in 16 colors at 640 by 350, and in black and white at 640 by
 200. The title is picture 38 of the first file in each.
 
-The code that reads them is not in the game but in `S101.EXE`, the program that starts it,
-which stays to do the game's drawing.
+The code that reads them is in both programs: in `S101.EXE`, for the title, where it was read
+for these notes, and again in `S101MAIN.EXE`, for the rest.
 
 A file starts with a directory, twelve bytes for each picture, to where the first picture
 starts. Two of the EGA's files have room for 256 pictures, most of it empty; the rest have
@@ -911,7 +920,7 @@ says they should be; they haven't been listened to.
 - The rest of the actions' bytes, and the flags of objects beyond the four the parser tests.
 - The timers.
 - The rest of an object's record: the flags' meanings, and the fields past the tree. Which of a thing's lists is which.
-- How the far pointers in a saved state are made right, and what its last part counts.
+- How the far pointers in a saved game are made right, and what a saved state's last part counts.
 - Where the system ends and the game begins among the root's segments and the overlays.
 - How the game names a picture, and the word in a picture's entry that isn't understood.
 - The word a pair of songs shares, and which song and which sound go with what in the game.

@@ -1,5 +1,8 @@
 # Notes
 
+[The PC](the-pc.md) is the machine the games are run on to be watched: where it came from, and
+what each game has asked of it.
+
 How each game was dug into: what it is on disk, how its program is built, and what its files
 hold.
 
