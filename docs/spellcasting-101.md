@@ -262,7 +262,7 @@ halves.
 |---|---|
 | 0 | The verb |
 | 2 | The preposition after the verb, or zero |
-| 4 | Flags for the object, kept with the sentence. Two are known: 20 is that it should be in the actor's hands, and 10 that it must be about the actor |
+| 4 | Flags for the object, kept with the sentence: [where it may be looked for](#a-sentence-into-objects), and what's asked of it |
 | 5 | The action when the command has no object, or zero when it must have one |
 | 6 | The action when it has one object |
 | 7 | Where the form's entries start in a second table, and then how many it has |
@@ -448,12 +448,62 @@ the grammar the writers typed, and they are why the grammar can be read here jus
 
 ### A sentence into objects
 
-The third layer takes what matched and makes it the action and the objects: it searches
-[the grammar of verbs](#the-grammar), finds the objects each noun phrase could be by
-[their nouns and adjectives](#what-an-object-is-called), and asks when there are several or
-none. Its messages are in segment `0000`, where the routine at `0000:030B` and its neighbors
-print them: `[There seems to be a verb missing in that sentence.]`, `[Which ... do you mean,
-... or ...?]`, `[What do you want to ...?]`. How it chooses among objects hasn't been read.
+What matched is a verb, perhaps a preposition, and one or two lots of noun phrases, each
+phrase a noun and its adjectives. The verb and preposition find a form in
+[the grammar of verbs](#the-grammar), and the form's flags say where each object may be
+looked for. They are ZIL's, bit for bit:
+
+| Bit | The object may be | ZIL called it |
+|---|---|---|
+| 1 | In the actor's hands | HELD |
+| 2 | In something the actor has | CARRIED |
+| 4 | In the place the actor is | ON-GROUND |
+| 8 | In something there | IN-ROOM |
+| 40 | Several objects, not one | MANY |
+| 20 | Taken first, if the actor hasn't got it | TAKE |
+| 10 | Refused, if the actor hasn't got it | HAVE |
+
+`take OBJECT` has 2, 4 and 8 and not 1: what's already in your hands can't be taken. `drop
+OBJECT` has 1 alone. `ask OBJECT about OBJECT` has none of the four for its second object,
+and none means anywhere: you can ask about a thing that's nowhere near.
+
+The routine at `0B6C:0684` finds the objects each phrase could be, by
+[their nouns and adjectives](#what-an-object-is-called), looking further afield only while a
+phrase has found nothing:
+
+1. It starts from the actor and goes out, to what the actor is in and what that is in, for as
+   long as each can be seen out of, and usually ends at the room. From there it walks the
+   tree down, keeping count of where it is by the four bits. It goes into a list of an object
+   only when the list's contents can be seen: a room's and a person's always, a thing's first
+   list when the thing has flag 15 and either flag 12 or flag 19, by their use a container
+   that's open or can be seen through. The fire is found in the fireplace, which has 12 and
+   15; the love note isn't found in the desk, which has 15 alone.
+2. In a room, it tries again with the bits the form didn't have, so what's there but in the
+   wrong place is still found. Presumably that is for the sake of a better message than not
+   being seen at all.
+3. Then the room's own row of what is also there. A room's record has, at offset 12, where
+   its row starts in a list of objects that are there without being in it: the scenery, the
+   doors, other rooms. Each has a byte for whether it counts for now. The Bedchamber's row is
+   the cobweb, the crack, the chimney and your house, and four more that don't count as the
+   game starts: the Alley, the old horse, the cart and the Tigerbelly house, which by that are
+   what's seen from the window.
+4. Then the room's row of a second list, at offset 14: places whose contents can be seen from
+   it. The Tool Shed's is the Alley.
+5. Then every object of type 4, which is how `floor` and `room` are everywhere.
+6. And when the form's bits are none, every object in the game.
+
+A phrase with no adjectives that still has nothing may be a pronoun. `it`, `him`, `her` and
+`them` are tried against four remembered objects, at `3B00:5168` and the three words after.
+
+If a phrase has found several objects, the game gets a say before the player is asked. The
+routine at `06E6:000A` is another of the source's `switch` statements, on the first of the
+objects found, and its cases call routines in the overlays that pick one, for the objects
+the story has look-alikes of. Only when nothing picks does the parser print `[Which ... do
+you mean, ... or ...?]` and wait, presumably with `<obj_gotten>` or `<adj_gotten>` as the rule for
+the answer. With nothing found at all it says so, and the turn is over.
+
+One object for one phrase goes straight into the words the action is performed on. Several,
+from `ALL` or a list, are performed one at a time.
 
 ## From an action to what happens
 
@@ -715,8 +765,7 @@ found.
 - What picks the block in the three calls that take it from a table, and where blocks 19, 39
   and 40 are loaded.
 - What a routine's answer means beyond zero, and 2 from performing; the reasons from 8 to 14.
-- The parser's last layer: how it chooses among the objects a noun phrase could be. The rest
-  of the flags of the grammar's forms, and of the actions' bytes.
+- The rest of the actions' bytes, and the flags of objects beyond the four the parser tests.
 - The timers.
 - The rest of an object's record: the flags' meanings, and the fields past the tree. Which of a thing's lists is which.
 - How the far pointers in a saved state are made right, and what its last part counts.
