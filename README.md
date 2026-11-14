@@ -15,7 +15,7 @@ question of what a player is stays open until more of the games is understood.
 
 | Game | Year | Short name | Where it stands |
 |---|---|---|---|
-| *Spellcasting 101: Sorcerers Get All the Girls* | 1990 | `sc101` | Its program and overlays are read, its text unpacked, and its objects listed; [notes](docs/spellcasting-101.md) |
+| *Spellcasting 101: Sorcerers Get All the Girls* | 1990 | `sc101` | Its program and overlays are read, its text unpacked, and its objects, vocabulary and grammar listed; [notes](docs/spellcasting-101.md) |
 | *Timequest* | 1991 | `tquest` | Built as *Spellcasting 101* is: its overlays are read, and its text unpacked |
 | *Spellcasting 201: The Sorcerer's Appliance* | 1991 | `sc201` | Not yet tried; linked with .RTLink, not PLINK86 |
 | *Gateway* | 1992 | `gateway` | Not yet tried |

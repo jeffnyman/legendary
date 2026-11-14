@@ -132,14 +132,14 @@ its record. What each type is for is inferred from the objects that have it.
 | 7 | 32 | 32 | 1 | 3 | People: you, Miss Beancounter, the registrar |
 | 8 | 76 | 22 | 1 | 0 | Things that hold nothing: rat, hole, dead branch, bridge |
 
-Every record starts with the same 14 bytes. Offsets here and below are in hex:
+Every record starts the same way. Offsets here and below are in hex:
 
 | Offset | What |
 |---|---|
 | 0 | A far pointer to the name |
 | 4 | A far pointer to a second name, or zero: `me` for `you`, `Miss B'counter` for `Miss Beancounter` |
-| 8 | Flags, a bit each, numbered from 1 at the low bit of the first byte |
-| 0A | Two words, not yet understood |
+| 8 | Flags, a bit each, numbered from 1 at the low bit of the first byte: 16 of them, or 48 for type 2 |
+| 0A, or 0E for type 2 | Where the object's nouns start in the list of nouns, and then where its adjectives start in the list of adjectives: [the words it's called by](#what-an-object-is-called) |
 
 and the rest depends on the type. The program never reads a record directly. It has a routine
 for each field, taking an object's number, which looks up the type and goes to the offset that
@@ -194,6 +194,104 @@ Other routines found on the way: `01B9:1694` tests a flag of an object and `01B9
 one, `01B9:344C` gives the object an object is in, `01B9:3659` the first on one of its lists,
 and `01B9:37F6` the next on the list it's on.
 
+## The vocabulary
+
+`VOCAB.DAT` is the words the game knows, 1,736 of them, in alphabetical order. It has the size
+of the words' text in a word, the text, each word ending in a zero, a count, and then eight
+bytes for each word:
+
+| Bytes | What |
+|---|---|
+| 2 | Where the word's text starts |
+| 2 | Its parts of speech, a bit each |
+| 2 | The number of a word it's a synonym of, or zero |
+| 2 | The parts of speech it's that word's synonym as |
+
+The program numbers the words from 1, and everything else names a word by its number. In
+memory each word has ten bytes, the same eight with a far pointer in place of the text's
+start, in a table from `3B00:005C` that is filled from the file as the game starts.
+
+| Bit | Part of speech | Words |
+|---|---|---|
+| 1 | Verb | 352 |
+| 2 | Noun | 1,112 |
+| 4 | Adjective | 464 |
+| 8 | Preposition | 44 |
+| 10 | Article | 2: `a` and `the` |
+| 20 | Direction | 22 |
+
+A word can be several: `board` and `crack` are verbs and nouns, and `north` is a direction, a
+verb and a noun. Eight words are none, and are the parser's own: `all`, `and`, `both`, `but`,
+`every`, `everything`, `except` and `then`. Four words start with an underline, which nothing typed can: `_integer`, `_string` and
+`_time`, by their names for what the player types that isn't a word, and `_foo`, the only
+noun of the object that is you.
+
+207 words are synonyms. `destroy`, `demolish`, `damage` and `crack` stand for `break`,
+`awaken` for `wake`, `atop` for `on`, and `n` for `north`. A synonym is a synonym only as some
+part of speech, which is what the last two bytes are for: `crack` is `break` as a verb, and
+itself as a noun. Wherever the parser wants a verb it takes the verb's synonym, and so on, so
+the tables that follow have each word once.
+
+### What an object is called
+
+The program has a list of nouns and a list of adjectives, each a row of word numbers, in the
+objects' segment at `2929:0A02` and `2929:180C`. An object's record says where its nouns start
+in the one and where its adjectives start in the other, and each object's words end at a zero.
+
+| Object | Nouns | Adjectives |
+|---|---|---|
+| Bedchamber | bedchamber, chamber | bed |
+| writing desk | desk, drawer | writing, desk, table |
+| Miss Beancounter | woman, beancounter, b'counter, minnie | miss, minnie |
+| your house | house, home, cottage, building | my |
+| rat | robbie, robby, rat, rodent | |
+
+The routine at `0B6C:000A` decides whether what the player typed could be an object. It is
+given a noun and some adjectives, and the object matches when the noun is among the object's
+nouns and every adjective is among its adjectives. `WRITING DESK`, `TABLE DESK` and `DESK` are
+all the desk, and `MISS MINNIE` is Miss Beancounter.
+
+### The grammar
+
+What a command may look like is in a table at `2B6A:00D1`: 376 forms of ten bytes, in order of
+the verb's number and then the preposition's, which the routine at `12A6:01D0` searches by
+halves.
+
+| Offset | What |
+|---|---|
+| 0 | The verb |
+| 2 | The preposition after the verb, or zero |
+| 4 | Flags, kept with the sentence; not yet understood, but they differ with the kind of object a form takes |
+| 5 | The action when the command has no object, or zero when it must have one |
+| 6 | The action when it has one object |
+| 7 | Where the form's entries start in a second table, and then how many it has |
+
+The second table follows the first, at `2B6A:0F81`, with six bytes for each way a form can go
+on to a second object: the preposition before it, flags, a byte not yet understood, and the
+action. These are the forms of `drop`, as the tools print them:
+
+```
+drop OBJECT: action 50
+drop OBJECT down OBJECT: action 51
+drop OBJECT in OBJECT: action 51
+drop OBJECT on OBJECT: action 2
+drop OBJECT from OBJECT: action 52
+drop OBJECT off OBJECT: action 52
+drop OBJECT out OBJECT: action 52
+drop OBJECT through OBJECT: action 52
+```
+
+In all, the table allows 507 shapes of command, and they come to 207 actions, numbered up to
+209. Nineteen of the shapes with a second object have no action, and what they are for isn't
+known. Many shapes make
+one action: `drop OBJECT on OBJECT`, `put OBJECT on OBJECT` and `apply OBJECT to OBJECT` are
+all action 2. This is ZIL's `SYNTAX` table, and an action is what ZIL called a verb: the
+number the rest of the game is written against. `climb OBJECT` is action 25, which is what the
+fireplace's exit performs on the chimney.
+
+What has been read of the parser is its tables. How it takes a line apart, what it does when
+a noun could be several objects, and how `all`, `it` and `then` work, is still to do.
+
 ## A room's exits
 
 A room's record ends with a count of its exits, a byte at offset 16, and a far pointer to
@@ -229,7 +327,7 @@ Which direction each number is isn't worked out.
 | `S101MAIN.EXE` | The root, PLINK86's loader, and the data |
 | `S101MAIN.OVL` | The 13 overlays of code |
 | `S101STR.DAT` | Text, packed, in 69 blocks: 1,204 strings |
-| `VOCAB.DAT` | The vocabulary: 1,736 words |
+| `VOCAB.DAT` | The vocabulary: 1,736 words, each with its parts of speech and its synonym |
 | `RESTART.DAT` | The world as the game starts: every object's record, and 91 variables |
 | `S101_C*.PIC`, `S101_E*.PIC` | Pictures; by their names and sizes, for the CGA and the EGA |
 | `S101_R*.RGN` | Not yet looked at; by the name, regions of the pictures |
@@ -341,8 +439,7 @@ The limits the routine was written with: a block has at most 255 strings, since 
 read as a byte; the words can take 786 bytes, which is what *Spellcasting 101*'s take exactly;
 and the file is read 2,048 bytes at a time.
 
-`VOCAB.DAT` is a byte, then the words in order, each ending in a zero, from `-'n'` to `zoe`,
-and then 13,890 bytes about them that aren't read yet.
+`VOCAB.DAT` is [the vocabulary](#the-vocabulary).
 
 ### The world as the game starts
 
@@ -369,9 +466,9 @@ found.
 
 - What picks the block in the three calls that take it from a table, and where blocks 19, 39
   and 40 are loaded.
-- The rest of `VOCAB.DAT`, and the parser that reads it.
-- The rest of an object's record: the two words every record has, the flags' meanings, and
-  the fields past the tree. Which list is which, and which direction is which.
+- The parser's code: how it takes a line apart and chooses among objects. The flags of the
+  grammar's forms.
+- The rest of an object's record: the flags' meanings, and the fields past the tree. Which list is which, and which direction is which.
 - How the far pointers in a saved state are made right, and what its last part counts.
 - Where the system ends and the game begins among the root's segments and the overlays.
 - The pictures, the regions, the music and the sounds.
