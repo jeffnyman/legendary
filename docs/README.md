@@ -14,4 +14,5 @@ hold.
   the actor's and the objects' own routines before the action's, in Infocom's order, from a main loop that takes
   what's needed first and runs the clock after; and a world of 427 objects in eight
   types, kept in a tree as Infocom's were but with several lists to a parent, with its first
-  state in a file.
+  state in a file; and 362 pictures, each drawn for the EGA and again for the CGA, packed by
+  an LZW of pixels and by Huffman's codes.

@@ -621,13 +621,13 @@ west, 9 up.
 
 | File | What it is |
 |---|---|
-| `S101.EXE` | The launcher: graphics, sound, the title, and then the game |
+| `S101.EXE` | The launcher: the title, and then the game, for which it stays to draw the pictures |
 | `S101MAIN.EXE` | The root, PLINK86's loader, and the data |
 | `S101MAIN.OVL` | The 13 overlays of code |
 | `S101STR.DAT` | Text, packed, in 69 blocks: 1,204 strings |
 | `VOCAB.DAT` | The vocabulary: 1,736 words, each with its parts of speech and its synonym |
 | `RESTART.DAT` | The world as the game starts: every object's record, and 91 variables |
-| `S101_C*.PIC`, `S101_E*.PIC` | Pictures; by their names and sizes, for the CGA and the EGA |
+| `S101_C*.PIC`, `S101_E*.PIC` | [The pictures](#the-pictures), for the CGA and the EGA: 362 in each set |
 | `S101_R*.RGN` | Not yet looked at; by the name, regions of the pictures |
 | `S101_M*.MUS`, `S101.BNK` | Music, and the AdLib instruments it plays on |
 | `*.RS`, `MUSIC.RS` | Sounds; by the name, RealSound |
@@ -760,6 +760,66 @@ made. So the file holds nothing the program doesn't, and what RESTART does is pu
 back. How the pointers are made right when the program loads somewhere else is still to be
 found.
 
+## The pictures
+
+The pictures are in twelve files, six for the EGA and six for the CGA: `S101_E1.PIC` to
+`S101_E6.PIC`, and `S101_C1.PIC` to `S101_C6.PIC`. The two sets have the same 362 pictures,
+number for number, drawn twice: in 16 colors at 640 by 350, and in black and white at 640 by
+200. The title is picture 38 of the first file in each.
+
+The code that reads them is not in the game but in `S101.EXE`, the program that starts it,
+which stays to do the game's drawing.
+
+A file starts with a directory, twelve bytes for each picture, to where the first picture
+starts. Two of the EGA's files have room for 256 pictures, most of it empty; the rest have
+room for what they hold.
+
+| Offset | What |
+|---|---|
+| 0 | Where the picture starts in the file, four bytes; zero for none |
+| 4 | How many places it's drawn at |
+| 5 | How it's kept: bit 0 set for no palette, and the rest the way it's packed |
+| 6 | Its width, and then its height, in pixels |
+| 0A | A word not yet understood: zero for most, and for a few a round number from 100 to 1,000, which looks like a time |
+
+A picture starts with its places, when it has any: two words each, across and down. Most
+that have one have one, the pieces of the screen that belong at a spot. A few have five, one
+small picture drawn in a row. Then, in the EGA's files only, a picture with a palette has it:
+16 bytes, each one of the EGA's 64 colors. Then the pixels, one of four ways:
+
+| Way | What it is | Used for |
+|---|---|---|
+| 4 | As they are, a bit a pixel, row after row | Small pieces in two colors |
+| 5 | As they are in four planes: each row as four rows of bits, blue first | Small pieces in color |
+| 1 | Huffman's codes, a byte of eight pixels at a time | The CGA's large pictures |
+| 0 | LZW, a pixel at a time | The EGA's large pictures |
+
+### The CGA's Huffman
+
+A count less one, then for each code its length in bits, the byte it stands for, and its
+bits, in one byte or in two when it's longer than eight. Then the picture's bytes, a code
+each, read from each byte's high bit down. Each picture has its own codes. Two pictures that
+are one byte over and over have a single code of no bits at all.
+
+### The EGA's LZW
+
+It is the scheme GIF made common, changed in every detail:
+
+- The codes are of pixels, not bytes: 0 to 15 are the 16 colors.
+- They start five bits wide, and are read from each byte's high bit down.
+- Code 16 says that the codes are a bit wider from now on. A GIF's reader works out for
+  itself when that happens; here the file says.
+- Code 17 starts the table over, at five bits. The first code after it is written and adds
+  nothing to the table.
+- New strings are numbered from 18.
+- The code with every bit set, whatever the width is by then, ends the picture.
+
+The title's 224,000 pixels are 42,194 bytes this way, under a fifth of what four planes of
+them take.
+
+All 724 pictures unpack, each to exactly its width times its height. The
+[tools](../tools/README.md) write them as PNG files.
+
 ## Still to do
 
 - What picks the block in the three calls that take it from a table, and where blocks 19, 39
@@ -770,4 +830,5 @@ found.
 - The rest of an object's record: the flags' meanings, and the fields past the tree. Which of a thing's lists is which.
 - How the far pointers in a saved state are made right, and what its last part counts.
 - Where the system ends and the game begins among the root's segments and the overlays.
-- The pictures, the regions, the music and the sounds.
+- How the game names a picture, and the word in a picture's entry that isn't understood.
+- The regions, the music and the sounds.
