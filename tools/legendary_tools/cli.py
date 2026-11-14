@@ -14,6 +14,7 @@ from .handlers import action_routines, object_routines
 from .loads import StringNames, find_loader, find_loads
 from .mz import MzExecutable
 from .objects import DIRECTIONS, Exit, GameObject, ObjectTable, SavedState, is_pointer
+from .pictures import HUFFMAN, LZW, RAW_PLANE, RAW_PLANES, PictureFile
 from .plink86 import Image, Plink86Program
 from .sentence import read_sentence_grammar
 
@@ -449,6 +450,34 @@ def sentence(args: argparse.Namespace) -> None:
         print()
 
 
+_PACKINGS = {RAW_PLANE: "as it is", RAW_PLANES: "as it is, in planes", HUFFMAN: "Huffman", LZW: "LZW"}
+
+
+def pictures(args: argparse.Namespace) -> None:
+    """The pictures in the game's .PIC files: listed, or written to a folder as PNG files."""
+    folder = GameFolder(args.folder)
+    for path in folder.ending(".pic"):
+        name = os.path.splitext(os.path.basename(path))[0].lower()
+        # the letter before the file's number says which display it's for
+        file = PictureFile(folder.read(path), ega=name.rstrip("0123456789").endswith("e"))
+        found = file.pictures()
+        print(f"{os.path.basename(path)}: {len(found)} pictures, for the {'EGA' if file.ega else 'CGA'}")
+        for entry in found:
+            if args.out:
+                picture = file.read(entry)
+                os.makedirs(args.out, exist_ok=True)
+                with open(os.path.join(args.out, f"{name}_{entry.number:03}.png"), "wb") as png:
+                    png.write(picture.png())
+            else:
+                packing = _PACKINGS.get(entry.packing, f"{entry.kind:#04x}")
+                notes = "" if entry.has_palette and file.ega else ", no palette"
+                if entry.places:
+                    notes += f", placed {entry.places} time{'s' if entry.places > 1 else ''}"
+                print(f"  {entry.number:3}  {entry.width:3} x {entry.height:3}  {packing}{notes}")
+    if args.out:
+        print(f"written to {args.out}")
+
+
 def strings(args: argparse.Namespace) -> None:
     """The table of string blocks that starts ...STR.DAT, or the words its text is packed with."""
     folder = GameFolder(args.folder)
@@ -532,6 +561,7 @@ def main() -> None:
     )
     command(grammar).add_argument("verb", nargs="?", help="only this verb's forms")
     command(loads)
+    command(pictures).add_argument("--out", metavar="FOLDER", help="write each picture there as a PNG file")
     command(sentence)
     sub = command(objects)
     sub.add_argument("number", type=int, nargs="?", help="only this object, in full")
