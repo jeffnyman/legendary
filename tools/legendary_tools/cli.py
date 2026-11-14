@@ -4,10 +4,12 @@ from __future__ import annotations
 
 import argparse
 import os
+import re
 import sys
 
 from . import data
 from .game import GameFolder
+from .loads import StringNames, find_loader, find_loads
 from .mz import MzExecutable
 from .plink86 import Image, Plink86Program
 
@@ -139,6 +141,7 @@ def dis(args: argparse.Namespace) -> None:
         )[:1]
     image = program.image(*numbers)
     print(f"; {image.where(segment * 16 + offset)}")
+    describe = _string_notes(GameFolder(args.folder), program, image.overlay_at(segment * 16 + offset))
     start = segment * 16 + offset
     disassembler = capstone.Cs(capstone.CS_ARCH_X86, capstone.CS_MODE_16)
     instructions = disassembler.disasm(image.memory[start : start + 16 * args.count], offset)
@@ -155,10 +158,84 @@ def dis(args: argparse.Namespace) -> None:
                 note = "  ; PLINK86's loader"
         elif any(linear + index in image.relocations for index in range(instruction.size)):
             note = "  ; a segment"
+        elif pointer := _POINTER_OPERAND.search(instruction.op_str):
+            note = describe(pointer[1] is None, int(pointer[2], 16))
         print(
             f"{segment:04x}:{instruction.address:04x}  {code.hex():<18}"
             f" {instruction.mnemonic} {instruction.op_str}{note}"
         )
+
+
+# a word at an offset alone, in ES's segment or, with no segment named, in DS's
+_POINTER_OPERAND = re.compile(r"word ptr (es:)?\[0x([0-9a-f]+)\]")
+
+
+def _shown(string: str, limit: int | None = None) -> str:
+    """A string on one line, with its line ends and tabs as C writes them."""
+    shown = string.replace("\\", "\\\\").replace("\n", "\\n").replace("\t", "\\t")
+    return shown if limit is None or len(shown) <= limit else shown[: limit - 3] + "..."
+
+
+def _string_notes(folder: GameFolder, program: Plink86Program, overlay: int | None):
+    """
+    What to say beside an instruction that uses a far pointer in the data at an offset: the
+    string it is, when the offset is in an array that the code there loads a block into.
+    """
+    try:
+        names = StringNames(find_loads(program))
+        file = data.StringFile(folder.read(folder.one("str.dat")))
+    except ValueError:
+        return lambda in_ds, offset: ""
+    unpacked: dict[int, list[str]] = {}
+
+    def describe(in_ds: bool, offset: int) -> str:
+        found = names.array_at(in_ds, offset)
+        if found is None:
+            return ""
+        array, index = found
+        blocks = [
+            block
+            for block in names.blocks(overlay, array)
+            if block < len(file.blocks) and index < file.blocks[block].strings
+        ]
+        if len(blocks) == 1:
+            strings = unpacked.setdefault(blocks[0], file.strings(file.blocks[blocks[0]]))
+            return f"  ; string {blocks[0]}.{index}: {_shown(strings[index], 70)}"
+        if blocks:
+            return f"  ; string {index} of block " + " or ".join(str(block) for block in blocks)
+        return ""
+
+    return describe
+
+
+def loads(args: argparse.Namespace) -> None:
+    """Where the program loads each string block, and the array of pointers it loads it into."""
+    folder = GameFolder(args.folder)
+    program = _program(folder)
+    file = data.StringFile(folder.read(folder.one("str.dat")))
+    segment, offset = find_loader(program)
+    found = find_loads(program)
+    print(
+        f"the routine that loads a block is at {segment:04x}:{offset:04x}, and {len(found)} calls go to it\n"
+    )
+    print("call      in          block  strings  array")
+    for load in sorted(found, key=lambda load: (load.overlay or 0, load.linear)):
+        block = "?" if load.block is None else str(load.block)
+        count = (
+            ""
+            if load.block is None or load.block >= len(file.blocks)
+            else str(file.blocks[load.block].strings)
+        )
+        if load.array is None:
+            array = "the caller's own" if load.local else "?"
+        else:
+            segment = "ds" if load.array[0] is None else f"{load.array[0]:04x}"
+            array = f"{segment}:{load.array[1]:04x}"
+        print(f"{load.linear:#07x}   {load.where:10}  {block:>5}  {count:>7}  {array}")
+
+    named = {load.block for load in found if load.block is not None}
+    missing = [str(block.number) for block in file.blocks if block.number not in named]
+    print(f"\nblocks no call names by number: {', '.join(missing) or 'none'}")
 
 
 def strings(args: argparse.Namespace) -> None:
@@ -190,9 +267,7 @@ def text(args: argparse.Namespace) -> None:
     blocks = file.blocks if args.block is None else [file.block(args.block)]
     for block in blocks:
         for number, string in enumerate(file.strings(block)):
-            # one string to a line, with its line ends and tabs as C writes them
-            shown = string.replace("\\", "\\\\").replace("\n", "\\n").replace("\t", "\\t")
-            print(f"{block.number}.{number}  {shown}")
+            print(f"{block.number}.{number}  {_shown(string)}")
 
 
 def vocab(args: argparse.Namespace) -> None:
@@ -240,6 +315,7 @@ def main() -> None:
     sub = command(dis, overlay="many")
     sub.add_argument("address", help="segment:offset, in hex")
     sub.add_argument("count", type=int, nargs="?", default=40, help="how many instructions (40)")
+    command(loads)
     command(strings).add_argument(
         "--words", action="store_true", help="list the words the text is packed with, not the blocks"
     )

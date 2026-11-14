@@ -33,6 +33,7 @@ python -m legendary_tools segments <the game's folder> [--overlay N]...
 python -m legendary_tools refs <the game's folder> <segment>
 python -m legendary_tools dump <the game's folder> <address> [<bytes>] [--overlay N]...
 python -m legendary_tools dis <the game's folder> <address> [<instructions>] [--overlay N]...
+python -m legendary_tools loads <the game's folder>
 ```
 
 - **`exe`** prints each program's MZ header: its image, what's in the file after it, the memory
@@ -49,7 +50,16 @@ python -m legendary_tools dis <the game's folder> <address> [<instructions>] [--
   fireplace's message.
 - **`dump`** prints memory in hex and as text.
 - **`dis`** prints instructions. A far call to a thunk is marked with the overlay and routine
-  it goes to, and an instruction with a segment in it is marked as having one.
+  it goes to, and an instruction with a segment in it is marked as having one. An instruction
+  that takes a string's pointer from an array has the string written beside it, as
+  `string 2.25: If you want to climb the chimney...`, when the code it's in loads one block
+  into that array; when it loads several, the blocks it could be are listed.
+- **`loads`** lists every call to the routine that loads a string block: where the call is,
+  the block, its count of strings, and the array of pointers it's loaded into. That is how the
+  program names a string, which is in
+  [docs/spellcasting-101.md](../docs/spellcasting-101.md#how-the-program-names-a-string). It
+  ends with the blocks no call names by number. It reads *Spellcasting 101* in full;
+  *Timequest* takes most of its block numbers from variables, which aren't followed.
 
 `segments`, `dump` and `dis` build the program's memory first: the root, the data, and the
 overlays `--overlay` names, which can't be two that load at the same place. Given a routine's
@@ -82,6 +92,8 @@ python -m legendary_tools vocab <the game's folder>
 - **`mz.py`**: a DOS program's MZ header, image and relocations.
 - **`plink86.py`**: PLINK86's table of overlays, the thunks, and the program's memory with
   overlays loaded. `src/Legendary.Core/Programs` is the same in C#.
+- **`loads.py`**: finding the routine that loads a string block and the calls to it, and from
+  them the block behind an array.
 - **`data.py`**: the data files, as far as they're understood: the string file, unpacked, and
   the vocabulary's words. `src/Legendary.Core/Text` has the string file in C#.
 - **`game.py`**: finding a game's files, whatever case their names are in.

@@ -208,12 +208,19 @@ class Image:
             found.setdefault(self.word(linear), []).append(linear)
         return found
 
-    def where(self, linear: int) -> str:
-        """What a place in memory belongs to: the root, or an overlay."""
+    def overlay_at(self, linear: int) -> int | None:
+        """The number of the overlay a place in memory is in; None for the root and the rest."""
         segment = linear // 16
         for overlay in self.loaded.values():
             if overlay.load_segment <= segment < overlay.end_segment:
-                return f"overlay {overlay.number}"
+                return overlay.number
+        return None
+
+    def where(self, linear: int) -> str:
+        """What a place in memory belongs to: the root, or an overlay."""
+        number = self.overlay_at(linear)
+        if number is not None:
+            return f"overlay {number}"
         if linear < len(self.program.mz.image):
             return "root"
         return "not loaded"
