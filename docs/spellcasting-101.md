@@ -1009,6 +1009,14 @@ So the first click after typing picks nothing: it brings the arrow up. It looks 
 and is how the game was. A word at `4517:7764` is 1 in place of the mouse when the mode's
 bits 02h or 08h are set, and sends the picking to a routine at `0C35:5719`, not yet read.
 
+Keys typed early aren't lost, either. The game opens on two pages of writing, each up for
+a time: some 35 seconds for the first and 20 for the second, and then the room, with nothing
+pressed. A letter ends both: the wait, at `0C35:32F5`, asks whether a key is there
+(`183B:0002`) and doesn't read it, the room's description then goes by without its prompt for
+more, and the letter is the first at the command prompt. A player who knows the game types
+the first command over the first page. A space is different, by what the game does and not
+yet by its code: it's used up, and ends only the page it is pressed at.
+
 ## Still to do
 
 - What picks the block in the three calls that take it from a table, and where blocks 19, 39
