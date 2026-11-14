@@ -46,6 +46,9 @@ public sealed partial class Machine
     /// <summary>The one system file table's header: no next table, and room for 40 files, as FILES=40 gives.</summary>
     private const ushort FileTables = 0x0580;
 
+    // the VGA BIOS's table of what it can do, which its state (INT 10h function 1Bh) points at
+    private const ushort VideoFunctions = 0x0590;
+
     // the ticks in a day: the timer's 18.2 a second for 24 hours
     internal const uint TicksPerDay = 0x1800B0;
 
@@ -160,6 +163,11 @@ public sealed partial class Machine
         // another over itself, starts its walk of them here
         WriteRom(bios + ListOfLists - 2, [Dos.DosServices.FirstBlock & 0xFF, Dos.DosServices.FirstBlock >> 8]);
         WriteRom(bios + FileTables, [0xFF, 0xFF, 0xFF, 0xFF, 40, 0]);
+
+        // what the video BIOS can do, as a VGA's has it: every mode from 0 to 7, 0Dh to 0Fh and
+        // 10h to 13h; text at 200, 350 and 400 lines; two character sets of eight; and the rest
+        // of what a VGA's BIOS offers
+        WriteRom(bios + VideoFunctions, [0xFF, 0xE0, 0x0F, 0, 0, 0, 0, 0x07, 0x02, 0x08, 0xFF, 0x0E, 0, 0, 0x3F, 0]);
 
         // the BIOS data area at 0040:0000, the parts programs read
         WriteWord(0x40, 0x10, 0x1021);   // equipment: a floppy drive, 80-column color video, a game port
@@ -345,17 +353,36 @@ public sealed partial class Machine
             case 0x1B:
             {
                 // the VGA's state, 64 bytes at ES:DI, which only a VGA's BIOS gives: a program
-                // that gets AL back as 1Bh knows it has one. What's filled in is what the mode
-                // has; the pointer to the table of what the BIOS can do is left zero
+                // that gets AL back as 1Bh knows it has one, and Microsoft's graphics library
+                // goes by what's in it to say which modes it will set
+                int mode = ReadByte(0x40, 0x49);
+                bool text = mode is <= 3 or 7;
                 byte[] state = new byte[64];
-                state[0x04] = ReadByte(0x40, 0x49);
+
+                // a far pointer to the table of what the BIOS can do
+                state[0x00] = VideoFunctions & 0xFF;
+                state[0x01] = VideoFunctions >> 8;
+                state[0x03] = BiosSegment >> 8;
+                state[0x04] = (byte)mode;
                 state[0x05] = ReadByte(0x40, 0x4A);
-                state[0x22] = 25;
-                state[0x23] = 16;
+
+                // rows, and the height of a character: 8 lines at 200, 14 at 350, 16 at 400 and 480
+                int lines = mode switch { 0x0F or 0x10 => 1, 0x11 or 0x12 => 3, _ when text => 2, _ => 0 };
+                state[0x22] = (byte)(lines == 3 ? 30 : 25);
+                state[0x23] = (byte)(lines switch { 0 => 8, 1 => 14, _ => 16 });
+
+                // a VGA with a color display, and no second display
                 state[0x25] = 0x08;
-                state[0x27] = 16;
-                state[0x29] = 1;
-                state[0x2A] = 2;
+
+                // colors, as a word, and pages
+                int colors = mode switch { 4 or 5 => 4, 6 or 0x11 => 2, 0x0F => 2, 0x13 => 256, _ => 16 };
+                state[0x27] = (byte)colors;
+                state[0x28] = (byte)(colors >> 8);
+                state[0x29] = (byte)(mode switch { <= 1 or 0x0D => 8, 2 or 3 or 7 or 0x0E => 4, 0x0F or 0x10 => 2, _ => 1 });
+                state[0x2A] = (byte)lines;
+
+                // 256 KB of video memory
+                state[0x31] = 0x03;
                 WriteBytes(Cpu.Es, (ushort)Cpu.Edi, state);
                 SetAl(0x1B);
                 break;

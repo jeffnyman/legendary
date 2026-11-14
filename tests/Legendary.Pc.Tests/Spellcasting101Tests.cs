@@ -25,7 +25,7 @@ public sealed class Spellcasting101Tests : IDisposable
     }
 
     /// <summary>The launcher started at an AT's pace, from midnight, and left to draw its title.</summary>
-    private Machine? Start()
+    private Machine? Start(string arguments = "")
     {
         if (TestData.Game("sc101/game") is not { } folder)
         {
@@ -33,7 +33,7 @@ public sealed class Spellcasting101Tests : IDisposable
         }
 
         var machine = new Machine(folder, _saves) { Log = _log.Add, InstructionsPerSecond = 3_000_000, TickCount = 0 };
-        machine.Load("S101.EXE");
+        machine.Load("S101.EXE", arguments);
         Run(machine, 6);
         return machine;
     }
@@ -88,6 +88,59 @@ public sealed class Spellcasting101Tests : IDisposable
         Assert.Equal(0, different);
     }
 
+    private void PressEnter(Machine machine)
+    {
+        machine.PressKey(Enter);
+        Run(machine, 0.1);
+        machine.ReleaseKey(Enter);
+        Run(machine, 11);
+    }
+
+    /// <summary>The video modes set, in order, from the log.</summary>
+    private string[] Modes() => [.. _log.Where(line => line.StartsWith("10/00 set video mode", StringComparison.Ordinal)).Select(line => line[^3..])];
+
+    /// <summary>
+    /// The game asks Microsoft's graphics library for the EGA's 640 by 350, and takes the CGA's
+    /// 640 by 200 only if the library won't set it. The library goes by the VGA's state, INT 10h
+    /// function 1Bh, and the table of modes it points at: with those as a VGA has them, the game
+    /// draws for the EGA, as its launcher did.
+    /// </summary>
+    [Fact]
+    public void The_game_draws_for_the_EGA_as_its_launcher_did()
+    {
+        if (Start() is not { } machine)
+        {
+            return;
+        }
+
+        PressEnter(machine);
+        Screenshot.WritePng(machine, Shot("s101-restore-ega.png"));
+
+        Assert.Equal(["10h", "10h"], Modes());
+        Assert.Equal(0x10, machine.VideoMode);
+        Assert.DoesNotContain(_log, line => line.Contains("S101_C1.PIC", StringComparison.Ordinal));
+    }
+
+    /// <summary>
+    /// With CGA after its name, the launcher draws for the CGA, and hands the word on to the
+    /// game after the ">" that says the launcher started it.
+    /// </summary>
+    [Fact]
+    public void CGA_on_the_command_line_makes_both_draw_for_the_CGA()
+    {
+        if (Start("CGA") is not { } machine)
+        {
+            return;
+        }
+
+        PressEnter(machine);
+        Screenshot.WritePng(machine, Shot("s101-restore-cga.png"));
+
+        Assert.Equal(["06h", "06h"], Modes());
+        Assert.Contains(_log, line => line.Contains("S101_C1.PIC", StringComparison.Ordinal));
+        Assert.DoesNotContain(_log, line => line.Contains("S101_E1.PIC", StringComparison.Ordinal));
+    }
+
     /// <summary>
     /// At a key, the launcher frees its own memory by hand, through DOS's list of lists, and
     /// loads S101MAIN.EXE over itself as an overlay. The game then starts: PLINK86 loads its
@@ -102,11 +155,7 @@ public sealed class Spellcasting101Tests : IDisposable
             return;
         }
 
-        machine.PressKey(Enter);
-        Run(machine, 0.1);
-        machine.ReleaseKey(Enter);
-        Run(machine, 11);
-        Screenshot.WritePng(machine, Shot("s101-restore.png"));
+        PressEnter(machine);
 
         Assert.Contains("21/52 list of lists", _log);
         Assert.Contains(_log, line => line.StartsWith("21/4B load overlay", StringComparison.Ordinal) && line.Contains("S101MAIN.EXE", StringComparison.Ordinal));
