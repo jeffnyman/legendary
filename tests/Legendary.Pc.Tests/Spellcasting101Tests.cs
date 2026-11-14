@@ -31,7 +31,7 @@ public sealed class Spellcasting101Tests : IDisposable
     }
 
     /// <summary>The launcher started at an AT's pace, from midnight, and left to draw its title.</summary>
-    private Machine? Start(string arguments = "")
+    private Machine? Start(string arguments = "", bool adLib = false)
     {
         if (TestData.Game("sc101/game") is not { } folder)
         {
@@ -39,10 +39,23 @@ public sealed class Spellcasting101Tests : IDisposable
         }
 
         var machine = new Machine(folder, _saves) { Log = _log.Add, InstructionsPerSecond = 3_000_000, TickCount = 0 };
-        machine.Load("S101.EXE", arguments);
+        if (adLib)
+        {
+            machine.LoadCommands("SOUND.COM", "S101.EXE");
+        }
+        else
+        {
+            machine.Load("S101.EXE", arguments);
+        }
+
         Run(machine, 6);
         return machine;
     }
+
+    // how loud what the machine has played since this was last cleared is: the sum of its
+    // samples' squares, and their count
+    private static double _energy;
+    private static long _samples;
 
     private static void Run(Machine machine, double seconds)
     {
@@ -50,10 +63,25 @@ public sealed class Spellcasting101Tests : IDisposable
         for (double t = 0; t < seconds; t += 0.05)
         {
             machine.Run(machine.InstructionsPerSecond / 20);
-            while (machine.ReadSamples(buffer) > 0)
+            int count;
+            while ((count = machine.ReadSamples(buffer)) > 0)
             {
+                foreach (short sample in buffer.AsSpan(0, count))
+                {
+                    _energy += (double)sample * sample;
+                }
+
+                _samples += count;
             }
         }
+    }
+
+    /// <summary>The loudness of what has played since the last call, as a root mean square, and a fresh start.</summary>
+    private static double Loudness()
+    {
+        double loudness = Math.Sqrt(_energy / Math.Max(_samples, 1));
+        (_energy, _samples) = (0, 0);
+        return loudness;
     }
 
     /// <summary>
@@ -277,5 +305,52 @@ public sealed class Spellcasting101Tests : IDisposable
         }
 
         Assert.Equal(0, different);
+    }
+
+    /// <summary>
+    /// With AdLib's driver, SOUND.COM, run first and left in memory, the launcher finds it with
+    /// no word said: it opens the first music file and the instruments, and plays the title's
+    /// music by the FM chip, where without the driver it plays MUSIC.RS on the speaker.
+    /// </summary>
+    [Fact]
+    public void With_AdLibs_driver_loaded_the_title_plays_by_FM()
+    {
+        Loudness();
+        if (Start(adLib: true) is not { } machine)
+        {
+            return;
+        }
+
+        Assert.Contains(_log, line => line.StartsWith("stays resident", StringComparison.Ordinal));
+        Assert.Contains(_log, line => line.Contains("S101_m1.mus", StringComparison.OrdinalIgnoreCase));
+        Assert.Contains(_log, line => line.Contains("S101.BNK", StringComparison.OrdinalIgnoreCase));
+        Assert.DoesNotContain(_log, line => line.Contains("MUSIC.RS", StringComparison.OrdinalIgnoreCase));
+        Assert.True(Loudness() > 100, "The title is silent.");
+        Assert.False(machine.Exited);
+    }
+
+    /// <summary>
+    /// The recorded sounds are the speaker's, whatever plays the music. Three turns of waiting
+    /// bring Joey Rottenwood up the stairs, and his laugh is ROTTEN3.RS, played by RealSound.
+    /// </summary>
+    [Fact]
+    public void Rottenwoods_laugh_is_a_recording_on_the_speaker()
+    {
+        if (Start(adLib: true) is not { } machine)
+        {
+            return;
+        }
+
+        PressEnter(machine);
+        Type(machine, "n");
+        Type(machine, "wait\n");
+        Type(machine, "wait\n");
+        Assert.DoesNotContain(_log, line => line.Contains("rotten3.rs", StringComparison.OrdinalIgnoreCase));
+
+        Loudness();
+        Type(machine, "wait\n");
+        Screenshot.WritePng(machine, Shot("s101-rottenwood.png"));
+        Assert.Contains(_log, line => line.Contains("rotten3.rs", StringComparison.OrdinalIgnoreCase));
+        Assert.True(Loudness() > 100, "The laugh is silent.");
     }
 }

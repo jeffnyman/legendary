@@ -76,6 +76,10 @@ internal sealed record CrackedBytes(string Program, int Offset, byte[] Cracked, 
 /// For a game that keeps documents in its files, how to read them from its folder, to show
 /// without playing; otherwise null.
 /// </param>
+/// <param name="Drivers">
+/// Programs to run before it, each of which stays in memory for it to use: a sound card's
+/// driver, as its box said to load first. One that isn't in its folder is passed over.
+/// </param>
 /// <param name="Hint">
 /// Something to know before playing, said as its program starts, from its folder and its save
 /// folder: null for nothing to say.
@@ -83,7 +87,8 @@ internal sealed record CrackedBytes(string Program, int Offset, byte[] Cracked, 
 internal sealed record KnownGame(
     string Key, string Title, int Year, string[] Markers, string? Program, int Cycles, string Note,
     VideoAdapter Video = VideoAdapter.Vga, DiskSet? Disks = null, bool MouseJoystick = false, CrackedBytes[]? Cracks = null,
-    Func<string, IReadOnlyList<GameDocument>>? Documents = null, Func<string, string, string?>? Hint = null);
+    Func<string, IReadOnlyList<GameDocument>>? Documents = null, Func<string, string, string?>? Hint = null,
+    string[]? Drivers = null);
 
 /// <summary>A game to play: its folder, the program in it to run, and how fast to run it.</summary>
 /// <param name="Folder">The game's folder, which becomes drive C:.</param>
@@ -125,11 +130,14 @@ internal static class Games
     /// <summary>Every game the player knows, in the order the menu shows them: by year.</summary>
     public static readonly KnownGame[] Known =
     [
-        // each game's launcher, which shows the title and loads the game over itself: the game's
+        // Spellcasting 101's music is played by AdLib's own driver, SOUND.COM, which its manual
+        // has the player run first: the launcher finds it in memory and uses it, with nothing
+        // said. Each game's launcher, which shows the title and loads the game over itself: the game's
         // own program, S101MAIN.EXE and its like, won't start without it. A copy from a
         // collection has a run.bat beside it too, which is the collection's and is left alone
         new("sc101", "Spellcasting 101: Sorcerers Get All the Girls", 1990, ["S101MAIN.EXE"], "S101.EXE", At,
-            "starts and plays, on the EGA or CGA, with the speaker's sound; not yet played through"),
+            "starts and plays, on the EGA or CGA, with AdLib music and the speaker's sounds; not yet played through",
+            Drivers: ["SOUND.COM"]),
         new("tquest", "Timequest", 1991, ["TIMEMAIN.EXE"], "TQ.EXE", At, Untried),
         new("sc201", "Spellcasting 201: The Sorcerer's Appliance", 1991, ["S201MAIN.EXE"], "S201.EXE", At, Untried),
         new("gateway", "Gateway", 1992, ["GATEMAIN.EXE"], "GATE.EXE", At, Untried),
@@ -297,7 +305,7 @@ internal static class Games
         => Path.Combine(Home, "states", Path.GetFileName(SaveFolder(game)), Path.ChangeExtension(game.Program, ".state"));
 
     // a file in a folder, whatever its case
-    private static string? FileIn(string folder, string name)
+    internal static string? FileIn(string folder, string name)
         => Directory.Exists(folder)
             ? Directory.EnumerateFiles(folder).FirstOrDefault(file => string.Equals(Path.GetFileName(file), name, StringComparison.OrdinalIgnoreCase))
             : null;

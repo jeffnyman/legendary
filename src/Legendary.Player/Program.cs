@@ -350,7 +350,18 @@ internal static class Program
             machine.RestoreProgramBytes(crack.Program, crack.Offset, crack.Cracked, crack.Original);
         }
 
-        machine.Load(game.Program, arguments);
+        // the game's drivers first, when it's the game itself that's run and not, say, its setup
+        string[] drivers = game.Known is { Drivers: { } named } played && string.Equals(game.Program, played.Program, StringComparison.OrdinalIgnoreCase)
+            ? [.. named.Where(driver => Games.FileIn(game.Folder, driver) is not null)]
+            : [];
+        if (drivers.Length > 0)
+        {
+            machine.LoadCommands([.. drivers, $"{game.Program} {arguments}".TrimEnd()]);
+        }
+        else
+        {
+            machine.Load(game.Program, arguments);
+        }
         statePath ??= Games.StateFile(game);
         if (resume)
         {
