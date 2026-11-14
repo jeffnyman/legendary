@@ -67,6 +67,34 @@ block as large as DOS will; and has DOS load `S101MAIN.EXE` as an overlay at the
 its own code is at. That is how Microsoft C starts a program in place of the one running, and
 it leaves the game the whole machine, which it needs: 347K, on a PC with 640K and DOS in it.
 
+### What the launcher is told
+
+The launcher hands the game its own command line, in small letters, after a `>`. The `>` is
+how the game knows the launcher started it: its main routine looks for one first, and without
+it says to use `S101.EXE` and ends. Then it reads the words, and knows seven:
+
+| Word | What it does |
+|---|---|
+| `cga` | Draws for the CGA, 640 by 200 in two colors |
+| `nocycle` | Draws for the EGA without, by the name, changing its colors as it goes |
+| `real` | Sound by RealSound, on the PC's speaker |
+| `noreal` | No RealSound |
+| `adlib` | Music by an AdLib card |
+| `mt32` | Music by a Roland MT-32; a digit after it is, by its use, the interrupt the MIDI card is on, 2 if none is given |
+| `xmouse` | Sets a flag for the mouse, not yet followed |
+
+With none of them, the game draws for the EGA, and its setting for sound starts with
+RealSound's bit in it. What each word sets is in the game's code; what the settings then do
+is inferred from the words.
+
+For the EGA, the game asks Microsoft's graphics library to set 640 by 350 in 16 colors, and
+if the library won't, it sets the CGA's mode and goes on as if `cga` had been said. So a PC
+with only a CGA needs no word at all.
+
+The copy these notes are made from was started by a batch file with `SVGA BLASTER 7 220`
+after the name, which is none of the seven. The launcher hands those on and the game passes
+over them.
+
 ### The overlays
 
 The MZ header of `S101MAIN.EXE` describes only its first 224,672 bytes. That is the root: the
