@@ -36,6 +36,7 @@ python -m legendary_tools dis <the game's folder> <address> [<instructions>] [--
 python -m legendary_tools loads <the game's folder>
 python -m legendary_tools objects <the game's folder> [<number>] [--tree] [--saved]
 python -m legendary_tools grammar <the game's folder> [<verb>]
+python -m legendary_tools actions <the game's folder> [<number>]
 ```
 
 - **`exe`** prints each program's MZ header: its image, what's in the file after it, the memory
@@ -73,7 +74,8 @@ python -m legendary_tools dis ../../legend/sc101/game 3670:054e
 
 - **`objects`** lists the game's objects as it starts, from the program's memory: each
   one's number, type, flags, names, and what it's in. It starts with the types. With a number,
-  it prints that object in full: its flags, the nouns and adjectives it's called by, where it is, what's on each of its lists, a room's
+  it prints that object in full: its flags, the nouns and adjectives it's called by, its routine,
+  where it is, what's on each of its lists, a room's
   exits with where each goes, and its record in words, with the far pointers in brackets. With
   `--tree`, it prints each room and holder with what's in it, and in that. With `--saved`, it
   prints the parts of `RESTART.DAT` and their sizes, which come to the file's. How the objects
@@ -87,6 +89,13 @@ python -m legendary_tools dis ../../legend/sc101/game 3670:054e
   understood. With a verb, it lists that verb's forms. It needs `VOCAB.DAT` for the words, and
   reads *Spellcasting 101* and *Timequest*. How the table is kept is in
   [docs/spellcasting-101.md](../docs/spellcasting-101.md#the-grammar).
+
+- **`actions`** lists each action with its routine, the routine that comes before it when
+  there is one, and the commands that make it, from the grammar: the first four, or all of
+  them with an action's number. An object's routine is in what `objects` prints for it. Both
+  are read from the code's own switches, which is in
+  [docs/spellcasting-101.md](../docs/spellcasting-101.md#from-an-action-to-what-happens), and
+  `dis` at a routine's address shows it. It reads *Spellcasting 101* only.
 
 ## The data files
 
@@ -112,6 +121,8 @@ python -m legendary_tools vocab <the game's folder>
 - **`mz.py`**: a DOS program's MZ header, image and relocations.
 - **`plink86.py`**: PLINK86's table of overlays, the thunks, and the program's memory with
   overlays loaded. `src/Legendary.Core/Programs` is the same in C#.
+- **`handlers.py`**: the routine of each object and each action, read from the switches in the
+  code that call them.
 - **`grammar.py`**: the table of the forms a command can take, and the second table of the
   ways each goes on to a second object.
 - **`objects.py`**: the table of objects, the types, each record's tree fields and a room's

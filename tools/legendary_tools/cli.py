@@ -9,7 +9,8 @@ import sys
 
 from . import data
 from .game import GameFolder
-from .grammar import read_grammar
+from .grammar import Form, read_grammar
+from .handlers import action_routines, object_routines
 from .loads import StringNames, find_loader, find_loads
 from .mz import MzExecutable
 from .objects import Exit, GameObject, ObjectTable, SavedState, is_pointer
@@ -275,6 +276,7 @@ def _show_object(program: Plink86Program, table: ObjectTable, found: GameObject)
         for label, numbers in (("nouns", found.nouns), ("adjectives", found.adjectives)):
             if numbers:
                 print(f"  {label}: " + ", ".join(table.words[number - 1].text for number in numbers))
+    print(f"  routine: {object_routines(program).get(found.number) or 'none'}")
     for place in found.places:
         print(
             f"  in {_named(table, place)}"
@@ -350,6 +352,45 @@ def objects(args: argparse.Namespace) -> None:
         where = ", ".join(_named(table, place) for place in found.places if place)
         name = found.name + (f" ({found.second_name})" if found.second_name else "")
         print(f"{found.number:4}  {found.type}  {found.flags:04x}  {name:44}  {where}")
+
+
+def _shapes(forms: list[Form], words: list[data.Word]) -> dict[int, list[str]]:
+    """The commands that make each action, by the action's number."""
+
+    def word(number: int) -> str:
+        return words[number - 1].text if number else ""
+
+    shapes: dict[int, list[str]] = {}
+    for form in forms:
+        start = " ".join(part for part in (word(form.verb), word(form.preposition)) if part)
+        if form.action_alone:
+            shapes.setdefault(form.action_alone, []).append(start)
+        if form.action_with_object:
+            shapes.setdefault(form.action_with_object, []).append(f"{start} OBJECT")
+        for second in form.seconds:
+            line = " ".join(part for part in (start, "OBJECT", word(second.preposition), "OBJECT") if part)
+            shapes.setdefault(second.action, []).append(line)
+    return shapes
+
+
+def actions(args: argparse.Namespace) -> None:
+    """Each action: its routine, the routine that comes before it, and the commands that make it."""
+    folder = GameFolder(args.folder)
+    program = _program(folder)
+    words = data.vocabulary(folder.read(folder.one("vocab.dat")))
+    shapes = _shapes(read_grammar(program, words), words)
+    routines, before = action_routines(program)
+    for number in sorted(routines):
+        if args.number not in (None, number):
+            continue
+        print(f"action {number}: {routines[number]}")
+        if number in before:
+            print(f"    first {before[number]}")
+        made = shapes.get(number, [])
+        if args.number is None and len(made) > 4:
+            made = [*made[:4], f"and {len(made) - 4} more"]
+        for shape in made or ["no command makes it"]:
+            print(f"    {shape}")
 
 
 def grammar(args: argparse.Namespace) -> None:
@@ -457,6 +498,9 @@ def main() -> None:
     sub = command(dis, overlay="many")
     sub.add_argument("address", help="segment:offset, in hex")
     sub.add_argument("count", type=int, nargs="?", default=40, help="how many instructions (40)")
+    command(actions).add_argument(
+        "number", type=int, nargs="?", help="only this action, with every command that makes it"
+    )
     command(grammar).add_argument("verb", nargs="?", help="only this verb's forms")
     command(loads)
     sub = command(objects)

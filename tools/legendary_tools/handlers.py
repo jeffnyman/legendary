@@ -1,0 +1,149 @@
+"""The routines the game runs for an action: each object's own, and each action's.
+
+The game does a thing by performing an action, a number from the grammar, on up to two
+objects. The routine that performs one gives a turn to the routines of the room, the actor and
+the objects, each with a reason for the call, then to the action's own. A routine that
+answers with something other than zero has dealt with it, and the rest aren't asked.
+
+Which routine is an object's, or an action's, isn't in any table of data. The game's source
+had a C switch for each: one on the action's number, and for each type of object one on the
+object's number, every case a call to a routine. The compiler made most of them a table of
+jumps, and the cases are read here from the code.
+"""
+
+from __future__ import annotations
+
+import re
+import struct
+from dataclasses import dataclass
+
+from .plink86 import Image, Plink86Program
+
+# push bp / mov bp,sp / mov ax,[bp+6] / (sub ax,<first>) / cmp ax,<count less one> /
+# jbe / jmp <default>, or ja <default> / add ax,ax / xchg bx,ax / jmp cs:[bx+<table>]
+_JUMP_TABLE = re.compile(
+    rb"\x55\x8b\xec\x8b\x46\x06(?:\x2d(..))?\x3d(..)(?:\x76\x03\xe9..|\x77.)\x03\xc0\x93\x2e\xff\xa7(..)",
+    re.DOTALL,
+)
+# cmp ax,<value> / je <case>, with the case near or, by a jump around a jump, far
+_COMPARE = re.compile(rb"\x3d(..)(?:\x74(.)|\x75\x03\xe9(..))", re.DOTALL)
+# an object's type, less one, made the index of a table of jumps
+_BY_TYPE = re.compile(
+    rb"\x26\x8a\x87\xfa\xff\x2a\xe4\x2d\x01\x00\x3d(..)\x77.\x03\xc0\x93\x2e\xff\xa7(..)", re.DOTALL
+)
+# mov al,es:[<the action>] / sub ah,ah / push ax / call far: the action handed to a routine
+_BY_ACTION = re.compile(rb"\x26\xa0..\x2a\xe4\x50\x9a(..)(..)", re.DOTALL)
+
+
+@dataclass(frozen=True)
+class Routine:
+    """A routine a case calls."""
+
+    overlay: int | None  # the overlay it's in, or None for the root
+    segment: int
+    offset: int
+
+    def __str__(self) -> str:
+        where = "the root" if self.overlay is None else f"overlay {self.overlay}"
+        return f"{self.segment:04x}:{self.offset:04x} in {where}"
+
+
+class _Code:
+    """The root's code, with what's needed to read a switch from it."""
+
+    def __init__(self, program: Plink86Program):
+        self.program = program
+        self.image: Image = program.image()
+        self.memory = self.image.memory
+        self.root = self.memory[: len(program.mz.image)]
+        self.segments = sorted(self.image.segment_references())
+
+    def segment_of(self, linear: int) -> int:
+        """The code segment a place is in: the nearest one named at or below it."""
+        return max(segment for segment in self.segments if segment * 16 <= linear)
+
+    def word(self, linear: int) -> int:
+        return struct.unpack_from("<H", self.memory, linear)[0]
+
+    def called(self, at: int) -> Routine | int | None:
+        """
+        What a case does: after pushing its arguments, a far call, which is to a routine in
+        the root or by a thunk to one in an overlay, or a near call, which is given as where it
+        goes. None when it does neither.
+        """
+        while self.memory[at : at + 2] == b"\xff\x76":
+            at += 3
+        if self.memory[at] == 0x9A and at + 3 in self.image.relocations:
+            offset, segment = struct.unpack_from("<HH", self.memory, at + 1)
+            thunk = self.program.thunk_at(segment, offset)
+            if thunk:
+                return Routine(thunk.overlay, thunk.target_segment, thunk.target_offset)
+            return Routine(None, segment, offset)
+        if self.memory[at : at + 2] == b"\x0e\xe8":
+            # push cs / call near: the offset wraps within the segment
+            segment = self.segment_of(at) * 16
+            return segment + ((at + 4 + self.word(at + 2) - segment) & 0xFFFF)
+        return None
+
+    def cases(self, start: int) -> dict[int, int]:
+        """A switch's cases, from the routine that starts at a place: each value, and where it goes."""
+        segment = self.segment_of(start)
+        match = _JUMP_TABLE.match(self.memory, start)
+        if match:
+            first = int.from_bytes(match[1], "little") if match[1] else 0
+            count = int.from_bytes(match[2], "little") + 1
+            table = segment * 16 + int.from_bytes(match[3], "little")
+            return {first + index: segment * 16 + self.word(table + 2 * index) for index in range(count)}
+
+        # a switch of few cases is compares, to the routine's far return
+        end = self.memory.index(b"\x5d\xcb", start)
+        found = {}
+        for compare in _COMPARE.finditer(self.memory, start, end):
+            if compare[2]:
+                target = compare.end() + int.from_bytes(compare[2], "little", signed=True)
+            else:
+                target = compare.end() + int.from_bytes(compare[3], "little", signed=True)
+            found[int.from_bytes(compare[1], "little")] = target
+        return found
+
+    def routines(self, start: int) -> dict[int, Routine]:
+        """A switch's cases that call a routine."""
+        found = {}
+        for value, target in self.cases(start).items():
+            called = self.called(target)
+            if isinstance(called, Routine):
+                found[value] = called
+        return found
+
+
+def object_routines(program: Plink86Program) -> dict[int, Routine]:
+    """Each object's routine, by the object's number, for the objects that have one."""
+    code = _Code(program)
+    for match in _BY_TYPE.finditer(code.root):
+        segment = code.segment_of(match.start())
+        table = segment * 16 + int.from_bytes(match[2], "little")
+        count = int.from_bytes(match[1], "little") + 1
+        # the one that's wanted hands the object and the reason on to a switch for its type
+        switches = [code.called(segment * 16 + code.word(table + 2 * index)) for index in range(count)]
+        if all(isinstance(switch, int) for switch in switches):
+            found: dict[int, Routine] = {}
+            for switch in switches:
+                if isinstance(switch, int):
+                    found.update(code.routines(switch))
+            return found
+    raise ValueError("the code that calls an object's routine wasn't found")
+
+
+def action_routines(program: Plink86Program) -> tuple[dict[int, Routine], dict[int, Routine]]:
+    """Each action's routine, by the action's number, and the routines some have before it."""
+    code = _Code(program)
+    before: dict[int, Routine] = {}
+    for match in _BY_ACTION.finditer(code.root):
+        start = int.from_bytes(match[2], "little") * 16 + int.from_bytes(match[1], "little")
+        if not code.memory.startswith(b"\x55\x8b\xec\x8b\x46\x06", start):
+            continue
+        if _JUMP_TABLE.match(code.memory, start):
+            return code.routines(start), before
+        # the switch called first, of few cases, is the routines that come before
+        before = code.routines(start)
+    raise ValueError("the code that calls an action's routine wasn't found")
