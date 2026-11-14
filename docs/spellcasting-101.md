@@ -191,8 +191,64 @@ This was checked by unpacking all of it: every block comes to exactly the size a
 of strings the table gives it. *Timequest*'s `TIMESTR.DAT` is packed the same way. The later
 games' string files don't unpack this way, and aren't read yet.
 
-How the program asks for a string, by block and number or some other way, is still to be
-found.
+### How the program names a string
+
+Nothing in the file names a string, and nothing in the program does either, by number. The
+program has a routine at `01B9:2B7F` that loads a block, which in C would be
+
+```c
+int load_strings(char far * far *array, int block);
+```
+
+It is given an array of far pointers and a block's number. It finds the block in the file by
+adding up the packed sizes of the ones before it, allocates the block's unpacked size, unpacks
+all of it there, and then walks the text, putting a pointer to each string in the array, in
+order. It returns the count of strings. From then on, a string is an element of the array: in
+the game's source, something like `strs[25]`.
+
+So the exit's routine from the top of these notes, when the test fails, does this:
+
+```
+3670:058f  mov es, word ptr [0xa0d6]
+3670:0593  push word ptr es:[0x7eda]
+3670:0598  push word ptr es:[0x7ed8]     ; string 2.25: If you want to climb the chimney, then say so.
+3670:059d  lcall 0x142c, 0x1175          ; print it
+```
+
+The array is at `3B00:7E74`, and overlay 3 loads block 2 into it. The pointer pushed is at
+`7ED8`, a hundred bytes on, and pointers are four bytes: string 25 of block 2. The
+[tools](../tools/README.md) work this out for any instruction, and write the string beside
+it.
+
+The routine is called from 118 places, and they show how the game is laid out. A few arrays in
+the data are shared by all of it:
+
+| Array | What's loaded into it |
+|---|---|
+| `3B00:7E74`, with room for 128 pointers before the next | The text of the part of the game the player is in: block 2 by overlay 3, block 3 by overlay 4, block 5 by overlays 5, 6 and 7, and so on to block 57 by overlay 11 |
+| `3B00:8074`, with room for 32 | A smaller block beside it: in overlay 12, block 45 is in the first array throughout while this one has block 46, 47 or on to 55 |
+| `3B00:80F4` | Another, used the same way |
+| `3B00:8274` | Block 65, by overlays 1 and 2, the two that share the first place in memory |
+| `3B00:8ABC` | Block 0, what the game says of memory, by the root |
+
+An overlay is a part of the story, then, and brings its text with it: its code is swapped in
+by PLINK86, and its routines load its block into the shared array, whatever part of the game
+had it before. The loader keeps a list of up to 16 arrays with
+blocks in them, and a second routine, at `01B9:2E87`, frees an array's block and takes it off
+the list. Loading into an array that still has a block frees the old one, and says
+`[WARNING: string block loading over existing block]`, which a finished game never should.
+
+Fifteen of the calls load into an array of the caller's own, on the stack: a block of a few
+strings, loaded, printed from and freed in one routine. The jokes of block 1 are read that way.
+
+Three calls take the block's number from a table, so sixteen blocks are named by no call:
+blocks 6 to 15 are in two tables of five, `7 9 11 13 15` at `4517:593C` and `6 8 10 12 14`
+after `4517:59FC`, and blocks 66 to 68 are in one after `4517:5DEE`. Blocks 19, 39 and 40
+aren't accounted for yet.
+
+The limits the routine was written with: a block has at most 255 strings, since the count is
+read as a byte; the words can take 786 bytes, which is what *Spellcasting 101*'s take exactly;
+and the file is read 2,048 bytes at a time.
 
 `VOCAB.DAT` is a byte, then the words in order, each ending in a zero, from `-'n'` to `zoe`,
 and then 13,890 bytes about them that aren't read yet.
@@ -204,7 +260,8 @@ file was made. How the game uses them when it loads somewhere else is still to b
 
 ## Still to do
 
-- How the program names a string in the blocks, and which strings are whose.
+- What picks the block in the three calls that take it from a table, and where blocks 19, 39
+  and 40 are loaded.
 - The rest of `VOCAB.DAT`, and the parser that reads it.
 - The objects: what `RESTART.DAT` and the data hold for each room and thing.
 - Where the system ends and the game begins among the root's segments and the overlays.
