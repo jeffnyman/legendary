@@ -55,12 +55,14 @@ saves goes to a folder of its own in your application data.
 `--watch` has the player say, on the terminal it was started from, what the game has in its
 memory as it's played: the time, the turn and the room, what is in the room and what those
 things hold, and each action as the game performs it, by the numbers
-[the notes](docs/spellcasting-101.md#the-objects) use.
+[the notes](docs/spellcasting-101.md#the-objects) use. An action is a number to the game; the
+watch names it by the first command in the game's grammar that makes it, so `LOOK AT RAT` is
+said as `examine`, which is the same action.
 
 ```
 world: 3:35 pm, turn 0, in Bedchamber (1)
 world:   here: rat (352), you (153) [cloak (82)], pile of hay (72), ..., fireplace (62) [fire (63)], writing desk (61) [love note (74), application (73)], door (60)
-world:   action 60 on rat (352)
+world:   action 60: examine rat (352)
 world: 3:40 pm, turn 1, in Bedchamber (1)
 ```
 
@@ -79,8 +81,8 @@ inside one. For now it knows *Spellcasting 101*.
 - **`src/Legendary.Core`** reads the games' files, in C#. So far: a DOS program's MZ header, and
   a program linked by PLINK86, with its overlays loaded into the memory it would have, the
   packed text of a string file, the pictures of a picture file and their regions, the songs of a music file, and a
-  RealSound recording. It also reads a game's world from its memory as it runs: the room, the
-  clock, the action, and the tree of objects.
+  RealSound recording, and the words of a vocabulary. It also reads a game's world from its
+  memory as it runs: the room, the clock, the action, the tree of objects, and the grammar.
 - **`tools`** has the same in Python, as commands to explore a game with: the overlays, the
   ways into them, memory in hex and as instructions, the text, the objects, the grammar, the
   pictures as PNG files, and the sounds as WAV files. See [tools/README.md](tools/README.md).
