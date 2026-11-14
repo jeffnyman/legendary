@@ -14,6 +14,13 @@ number and then the preposition's, which it searches by halves:
 The second table has six bytes for each way a form can go on to a second object: the
 preposition before it, flags for it, a byte not yet understood, and the action.
 
+Of a form's flags, and a second object's, two are known. 20 is that the object should be in
+the actor's hands, and is taken first when it isn't, with "[Taking the cloak first.]"; 10 is
+that it must be somewhere about the actor, and the command is refused when it isn't.
+
+Before the forms, from the start of their segment, is a byte for each action. Its bit 1 is
+that the action takes no turn: the game's clock doesn't move for it.
+
 A word that is a synonym is looked up as the word it stands for. An action is a number; what
 the game does about one is its own business, and isn't here.
 """
@@ -54,10 +61,14 @@ class Form:
     seconds: list[Second] = field(default_factory=list)
 
 
-def read_grammar(program: Plink86Program, words: list[Word]) -> list[Form]:
-    """The forms, in the table's order."""
-    image = program.image()
-    memory = image.memory
+TAKEN_FIRST = 0x20  # the object is taken first when the actor doesn't have it in hand
+MUST_BE_HELD = 0x10  # the object must be somewhere about the actor
+NO_TURN = 0x01  # of an action's byte: the action takes no turn
+
+
+def _tables(program: Plink86Program) -> tuple[bytes, int, int, int]:
+    """The program's memory, the forms' segment, and where the two tables start in it."""
+    memory = program.image().memory
     root = memory[: len(program.mz.image)]
     found = {
         (int.from_bytes(match[2], "little"), int.from_bytes(match[1], "little"))
@@ -67,6 +78,18 @@ def read_grammar(program: Plink86Program, words: list[Word]) -> list[Form]:
         raise ValueError("the code that searches the grammar wasn't found")
     # the forms come first, and the second table follows them
     (segment, first), (_, second) = sorted(found)[:2]
+    return memory, segment, first, second
+
+
+def action_flags(program: Plink86Program) -> bytes:
+    """A byte for each action, the first for action 1: what's in the forms' segment before them."""
+    memory, segment, first, _ = _tables(program)
+    return memory[segment * 16 : segment * 16 + first]
+
+
+def read_grammar(program: Plink86Program, words: list[Word]) -> list[Form]:
+    """The forms, in the table's order."""
+    memory, segment, first, second = _tables(program)
     forms_at = segment * 16 + first
     seconds_at = segment * 16 + second
 

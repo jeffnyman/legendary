@@ -68,6 +68,24 @@ LAYOUTS = {
 }
 
 
+# the directions an exit can be in, by number, from the main loop's own tests of the word typed
+DIRECTIONS = (
+    "",
+    "north",
+    "northeast",
+    "east",
+    "southeast",
+    "south",
+    "southwest",
+    "west",
+    "northwest",
+    "up",
+    "down",
+    "in",
+    "out",
+)
+
+
 @dataclass(frozen=True)
 class Exit:
     """A row of a room's exits: a direction, a kind, and a far pointer."""

@@ -76,7 +76,7 @@ python -m legendary_tools dis ../../legend/sc101/game 3670:054e
   one's number, type, flags, names, and what it's in. It starts with the types. With a number,
   it prints that object in full: its flags, the nouns and adjectives it's called by, its routine,
   where it is, what's on each of its lists, a room's
-  exits with where each goes, and its record in words, with the far pointers in brackets. With
+  exits with the direction and where each goes, and its record in words, with the far pointers in brackets. With
   `--tree`, it prints each room and holder with what's in it, and in that. With `--saved`, it
   prints the parts of `RESTART.DAT` and their sizes, which come to the file's. How the objects
   are kept is in [docs/spellcasting-101.md](../docs/spellcasting-101.md#the-objects). It reads
@@ -90,7 +90,7 @@ python -m legendary_tools dis ../../legend/sc101/game 3670:054e
   reads *Spellcasting 101* and *Timequest*. How the table is kept is in
   [docs/spellcasting-101.md](../docs/spellcasting-101.md#the-grammar).
 
-- **`actions`** lists each action with its routine, the routine that comes before it when
+- **`actions`** lists each action with its routine, whether it takes no turn, the routine that comes before it when
   there is one, and the commands that make it, from the grammar: the first four, or all of
   them with an action's number. An object's routine is in what `objects` prints for it. Both
   are read from the code's own switches, which is in

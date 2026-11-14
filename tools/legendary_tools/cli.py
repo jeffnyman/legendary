@@ -9,11 +9,11 @@ import sys
 
 from . import data
 from .game import GameFolder
-from .grammar import Form, read_grammar
+from .grammar import NO_TURN, Form, action_flags, read_grammar
 from .handlers import action_routines, object_routines
 from .loads import StringNames, find_loader, find_loads
 from .mz import MzExecutable
-from .objects import Exit, GameObject, ObjectTable, SavedState, is_pointer
+from .objects import DIRECTIONS, Exit, GameObject, ObjectTable, SavedState, is_pointer
 from .plink86 import Image, Plink86Program
 
 
@@ -289,7 +289,8 @@ def _show_object(program: Plink86Program, table: ObjectTable, found: GameObject)
         print(f"  list {index}: {members or 'empty'}")
     for row in found.exits:
         target = _exit_target(program, table, row)
-        print(f"  exit {row.direction:2}, kind {row.kind}: {target}")
+        direction = DIRECTIONS[row.direction] if row.direction < len(DIRECTIONS) else str(row.direction)
+        print(f"  exit {direction}, kind {row.kind}: {target}")
     words = []
     at = 0
     while at < len(found.record):
@@ -380,10 +381,12 @@ def actions(args: argparse.Namespace) -> None:
     words = data.vocabulary(folder.read(folder.one("vocab.dat")))
     shapes = _shapes(read_grammar(program, words), words)
     routines, before = action_routines(program)
+    flags = action_flags(program)
     for number in sorted(routines):
         if args.number not in (None, number):
             continue
-        print(f"action {number}: {routines[number]}")
+        turn = ", and takes no turn" if number <= len(flags) and flags[number - 1] & NO_TURN else ""
+        print(f"action {number}: {routines[number]}{turn}")
         if number in before:
             print(f"    first {before[number]}")
         made = shapes.get(number, [])
