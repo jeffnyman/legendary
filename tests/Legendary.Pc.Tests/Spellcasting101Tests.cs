@@ -252,6 +252,12 @@ public sealed class Spellcasting101Tests : IDisposable
 
         PressEnter(machine);
         Type(machine, "n");
+
+        // the game's first two pages, "Another red letter day..." and "Chapter One: Escape!",
+        // each wait for a key, and so does the room's description when it has filled its window
+        Type(machine, " ");
+        Type(machine, " ");
+        Type(machine, " ");
         Screenshot.WritePng(machine, Shot("s101-bedchamber.png"));
 
         ushort load = LoadSegment();
@@ -438,6 +444,44 @@ public sealed class Spellcasting101Tests : IDisposable
         Run(machine, 4);
         Assert.DoesNotContain(_log, line => line.Contains("rotten3.rs", StringComparison.OrdinalIgnoreCase));
         Assert.Equal(2, _log.Count(line => line.StartsWith("21/3D open", StringComparison.Ordinal) && line.Contains("S101_m1.mus", StringComparison.OrdinalIgnoreCase)));
+    }
+
+    /// <summary>
+    /// With no mouse the game is played as with one, by the keyboard: it takes the PC to have no
+    /// mouse's driver from where INT 33h points, and then asks the interrupt nothing. It opens
+    /// on its first page, which waits for a key, and starts its own music under it.
+    /// </summary>
+    /// <remarks>
+    /// When INT 33h pointed at something, the game took it for a driver that had found no mouse,
+    /// asked it for the buttons all the same, and read what was left in the register as a
+    /// button held down: every page was clicked past as it came, and the music with it.
+    /// </remarks>
+    [Fact]
+    public void With_no_mouse_the_first_page_waits_and_the_music_starts()
+    {
+        if (Start(adLib: true) is not { } machine)
+        {
+            return;
+        }
+
+        PressEnter(machine);
+        Type(machine, "n");
+        Screenshot.WritePng(machine, Shot("s101-first-page.png"));
+
+        ushort data = (ushort)(LoadSegment() + DataSegment);
+        Assert.Equal(2, machine.ReadWord(data, 0x8610));
+        Assert.DoesNotContain(_log, line => line.StartsWith("33/", StringComparison.Ordinal));
+
+        // the page is red writing on black, with no room's picture yet and no turn taken
+        uint[] screen = new uint[640 * 350];
+        machine.Render(screen);
+        Assert.Equal(0x000000u, screen[(100 * 640) + 450] & 0xFFFFFF);
+        Assert.Contains(screen, pixel => (pixel & 0xFFFFFF) == 0xFF0000);
+        Assert.Equal(2, _log.Count(line => line.StartsWith("21/3D open", StringComparison.Ordinal) && line.Contains("S101_m1.mus", StringComparison.OrdinalIgnoreCase)));
+
+        Loudness();
+        Run(machine, 2);
+        Assert.True(Loudness() > 100, "The game's music is silent.");
     }
 
     /// <summary>
