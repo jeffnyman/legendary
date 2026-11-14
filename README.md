@@ -63,9 +63,11 @@ said as `examine`, which is the same action.
 world: 3:35 pm, turn 0, in Bedchamber (1)
 world:   here: rat (352), you (153) [cloak (82)], pile of hay (72), ..., fireplace (62) [fire (63)], writing desk (61) [love note (74), application (73)], door (60)
 world:   action 60: examine rat (352)
+world:     answered by rat (352), asked as the object: 1
 world: 3:40 pm, turn 1, in Bedchamber (1)
 world:   action 25: climb chimney (185)
 world:   action 27: climb in fireplace (62)
+world:     answered by fireplace (62), asked as the object: 1
 world: 3:45 pm, turn 2, in Bedchamber (1)
 ```
 
@@ -73,7 +75,11 @@ That is `EXAMINE RAT` and then `CLIMB CHIMNEY`, and it shows things the game has
 what the desk has in it, and that climbing the chimney, with the fire lit,
 [is turned into entering the fireplace](docs/spellcasting-101.md#from-an-action-to-what-happens).
 Every action is said, as the game gets to its routine that performs one: the PC tells the
-watch each time the program is there. The room and its contents are looked at once a frame,
+watch each time the program is there. The game then asks a row of routines about the action,
+the room's, the actor's, the objects' and at last the action's own, and stops at the first
+that answers; the watch says which that was. The rat has its own answer to being examined.
+Climbing the chimney is never answered at all, because the chimney's routine started the turn
+over and didn't come back. The room and its contents are looked at once a frame,
 so a turn can be seen half done, the room changed and the turn not yet counted. The watch
 reads the game's memory and changes nothing. For now it knows *Spellcasting 101*.
 
