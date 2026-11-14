@@ -2,9 +2,11 @@
   <Folder Name="/src/">
     <Project Path="src/Legendary.Core/Legendary.Core.csproj" />
     <Project Path="src/Legendary.Pc/Legendary.Pc.csproj" />
+    <Project Path="src/Legendary.Player/Legendary.Player.csproj" />
   </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/Legendary.Core.Tests/Legendary.Core.Tests.csproj" />
     <Project Path="tests/Legendary.Pc.Tests/Legendary.Pc.Tests.csproj" />
+    <Project Path="tests/Legendary.Player.Tests/Legendary.Player.Tests.csproj" />
   </Folder>
 </Solution>
