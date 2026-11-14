@@ -150,15 +150,67 @@ public sealed partial class Machine
 
     private (int X, int Y) MousePosition => ((int)_mouseX, (int)_mouseY);
 
-    /// <summary>The driver's state after a reset: the pointer hidden, in the middle of a 640 by 200 screen.</summary>
+    // Microsoft's arrow, the driver's pointer until a program gives it another: 16 rows of a
+    // mask and of the pointer itself, a bit a pixel from the left. Where the mask has a 1 the
+    // screen shows through; where it has a 0, the pixel is black, or white where the pointer has
+    // a 1. Its tip, the pixel that counts, is its top left corner.
+    private static readonly ushort[] ArrowMask =
+    [
+        0x3FFF, 0x1FFF, 0x0FFF, 0x07FF, 0x03FF, 0x01FF, 0x00FF, 0x007F,
+        0x003F, 0x001F, 0x01FF, 0x10FF, 0x30FF, 0xF87F, 0xF87F, 0xFC3F,
+    ];
+
+    private static readonly ushort[] ArrowShape =
+    [
+        0x0000, 0x4000, 0x6000, 0x7000, 0x7800, 0x7C00, 0x7E00, 0x7F00,
+        0x7F80, 0x7FC0, 0x7C00, 0x4600, 0x0600, 0x0300, 0x0300, 0x0180,
+    ];
+
+    /// <summary>
+    /// Draws the driver's pointer on a picture of the screen, when there's a mouse, the program
+    /// has the pointer shown, and the mode is a graphics mode. A real driver draws it into video
+    /// memory and puts back what was under it; drawn here, on the picture, it is never in the
+    /// way of what the program reads or writes there.
+    /// </summary>
+    private void DrawMousePointer(Span<uint> pixels)
+    {
+        int mode = VideoMode;
+        if (!_mouse || _mouseHidden != 0 || mode is <= 3 or 7)
+        {
+            return;
+        }
+
+        // the driver's 640 columns are 320 pixels in the modes that are 320 across
+        int width = DisplayWidth, height = DisplayHeight;
+        var (x, y) = MousePosition;
+        x = x * width / 640;
+        for (int row = 0; row < 16 && y + row < height; row++)
+        {
+            for (int column = 0; column < 16 && x + column < width; column++)
+            {
+                int bit = 0x8000 >> column;
+                if ((ArrowMask[row] & bit) == 0)
+                {
+                    pixels[((y + row) * width) + x + column] = (ArrowShape[row] & bit) != 0 ? 0xFFFFFFFF : 0xFF000000;
+                }
+            }
+        }
+    }
+
+    /// <summary>
+    /// The driver's state after a reset: the pointer hidden, in the middle of its screen, which
+    /// is 640 across and as many rows as the video mode has: 350 or 480 in the EGA's and VGA's
+    /// tall modes, and 200 in every other.
+    /// </summary>
     private void ResetMouse()
     {
+        int rows = VideoMode switch { 0x0F or 0x10 => 350, 0x11 or 0x12 => 480, _ => 200 };
         _mouseMinX = 0;
         _mouseMaxX = 639;
         _mouseMinY = 0;
-        _mouseMaxY = 199;
+        _mouseMaxY = rows - 1;
         _mouseX = 320;
-        _mouseY = 100;
+        _mouseY = rows / 2;
         _mickeysPer8X = 8;
         _mickeysPer8Y = 16;
         _mickeyCountX = _mickeyCountY = 0;
@@ -178,8 +230,8 @@ public sealed partial class Machine
     /// </summary>
     /// <remarks>
     /// The driver keeps the pointer in its own coordinates, which in the 320 by 200 graphics
-    /// modes are 640 by 200: a program halves the column. It draws no pointer of its own here;
-    /// the games draw theirs.
+    /// modes are 640 by 200: a program halves the column. In a graphics mode it draws its
+    /// pointer, the arrow, while the program has it shown (see <see cref="DrawMousePointer"/>).
     /// </remarks>
     private void MouseService()
     {

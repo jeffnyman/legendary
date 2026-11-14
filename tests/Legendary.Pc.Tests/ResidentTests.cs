@@ -111,4 +111,65 @@ public sealed class ResidentTests : IDisposable
         Assert.Equal(0, machine.ExitCode);
         Assert.InRange(machine.Time.TotalSeconds, least, most);
     }
+
+    /// <summary>
+    /// The mouse driver draws its pointer in a graphics mode while the program has it shown, and
+    /// keeps it within the mode's screen: in the EGA's 640 by 350, all 350 rows of it.
+    /// </summary>
+    [Fact]
+    public void The_mouse_drivers_arrow_is_drawn_where_the_mouse_is()
+    {
+        //   mov ax, 10h; int 10h      the EGA's 640 by 350
+        //   mov ax, 0; int 33h        reset the mouse
+        //   mov ax, 1; int 33h        show the pointer
+        //   mov ax, 4C00h; int 21h
+        File.WriteAllBytes(Path.Combine(_game, "ARROW.COM"),
+            [0xB8, 0x10, 0x00, 0xCD, 0x10, 0xB8, 0x00, 0x00, 0xCD, 0x33, 0xB8, 0x01, 0x00, 0xCD, 0x33, 0xB8, 0x00, 0x4C, 0xCD, 0x21]);
+        var machine = new Machine(_game, _saves) { Log = _log.Add, Mouse = true };
+        machine.Load("ARROW.COM");
+        for (int i = 0; i < 100 && !machine.Exited; i++)
+        {
+            machine.Run(10_000);
+        }
+
+        Assert.Equal((640, 350), (machine.DisplayWidth, machine.DisplayHeight));
+        uint[] screen = new uint[640 * 350];
+        uint At(int x, int y)
+        {
+            machine.Render(screen);
+            return screen[(y * 640) + x] & 0xFFFFFF;
+        }
+
+        // the pointer starts in the middle: the second row of the arrow is black, white, black
+        Assert.Equal((0x000000u, 0xFFFFFFu, 0x000000u), (At(320, 176), At(321, 176), At(322, 176)));
+
+        // 16 mickeys are 8 rows: down to the last row, and back up ten
+        machine.MoveMouse(0, 10_000);
+        machine.MoveMouse(0, -20);
+        Assert.Equal(0xFFFFFFu, At(321, 340));
+        Assert.Equal(0x000000u, At(321, 176));
+
+        // and across: 8 mickeys are 8 columns
+        machine.MoveMouse(-100, 0);
+        Assert.Equal(0xFFFFFFu, At(221, 340));
+    }
+
+    /// <summary>A pointer the program hasn't asked to be shown isn't drawn.</summary>
+    [Fact]
+    public void A_hidden_pointer_is_not_drawn()
+    {
+        //   mov ax, 10h; int 10h; mov ax, 0; int 33h; mov ax, 4C00h; int 21h
+        File.WriteAllBytes(Path.Combine(_game, "HIDDEN.COM"),
+            [0xB8, 0x10, 0x00, 0xCD, 0x10, 0xB8, 0x00, 0x00, 0xCD, 0x33, 0xB8, 0x00, 0x4C, 0xCD, 0x21]);
+        var machine = new Machine(_game, _saves) { Log = _log.Add, Mouse = true };
+        machine.Load("HIDDEN.COM");
+        for (int i = 0; i < 100 && !machine.Exited; i++)
+        {
+            machine.Run(10_000);
+        }
+
+        uint[] screen = new uint[640 * 350];
+        machine.Render(screen);
+        Assert.All(screen, pixel => Assert.Equal(0u, pixel & 0xFFFFFF));
+    }
 }

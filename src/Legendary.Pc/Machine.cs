@@ -175,6 +175,8 @@ public sealed partial class Machine : ICpuBus
             _cga.Time = Seconds;
             _cga.Render(pixels);
         }
+
+        DrawMousePointer(pixels);
     }
 
     /// <summary>
