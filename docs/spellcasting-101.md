@@ -936,8 +936,24 @@ of a program's code. Most of the files end with 288 bytes more than their count.
 
 The recorded sounds are the speaker's whatever plays the music: an AdLib card of 1990 had no
 way to play a recording, and the game has no other. Three turns into the game Joey Rottenwood
-comes up the stairs, and his laugh is `ROTTEN3.RS`, on the speaker, with the AdLib's driver
-loaded or without.
+comes up the stairs, and his laugh is `ROTTEN3.RS`, on the speaker.
+
+Two rules of the game's decide whether a sound is heard, and both were found by a sound that
+wasn't:
+
+- **No recording while a song plays.** The routines that load a sound and play it, at
+  `233C:0455` and `233C:0476`, do nothing while bit 40 of the byte at `4517:9126` is set, and
+  it is set for as long as a song is playing: the music's driver and RealSound both want the
+  PC's timer. The song that starts the game lasts most of a minute. Get to Rottenwood sooner
+  and there is music and no laugh.
+- **Any key stops a sound.** While a sound plays, the keyboard's interrupt goes to RealSound's
+  own handler, which ends the sound and leaves a space for the game to read as a key. It
+  doesn't look at what the keyboard sent: a key let go ends a sound as surely as a key
+  pressed.
+
+The second has a consequence [that took a disk to see](the-pc.md#a-laugh-and-a-disk). The
+laugh is started by a key, the one pressed at the prompt for more that the scene stops at, and
+that key must be let go before the laugh starts or it ends it.
 
 The speaker has two states, in and out, and no levels between. RealSound gets levels from it
 by time: it sends a pulse 16,572 times a second, faster than can be heard, and how long each

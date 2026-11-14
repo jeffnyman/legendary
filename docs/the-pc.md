@@ -21,6 +21,7 @@ finds what the others didn't need. *Spellcasting 101* found four:
 | Asked whether Microsoft's Hercules driver is loaded, INT 10h function EFh | Leaves the registers as they came, which says no |
 | Had DOS parse a file's name into a file control block, INT 21h function 29h, as Microsoft C does for a program it starts | Parses it |
 | Needed AdLib's driver in memory before it, for its music | Loads `.COM` programs, lets a program stay resident, and runs one program after another |
+| Counted, without knowing it, on a file's taking time to read | Can give its disk a speed |
 | Freed its memory by hand, through the list of lists, and had DOS load the game over it as an overlay, INT 21h function 4Bh with 3 | Gives the first memory block's segment before the list of lists, joins free blocks that are side by side before it resizes one, and loads overlays |
 
 Music asked for more. The game's FM music is played by AdLib's own driver, `SOUND.COM`, a
@@ -34,6 +35,26 @@ when the game's folder has it, and then the game.
 With those, the launcher draws its title, the same pixel for pixel as Legendary's own reader
 of the picture file makes it, and the game starts, asks whether to restore a saved game, and
 plays. The tests in `tests/Legendary.Pc.Tests` do all of it.
+
+## A laugh and a disk
+
+Joey Rottenwood laughs in the game's first scene, and on this PC he didn't. The file with the
+laugh was opened, read, and played for less than a tenth of a second.
+
+The game stops a recorded sound [at any interrupt from the keyboard](spellcasting-101.md#the-sounds),
+a key let go as well as a key pressed, and the laugh comes straight after a key: the scene
+stops at a prompt for more, the player presses a key, and the game reads `ROTTEN3.RS` and
+plays it. On a PC of 1990 the file was a fraction of a second coming off the disk. By then the
+key was up, its interrupt had come and gone while DOS waited for the disk, and the laugh
+played to its end. Here a file took no time at all to read, so the laugh started while the key
+was still down, and letting go of the key ended it.
+
+Nothing in the game's code says it depends on a slow disk, and its writers surely never knew
+it did. So the PC's disk can now be given a speed, `DiskBytesPerSecond`: opening a file and
+reading from one then take the machine's time, with the program waiting in DOS and interrupts
+on, as they were. The player gives it 200 KB a second, a hard disk of the day as DOS got bytes
+off one. The tests play the scene both ways: with the speed, 2.8 seconds of laugh; without,
+none.
 
 ## The notes, checked
 
