@@ -44,6 +44,9 @@ internal sealed class CommandShell(DosServices dos, DosDrive drive, Machine mach
     /// <summary>Starts a batch file, by its path on drive C: and its arguments.</summary>
     public void Start(string[] parts, string arguments) => _frames.Add(Read(parts, arguments));
 
+    /// <summary>Starts on some lines given as they are, with no file: the next call to <see cref="Continue"/> runs them.</summary>
+    public void Start(IReadOnlyList<string> lines) => _frames.Add(new Frame { Lines = [.. lines] });
+
     /// <summary>
     /// Runs lines until one starts a program, which the machine then runs; false when the batch
     /// files have all ended instead.

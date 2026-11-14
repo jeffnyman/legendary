@@ -265,6 +265,13 @@ public sealed partial class Machine : ICpuBus
     public void Load(string program, string arguments = "") => _dos.Load(program, arguments);
 
     /// <summary>
+    /// Runs commands one after another, as the lines of a batch file would be, with no file: a
+    /// driver that stays in memory and then the game that needs it. Each is a program's name
+    /// and what follows it on its command line.
+    /// </summary>
+    public void LoadCommands(params string[] commands) => _dos.LoadCommands(commands);
+
+    /// <summary>
     /// Runs for the given number of instructions' time, or until the program exits or the
     /// processor halts with interrupts off, which nothing can end. A halted processor with
     /// interrupts on waits for the next one, and the time passes. A service the machine doesn't
@@ -723,6 +730,10 @@ public sealed partial class Machine : ICpuBus
             case 0x16: KeyboardService(); break;
             case 0x1A: ClockService(); break;
             case 0x20: _dos.Terminate(0); break;
+            case 0x27:
+                // terminate and stay resident, the old way: DX is the first byte not kept
+                _dos.Keep(0, ((ushort)Cpu.Edx + 15) / 16);
+                break;
             case 0x21: _dos.Call(); break;
             case DosKeyService: _dos.KeyFromBios(); break;
             case 0x2F: MultiplexService(); break;

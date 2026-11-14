@@ -1,0 +1,78 @@
+namespace Legendary.Pc.Tests;
+
+/// <summary>
+/// Programs that end and stay in memory, with two .COM programs assembled by hand: a driver that
+/// takes an interrupt and keeps itself, and a program run after it that calls the interrupt.
+/// </summary>
+public sealed class ResidentTests : IDisposable
+{
+    private readonly string _game = Directory.CreateTempSubdirectory("legendary-game").FullName;
+    private readonly string _saves = Directory.CreateTempSubdirectory("legendary-saves").FullName;
+    private readonly List<string> _log = [];
+
+    public void Dispose()
+    {
+        Directory.Delete(_game, recursive: true);
+        Directory.Delete(_saves, recursive: true);
+    }
+
+    private Machine Run(params string[] commands)
+    {
+        var machine = new Machine(_game, _saves) { Log = _log.Add };
+        machine.LoadCommands(commands);
+        for (int i = 0; i < 100 && !machine.Exited; i++)
+        {
+            machine.Run(10_000);
+        }
+
+        Assert.True(machine.Exited, "The programs didn't end.");
+        return machine;
+    }
+
+    /// <summary>The driver, a .COM program, which starts at 100h with every segment on its PSP.</summary>
+    /// <param name="keep27">How it stays: by INT 27h, or else by INT 21h function 31h.</param>
+    private void WriteDriver(bool keep27)
+    {
+        //   100: mov dx, 110h; mov ax, 2560h; int 21h      INT 60h is the handler's
+        //   108: (INT 27h)  mov dx, 113h; int 27h; nop; nop; nop     keep to the handler's end
+        //        (function 31h)  mov dx, 12h; mov ax, 3100h; int 21h   keep 12h paragraphs
+        //   110: mov al, 2Ah; iret                         the handler
+        byte[] stay = keep27 ? [0xBA, 0x13, 0x01, 0xCD, 0x27, 0x90, 0x90, 0x90] : [0xBA, 0x12, 0x00, 0xB8, 0x00, 0x31, 0xCD, 0x21];
+        File.WriteAllBytes(Path.Combine(_game, "DRIVER.COM"), [0xBA, 0x10, 0x01, 0xB8, 0x60, 0x25, 0xCD, 0x21, .. stay, 0xB0, 0x2A, 0xCF]);
+
+        // the program that uses it: int 60h; mov ah, 4Ch; int 21h, so it ends with what the handler gave
+        File.WriteAllBytes(Path.Combine(_game, "USER.COM"), [0xCD, 0x60, 0xB4, 0x4C, 0xCD, 0x21]);
+    }
+
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public void A_driver_stays_and_the_next_program_calls_it(bool keep27)
+    {
+        WriteDriver(keep27);
+
+        var machine = Run("DRIVER.COM", "USER.COM");
+
+        Assert.Contains(_log, line => line.StartsWith("stays resident", StringComparison.Ordinal));
+        Assert.Equal(0x2A, machine.ExitCode);
+
+        // the second program was loaded above the first, not over it
+        string[] loaded = [.. _log.Where(line => line.StartsWith("loaded ", StringComparison.Ordinal))];
+        Assert.Equal(2, loaded.Length);
+        Assert.NotEqual(loaded[0].Split(" at ")[1], loaded[1].Split(" at ")[1]);
+    }
+
+    /// <summary>A program that only ends is gone, and the next gets its memory: the same PSP.</summary>
+    [Fact]
+    public void A_program_that_ends_leaves_its_memory_to_the_next()
+    {
+        File.WriteAllBytes(Path.Combine(_game, "ONE.COM"), [0xB8, 0x00, 0x4C, 0xCD, 0x21]);
+        File.WriteAllBytes(Path.Combine(_game, "TWO.COM"), [0xB8, 0x05, 0x4C, 0xCD, 0x21]);
+
+        var machine = Run("ONE.COM", "TWO.COM");
+
+        Assert.Equal(5, machine.ExitCode);
+        string[] loaded = [.. _log.Where(line => line.StartsWith("loaded ", StringComparison.Ordinal))];
+        Assert.Equal(loaded[0].Split(" at ")[1], loaded[1].Split(" at ")[1]);
+    }
+}

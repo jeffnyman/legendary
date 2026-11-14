@@ -77,6 +77,17 @@ internal sealed partial class DosServices(Machine machine, DosDrive drive)
         LoadProgram(location, arguments);
     }
 
+    /// <summary>
+    /// Runs commands one after another, as a batch file's lines: a driver that stays in memory,
+    /// say, and then the game that needs it.
+    /// </summary>
+    public void LoadCommands(IReadOnlyList<string> commands)
+    {
+        _shell ??= new CommandShell(this, drive, machine);
+        _shell.Start(commands);
+        NextCommand();
+    }
+
     /// <summary>Whether a program has ended and a batch file has more lines to run.</summary>
     internal bool BetweenPrograms => _betweenPrograms;
 
@@ -111,7 +122,7 @@ internal sealed partial class DosServices(Machine machine, DosDrive drive)
             throw new FileNotFoundException($"{program} isn't on the disk in drive A:, {disk.Name}.", program);
         }
 
-        InitializeArena();
+        StartArena();
         _currentDrive = DriveA;
         LoadImage(@"A:\" + DosDrive.Join(parts), parts[^1], fat.Read(entry), arguments);
     }
@@ -119,7 +130,7 @@ internal sealed partial class DosServices(Machine machine, DosDrive drive)
     /// <summary>Loads a program by its place on a drive, and readies the processor to run it.</summary>
     private void LoadProgram(Location location, string arguments)
     {
-        InitializeArena();
+        StartArena();
 
         string dosPath = location.Name;
         byte[] image;
@@ -145,13 +156,8 @@ internal sealed partial class DosServices(Machine machine, DosDrive drive)
     {
         ushort environmentSegment = BuildEnvironment(["COMSPEC=C:\\COMMAND.COM", "PATH=C:\\"], dosPath);
 
-        if (image.Length < 0x1C || image[0] != 'M' || image[1] != 'Z')
-        {
-            throw new NotSupportedException($"{program} isn't an MZ executable; .COM programs aren't loaded yet.");
-        }
-
         string tail = arguments.Length > 0 ? " " + arguments : "";
-        if (!TryLoadExe(image, program, environmentSegment, tail, parent: 0))
+        if (!TryLoadProgram(image, program, environmentSegment, tail, parent: 0))
         {
             throw new InvalidOperationException($"{program} needs more memory than is free.");
         }
@@ -191,6 +197,54 @@ internal sealed partial class DosServices(Machine machine, DosDrive drive)
     /// <param name="environment">Its environment's segment.</param>
     /// <param name="tail">Its command tail, as the PSP holds it: what followed its name, from the space before the arguments.</param>
     /// <param name="parent">The PSP of the program that ran it, or 0 for one run by the shell.</param>
+    private bool TryLoadProgram(byte[] file, string program, ushort environment, string tail, ushort parent)
+        => file.Length >= 0x1C && file[0] == 'M' && file[1] == 'Z'
+            ? TryLoadExe(file, program, environment, tail, parent)
+            : TryLoadCom(file, program, environment, tail, parent);
+
+    /// <summary>
+    /// Loads a .COM program: a file with no header, which is the program as it is in memory. It
+    /// goes at 100h in the largest block there is, right after its PSP, with every segment
+    /// register on the PSP and the stack at the top of the block's first 64 KB, a zero on it to
+    /// return to the PSP's INT 20h.
+    /// </summary>
+    private bool TryLoadCom(byte[] file, string program, ushort environment, string tail, ushort parent)
+    {
+        int largest = LargestFree();
+        if (file.Length > 0xFF00 || largest < 0x10 + ((file.Length + 0x100 + 15) / 16))
+        {
+            machine.Trace($"{program} needs {file.Length + 0x200} bytes; {largest * 16} are free");
+            return false;
+        }
+
+        ushort psp = Allocate(largest, 0)!.Value;
+        machine.WriteBytes(psp, 0x100, file);
+        machine.ProgramLoaded(program, (ushort)(psp + 0x10), 0, file.Length);
+
+        SetOwner(environment, psp, "");
+        SetOwner(psp, psp, Path.GetFileNameWithoutExtension(program));
+        BuildPsp(psp, (ushort)(psp + largest), environment, tail, parent == 0 ? psp : parent);
+        _psp = psp;
+        _dtaSegment = psp;
+        _dtaOffset = 0x80;
+
+        ushort stack = (ushort)(largest >= 0x1000 ? 0xFFFE : (largest * 16) - 2);
+        machine.WriteWord(psp, stack, 0);
+        var cpu = machine.Cpu;
+        cpu.Cs = cpu.Ds = cpu.Es = cpu.Ss = psp;
+        cpu.Eip = 0x100;
+        cpu.Esp = stack;
+        cpu.Eax = 0;
+        cpu.Ebx = 0;
+        cpu.Ecx = 0x00FF;
+        cpu.Edx = psp;
+        cpu.Esi = 0x100;
+        cpu.Edi = stack;
+        cpu.Ebp = 0x091C;
+        cpu.Eflags = 0x0202;
+        return true;
+    }
+
     private bool TryLoadExe(byte[] file, string program, ushort environment, string tail, ushort parent)
     {
         string name = Path.GetFileNameWithoutExtension(program);
@@ -290,8 +344,26 @@ internal sealed partial class DosServices(Machine machine, DosDrive drive)
     /// next program starts the arena afresh), and with a batch file running, the machine runs on
     /// to its next line; without one, it has ended.
     /// </summary>
-    public void Terminate(int code)
+    public void Terminate(int code) => End(code, keep: null);
+
+    /// <summary>
+    /// Ends the program and leaves it in memory, as a driver ends: INT 21h function 31h, and
+    /// the older INT 27h. Its block is cut to the size it asks to keep, its files stay open, and
+    /// the programs run after it are loaded above it.
+    /// </summary>
+    /// <param name="code">Its exit code.</param>
+    /// <param name="paragraphs">How much of its block to keep, from its PSP.</param>
+    public void Keep(int code, int paragraphs) => End(code, paragraphs);
+
+    private void End(int code, int? keep)
     {
+        if (keep is { } paragraphs)
+        {
+            Resize(_psp, Math.Max(paragraphs, 6));
+            _residents.Add(_psp);
+            machine.Trace($"stays resident at {_psp:X4}h, {paragraphs * 16} bytes");
+        }
+
         machine.ExitCode = code;
         if (_parents.Count > 0)
         {
@@ -301,7 +373,11 @@ internal sealed partial class DosServices(Machine machine, DosDrive drive)
         }
 
         FlushConsole();
-        CloseProgramFiles();
+        if (keep is null)
+        {
+            CloseProgramFiles();
+        }
+
         machine.ProgramEnded();
         machine.Trace($"exit {code}");
         if (_shell?.Running == true)
@@ -320,6 +396,32 @@ internal sealed partial class DosServices(Machine machine, DosDrive drive)
     // last), the owning program's PSP (0 when free), the size in paragraphs, and a name.
 
     private void InitializeArena() => WriteBlock(ArenaStart, 'Z', 0, ArenaEnd - ArenaStart - 1);
+
+    // the programs that have ended and stayed in memory, by their PSPs: drivers, mostly
+    private readonly HashSet<ushort> _residents = [];
+
+    /// <summary>
+    /// Readies memory for a program run from the shell: all of it, or, when programs have stayed
+    /// resident, all but theirs.
+    /// </summary>
+    private void StartArena()
+    {
+        if (_residents.Count == 0)
+        {
+            InitializeArena();
+            return;
+        }
+
+        foreach (var block in Blocks().ToList())
+        {
+            if (block.Owner != 0 && !_residents.Contains(block.Owner))
+            {
+                WriteBlock(block.Mcb, block.Type, 0, block.Size);
+            }
+        }
+
+        Coalesce();
+    }
 
     private void WriteBlock(int mcb, char type, int owner, int size)
     {
@@ -631,6 +733,7 @@ internal sealed partial class DosServices(Machine machine, DosDrive drive)
                 _dtaSegment = cpu.Ds;
                 _dtaOffset = cpu.Dx;
                 break;
+            case 0x31: Keep(cpu.Al, cpu.Dx); break;
             case 0x25:
                 machine.SetVector(cpu.Al, cpu.Ds, cpu.Dx);
                 machine.Trace($"21/25 set vector {cpu.Al:X2}h to {cpu.Ds:X4}:{cpu.Dx:X4}");

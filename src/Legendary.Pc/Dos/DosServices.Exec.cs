@@ -77,11 +77,6 @@ internal sealed partial class DosServices
         }
 
         byte[] image = File.ReadAllBytes(file);
-        if (image.Length < 0x1C || image[0] != 'M' || image[1] != 'Z')
-        {
-            throw new NotSupportedException($"{path} isn't an MZ executable; .COM programs aren't run yet.");
-        }
-
         var core = machine.Cpu;
         var parent = new Parent
         {
@@ -96,7 +91,7 @@ internal sealed partial class DosServices
         };
 
         ushort environmentSegment = BuildEnvironment(EnvironmentOf(environment), location.Name);
-        if (!TryLoadExe(image, location.Parts[^1], environmentSegment, tail, parent.Psp))
+        if (!TryLoadProgram(image, location.Parts[^1], environmentSegment, tail, parent.Psp))
         {
             Free(environmentSegment);
             Fail(8);

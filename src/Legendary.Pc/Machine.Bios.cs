@@ -13,7 +13,7 @@ public sealed partial class Machine
     private const ushort DummyReturn = 0xFF53;
 
     // the vectors answered in C#: the BIOS's, DOS's and the mouse driver's (EMS installs its own)
-    private static readonly byte[] Services = [0x10, 0x11, 0x12, 0x13, 0x15, 0x16, 0x1A, 0x20, 0x21, 0x2F, 0x33];
+    private static readonly byte[] Services = [0x10, 0x11, 0x12, 0x13, 0x15, 0x16, 0x1A, 0x20, 0x21, 0x27, 0x2F, 0x33];
 
     // the BIOS's keyboard and timer interrupt handlers, past the stubs, and its system
     // configuration table
