@@ -22,6 +22,7 @@ finds what the others didn't need. *Spellcasting 101* found four:
 | Had DOS parse a file's name into a file control block, INT 21h function 29h, as Microsoft C does for a program it starts | Parses it |
 | Needed AdLib's driver in memory before it, for its music | Loads `.COM` programs, lets a program stay resident, and runs one program after another |
 | Counted, without knowing it, on a file's taking time to read | Can give its disk a speed |
+| Left its pointer to the mouse's driver to draw, INT 33h functions 1 and 2 | Draws Microsoft's arrow over the picture when the driver has been asked to show it, and gives the mouse the rows of the mode it's in |
 | Freed its memory by hand, through the list of lists, and had DOS load the game over it as an overlay, INT 21h function 4Bh with 3 | Gives the first memory block's segment before the list of lists, joins free blocks that are side by side before it resizes one, and loads overlays |
 
 Music asked for more. The game's FM music is played by AdLib's own driver, `SOUND.COM`, a
@@ -55,6 +56,25 @@ reading from one then take the machine's time, with the program waiting in DOS a
 on, as they were. The player gives it 200 KB a second, a hard disk of the day as DOS got bytes
 off one. The tests play the scene both ways: with the speed, 2.8 seconds of laugh; without,
 none.
+
+## An arrow nobody drew
+
+Clicks worked in the game from the start, and there was no pointer to click with. The game
+has none of its own. A mouse's driver draws the arrow, and the game only asks it to
+[show it and hide it](spellcasting-101.md#the-mouse). This PC's driver answered where the
+mouse was and what its buttons were doing, and drew nothing, since the programs it had run
+before all drew their own.
+
+So the PC's driver now draws: Microsoft's arrow, black edged around white, with its tip where
+the mouse is, laid over the picture when it's shown to the player and never written into the
+video card's memory, so a program that reads its own screen back doesn't find an arrow in it.
+It's drawn in the graphics modes, when the program has asked for it as many times as it has
+asked for it to be hidden.
+
+The driver also thought every screen had 200 rows, as the CGA's and the VGA's 320 by 200 have.
+The game's EGA screen has 350, and the mouse couldn't reach the bottom of it, where the
+prompt is. A reset now gives the mouse the rows of the mode: 350 for modes 0Fh and 10h, 480
+for 11h and 12h, and 200 for the others.
 
 ## The notes, checked
 

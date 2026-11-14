@@ -81,7 +81,7 @@ it says to use `S101.EXE` and ends. Then it reads the words, and knows seven:
 | `noreal` | No RealSound |
 | `adlib` | Music by an AdLib card |
 | `mt32` | Music by a Roland MT-32; a digit after it is, by its use, the interrupt the MIDI card is on, 2 if none is given |
-| `xmouse` | Sets a flag for the mouse, not yet followed |
+| `xmouse` | Has the game draw [the mouse's pointer](#the-mouse) itself, and not leave it to the driver |
 
 With none of them, the game draws for the EGA, and its setting for sound starts with
 RealSound's bit in it. What each word sets is in the game's code; what the settings then do
@@ -966,6 +966,42 @@ speed, which is the header's count: the sounds are at 16,572, 8,286 and 4,143 by
 The [tools](../tools/README.md) write the songs out as `.mid` and `.rol` files, and the
 sounds as WAV files, a pulse's length as a level. The WAV files are made as the player's code
 says they should be; they haven't been listened to.
+
+## The mouse
+
+The game's code for the mouse is its own segment, `167E`, and everything else asks it. It
+keeps one word, at `4517:8610`, that says what kind of pointing there is and whether the
+pointer is up:
+
+| Bits | Meaning |
+|---|---|
+| 01h | The pointer is on the screen |
+| 02h | No mouse's driver: the pointer is the game's, moved without one |
+| 04h | A mouse, with the game drawing the pointer: the word `xmouse` |
+| 08h | Something else whose pointer the driver draws, and which is picked with as 02h is; not yet followed |
+| 10h | A mouse, with the driver drawing the pointer |
+
+`167E:0002` sets it at the start, from whether INT 33h answers. With an ordinary driver the
+game draws nothing for the mouse. `167E:02CF` shows the pointer and `167E:0407` hides it, by
+the driver's functions 1 and 2, and the game hides it around everything it draws, as a driver
+of the day needed: the arrow was in the video card's memory with the picture. With `xmouse`,
+or with no driver, the same two routines save what is under the pointer and draw one; the word is there,
+presumably, for a driver that couldn't draw on an EGA. `167E:059B` gives where the mouse is and
+whether a button is down, and `167E:0618` whether it has moved, from the driver's count of
+its steps.
+
+A player at the prompt is in one of two states, and the pointer says which.
+
+- **Typing**, at `0C35:4785`. The routine starts by hiding the pointer and showing the text's
+  cursor, and then waits for a key or a button. The mouse can be moved all day and nothing
+  shows. A click is taken as a Tab, and a Tab ends the typing.
+- **Picking**, at `0C35:4922`. It shows the pointer and waits on the lists of verbs and
+  objects, the compass and the buttons. If the pointer is down while it waits, it comes back
+  when the mouse moves.
+
+So the first click after typing picks nothing: it brings the arrow up. It looks like a fault
+and is how the game was. A word at `4517:7764` is 1 in place of the mouse when the mode's
+bits 02h or 08h are set, and sends the picking to a routine at `0C35:5719`, not yet read.
 
 ## Still to do
 
