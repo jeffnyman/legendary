@@ -12,6 +12,12 @@ public sealed class Spellcasting101Tests : IDisposable
 {
     private const byte Enter = 0x1C;
 
+    // the keys' scan codes, a row of the keyboard at a time
+    private const string Digits = "1234567890-=", Top = "qwertyuiop[]", Home = "asdfghjkl;'", Bottom = "zxcvbnm,./";
+
+    // where the notes have things, as segments from where the game loads
+    private const int DataSegment = 0x4517, FarData = 0x3B00, YouSegment = 0x27F5;
+
     private readonly string _saves = Directory.CreateTempSubdirectory("legendary-saves").FullName;
     private readonly List<string> _log = [];
 
@@ -96,6 +102,38 @@ public sealed class Spellcasting101Tests : IDisposable
         Run(machine, 11);
     }
 
+    private static byte Scan(char key) => key switch
+    {
+        ' ' => 0x39,
+        '\n' => Enter,
+        _ when Digits.Contains(key) => (byte)(0x02 + Digits.IndexOf(key)),
+        _ when Top.Contains(key) => (byte)(0x10 + Top.IndexOf(key)),
+        _ when Home.Contains(key) => (byte)(0x1E + Home.IndexOf(key)),
+        _ when Bottom.Contains(key) => (byte)(0x2C + Bottom.IndexOf(key)),
+        _ => throw new ArgumentOutOfRangeException(nameof(key), key, "Not a key these tests press."),
+    };
+
+    /// <summary>Types some text, a key at a time, and gives the game four seconds to answer.</summary>
+    private static void Type(Machine machine, string text)
+    {
+        foreach (char key in text)
+        {
+            machine.PressKey(Scan(key));
+            Run(machine, 0.05);
+            machine.ReleaseKey(Scan(key));
+            Run(machine, 0.05);
+        }
+
+        Run(machine, 4);
+    }
+
+    /// <summary>The segment the game was loaded at, from the log's line for its loading.</summary>
+    private ushort LoadSegment()
+    {
+        string line = _log.Last(line => line.StartsWith("21/4B load overlay", StringComparison.Ordinal));
+        return Convert.ToUInt16(line[^5..^1], 16);
+    }
+
     /// <summary>The video modes set, in order, from the log.</summary>
     private string[] Modes() => [.. _log.Where(line => line.StartsWith("10/00 set video mode", StringComparison.Ordinal)).Select(line => line[^3..])];
 
@@ -166,5 +204,78 @@ public sealed class Spellcasting101Tests : IDisposable
         // the game itself writes the file its notes took for its makers', 13,463 bytes of it
         Assert.Equal(13463, new FileInfo(Path.Combine(_saves, "RESTART.DAT")).Length);
         Assert.False(machine.Exited);
+    }
+
+    /// <summary>
+    /// The game, played: no to restoring, and then three commands. What it does is read from its
+    /// own memory, at the places the notes found by taking the program apart, and is what the
+    /// notes say it should be.
+    /// </summary>
+    [Fact]
+    public void Three_commands_do_what_the_notes_say_they_do()
+    {
+        if (Start() is not { } machine)
+        {
+            return;
+        }
+
+        PressEnter(machine);
+        Type(machine, "n");
+        Screenshot.WritePng(machine, Shot("s101-bedchamber.png"));
+
+        ushort load = LoadSegment();
+        ushort data = (ushort)(load + DataSegment), far = (ushort)(load + FarData);
+        int Room() => machine.ReadWord(data, 0x42);
+        int Moves() => machine.ReadWord(data, 0x46);
+        int Clock() => machine.ReadWord(data, 0x48);
+        (int Action, int Object) Performed() => (machine.ReadByte(far, 0x58), machine.ReadWord(far, 0x00));
+
+        // the game starts in the Bedchamber, object 1, with you, object 153, in it, at 3:35 in
+        // the afternoon: the clock counts five minutes at a time
+        Assert.Equal((1, 153, 0), (Room(), machine.ReadWord(data, 0x44), Moves()));
+        Assert.Equal(1, machine.ReadWord((ushort)(load + YouSegment), 0x0E));
+        Assert.Equal((15 * 60 + 35) / 5, Clock());
+
+        // EXAMINE is action 60, and the rat object 352
+        Type(machine, "examine rat\n");
+        Assert.Equal((60, 352), Performed());
+        Assert.Equal((1, 1), (Room(), Moves()));
+
+        // CLIMB CHIMNEY is action 25 on object 185, but the chimney's own routine, while the fire
+        // is in the fireplace, starts over with action 27 on the fireplace, object 62
+        Type(machine, "climb chimney\n");
+        Assert.Equal((27, 62), Performed());
+        Assert.Equal((1, 2), (Room(), Moves()));
+
+        // north from the Bedchamber is the Potty Chamber, object 2; going is action 197
+        Type(machine, "n\n");
+        Screenshot.WritePng(machine, Shot("s101-potty-chamber.png"));
+        Assert.Equal(197, Performed().Action);
+        Assert.Equal((2, 3), (Room(), Moves()));
+        Assert.Equal(2, machine.ReadWord((ushort)(load + YouSegment), 0x0E));
+        Assert.Equal((15 * 60 + 50) / 5, Clock());
+
+        // and the picture now on the screen is picture 51 of the first file, as Legendary's
+        // reader unpacks it, pixel for pixel
+        string folder = TestData.Game("sc101/game")!;
+        string file = Directory.EnumerateFiles(folder).First(path => path.EndsWith("s101_e1.pic", StringComparison.OrdinalIgnoreCase));
+        var pictures = new PictureFile(File.ReadAllBytes(file), ega: true);
+        var room = pictures.Read(pictures.Entries[51]);
+        uint[] screen = new uint[640 * 350];
+        machine.Render(screen);
+        int different = 0;
+        for (int y = 0; y < room.Height; y++)
+        {
+            for (int x = 0; x < room.Width; x++)
+            {
+                var (red, green, blue) = PictureFile.EgaColor(room.Palette![room.Pixels[y * room.Width + x]]);
+                if ((screen[y * 640 + 261 + x] & 0xFFFFFF) != (uint)(red << 16 | green << 8 | blue))
+                {
+                    different++;
+                }
+            }
+        }
+
+        Assert.Equal(0, different);
     }
 }
