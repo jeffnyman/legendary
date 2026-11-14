@@ -137,7 +137,7 @@ ZIL's exits.
 | `S101.EXE` | The launcher: graphics, sound, the title, and then the game |
 | `S101MAIN.EXE` | The root, PLINK86's loader, and the data |
 | `S101MAIN.OVL` | The 13 overlays of code |
-| `S101STR.DAT` | Text, packed, in 69 blocks |
+| `S101STR.DAT` | Text, packed, in 69 blocks: 1,204 strings |
 | `VOCAB.DAT` | The vocabulary: 1,736 words |
 | `RESTART.DAT` | The world as the game starts |
 | `S101_C*.PIC`, `S101_E*.PIC` | Pictures; by their names and sizes, for the CGA and the EGA |
@@ -145,11 +145,54 @@ ZIL's exits.
 | `S101_M*.MUS`, `S101.BNK` | Music, and the AdLib instruments it plays on |
 | `*.RS`, `MUSIC.RS` | Sounds; by the name, RealSound |
 
-Not all the text is in the program. `S101STR.DAT` starts with a count, 69, and three words for
-each block: its size unpacked, its size packed, and how many strings are in it. They come to
-1,204 strings, 196,654 bytes packed into 103,937. The program's messages call them string
-blocks, loaded into a table as they're needed. How they're packed isn't worked out; what
-follows the table looks like the tree of a Huffman code.
+### The text
+
+Not all the text is in the program. The longer pieces are in `S101STR.DAT`, in what the
+program's messages call string blocks, loaded into a table as they're needed: 1,204 strings
+in 69 blocks, 196,654 bytes of them packed into 103,937. Block 0 is what the game says when
+there's too little memory, block 1 is jokes, block 2 starts with the application to Sorcerer
+University, and the story goes on from there.
+
+The file has four parts:
+
+| Part | What |
+|---|---|
+| The table | A count of blocks, 69, then three words for each: its size unpacked, its size packed, and its count of strings |
+| The tree | A count of nodes, 218, then two words for each |
+| The words | A count, 128; a word for where each starts, and one more for where the last ends; then the words, each ending in a zero |
+| The blocks | One after another, to the end of the file |
+
+The text is packed twice over. First, the 128 commonest words are each made one character,
+from 128 up: `A `, `Balmoral `, `He `, `Hillary ` and on through `your `, most with the space
+that follows them. `Professor `, `Sorcerer ` and `Tickingclock ` are there with `the ` and
+`of `. Then the characters, the words among them, are given Huffman codes: the commoner the
+character, the fewer bits.
+
+The tree is how a code is read. Start at node 0, and take a bit: 0 for the node's first word, 1
+for its second. A word above zero is the node to go to for the next bit. A word below zero is a
+character, negated, and the code is done. Zero itself is the end of the string. The tree
+starts:
+
+```
+node 0:    1    81
+node 1:    2     6
+node 2:    3     5
+node 3:  't'     4
+node 4:  'c'   'u'
+node 5:  'a'   'r'
+```
+
+so `0000` is a `t`, `0010` an `a`, and `00010` a `c`. Bits come from each byte's low bit up.
+When a string ends, what's left of its last byte is skipped, and the next string starts on the
+next byte, so a string can be found without unpacking the ones before it bit by bit, though
+nothing in the file says where each starts.
+
+This was checked by unpacking all of it: every block comes to exactly the size and the count
+of strings the table gives it. *Timequest*'s `TIMESTR.DAT` is packed the same way. The later
+games' string files don't unpack this way, and aren't read yet.
+
+How the program asks for a string, by block and number or some other way, is still to be
+found.
 
 `VOCAB.DAT` is a byte, then the words in order, each ending in a zero, from `-'n'` to `zoe`,
 and then 13,890 bytes about them that aren't read yet.
@@ -161,7 +204,7 @@ file was made. How the game uses them when it loads somewhere else is still to b
 
 ## Still to do
 
-- The string blocks' packing.
+- How the program names a string in the blocks, and which strings are whose.
 - The rest of `VOCAB.DAT`, and the parser that reads it.
 - The objects: what `RESTART.DAT` and the data hold for each room and thing.
 - Where the system ends and the game begins among the root's segments and the overlays.
