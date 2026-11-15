@@ -180,7 +180,7 @@ internal static class Program
                     // the panel's text at a size, which asks for the panel too
                     const string What = "a size from 1 to 4, as in 1.5";
                     string size = Next("--panel-text", What);
-                    panelText = double.TryParse(size, NumberStyles.Float, CultureInfo.InvariantCulture, out double times) && times >= 1 && times <= 4
+                    panelText = double.TryParse(size, NumberStyles.Float, CultureInfo.InvariantCulture, out double times) && times >= SdlWindow.SmallestPanelText && times <= SdlWindow.BiggestPanelText
                         ? times
                         : throw new UsageException($"--panel-text needs {What}, not '{size}'");
                     panel = true;
@@ -463,11 +463,21 @@ internal static class Program
                     Icon = GameIcons.For(game),
                     EachFrame = watching is null ? null : watching.Look,
                     Panel = panel ? watching!.Panel : null,
-                    PanelText = panelText,
+                    PanelText = panelText > 0
+                        ? panelText
+                        : settings.PanelText is >= SdlWindow.SmallestPanelText and <= SdlWindow.BiggestPanelText and var kept ? kept : 0,
                 };
 
                 using var player = new SdlPlayer(machine, options);
                 running = player.Run(seconds);
+
+                // the size the panel's text ended at, given here or changed while playing, is the
+                // size it has next time
+                if (panel && player.PanelText > 0 && player.PanelText != settings.PanelText)
+                {
+                    settings.PanelText = player.PanelText;
+                    settings.Save();
+                }
             }
         }
         catch (NotSupportedException ex)
@@ -620,7 +630,8 @@ internal static class Program
               --panel            the same in a panel down the window's right side: the world as
                                  it is now, and under it the last of what happened
               --panel-text <n>   the panel, with its text n times its size, from 1 to 4, as in
-                                 1.5 (its size is 8 pixels, doubled on a tall window)
+                                 1.5 (its size is 8 pixels, doubled on a tall window); the
+                                 size last used is kept for the next run with a panel
               --documents [n]    list the documents a game keeps, rather than play it, or show the
                                  one numbered n, or all of them (no game here keeps any yet)
 
@@ -631,6 +642,7 @@ internal static class Program
               the mouse is the PC's once a click in the window captures it; Ctrl+F10 frees it
               F11 full screen, Shift+F11 pixel shape, F12 full speed on and off, Pause pauses
               Ctrl+F5 saves the whole machine's state, Ctrl+F9 loads it back
+              Ctrl+F7 and Ctrl+F8 make the panel's text smaller and bigger
               Ctrl+F1 to Ctrl+F4 put disk 1 to 4 in drive A:, for a game played from its disks
               Ctrl+F11 switches a CGA game between an RGB and a composite monitor
             """);

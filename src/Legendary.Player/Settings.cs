@@ -91,7 +91,7 @@ internal sealed class Profile
 
 /// <summary>
 /// The player's settings, in one file in the user's application data (never in a game's folder,
-/// which is only read): where each game is, and each game's profile. It's plain JSON, to be read
+/// which is only read): where each game is, each game's profile, and the size of the panel's text. It's plain JSON, to be read
 /// and edited by hand as well as by the player.
 /// </summary>
 internal sealed class Settings
@@ -112,6 +112,12 @@ internal sealed class Settings
 
     /// <summary>Each game's profile, by the game's short name.</summary>
     public Dictionary<string, Profile> Profiles { get; set; } = new(StringComparer.OrdinalIgnoreCase);
+
+    /// <summary>
+    /// The size of the text in the panel beside the game, in times its own size: the last one
+    /// used, whatever the game. Null when none has been chosen.
+    /// </summary>
+    public double? PanelText { get; set; }
 
     /// <summary>The file they're kept in.</summary>
     [JsonIgnore]

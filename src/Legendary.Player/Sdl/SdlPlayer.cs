@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.Globalization;
 using Legendary.Pc;
 using SDL;
 using static SDL.SDL3;
@@ -150,6 +151,12 @@ internal sealed unsafe class SdlPlayer : IDisposable
     /// Plays until the window is closed or the program ends, or for the emulated seconds given.
     /// Returns whether the program is still running.
     /// </summary>
+    /// <summary>
+    /// The size the panel's text was last asked to be, by the options or by Ctrl+F7 and Ctrl+F8;
+    /// 0 when it never was, and the window's height chooses.
+    /// </summary>
+    public double PanelText => _window.PanelText;
+
     public bool Run(double? seconds = null)
     {
         long frameTicks = (long)(Stopwatch.Frequency / FrameRate);
@@ -444,6 +451,19 @@ internal sealed unsafe class SdlPlayer : IDisposable
                 if (key.down && !key.repeat)
                 {
                     ReleaseMouse();
+                }
+
+                return;
+            case SDL_Scancode.SDL_SCANCODE_F7 or SDL_Scancode.SDL_SCANCODE_F8
+                when (key.mod & SDL_Keymod.SDL_KMOD_CTRL) != 0 && _options.Panel is not null:
+                if (key.down && !key.repeat)
+                {
+                    // the panel's text, half a size smaller or bigger
+                    float step = key.scancode == SDL_Scancode.SDL_SCANCODE_F8 ? 0.5f : -0.5f;
+                    if (_window.StepPanelText(step) is { } size)
+                    {
+                        Message(string.Create(CultureInfo.InvariantCulture, $"panel text {size:0.#}"));
+                    }
                 }
 
                 return;

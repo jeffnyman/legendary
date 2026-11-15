@@ -34,7 +34,7 @@ internal sealed unsafe class SdlWindow : IDisposable
     private readonly int _panelColumns;
 
     // how many times its size the panel's text is; 0 for a size chosen by the window's height
-    private readonly float _panelText;
+    private float _panelText;
 
     public SdlWindow(string title, int scale, bool fullscreen, bool squarePixels, int panelColumns = 0, float panelText = 0)
     {
@@ -248,6 +248,42 @@ internal sealed unsafe class SdlWindow : IDisposable
 
             return surface;
         }
+    }
+
+    /// <summary>The smallest and the biggest the panel's text can be asked to be, in times its size.</summary>
+    public const float SmallestPanelText = 1, BiggestPanelText = 4;
+
+    /// <summary>The size asked for the panel's text, in times its size; 0 when the window's height chooses it.</summary>
+    public float PanelText => _panelText;
+
+    /// <summary>
+    /// Makes the panel's text bigger or smaller by a step, from the size it has now, and the
+    /// window wider or narrower by what the panel gains or loses, so the picture keeps its size.
+    /// Returns the size the text has then, or null when the window has no panel.
+    /// </summary>
+    public float? StepPanelText(float step)
+    {
+        if (_panelColumns == 0)
+        {
+            return null;
+        }
+
+        int width, height;
+        if (!SDL_GetWindowSize(_window, &width, &height))
+        {
+            return null;
+        }
+
+        float before = PanelWidth(height, 1);
+        _panelText = Math.Clamp(TextScale(height, 1) + step, SmallestPanelText, BiggestPanelText);
+        SDL_SetWindowMinimumSize(_window, 320 + (int)PanelWidth(200, 1), 200);
+        if (!IsFullscreen)
+        {
+            SDL_SetWindowSize(_window, width + (int)(PanelWidth(height, 1) - before), height);
+        }
+
+        Redraw();
+        return _panelText;
     }
 
     /// <summary>Switches between a window and the full screen.</summary>

@@ -49,6 +49,8 @@ public sealed class ProfileTests : IDisposable
         Assert.True(settings.Remember(Spellcasting101, Spellcasting));
         Assert.False(settings.Remember(Spellcasting101, Spellcasting));
         settings.Profiles["SC101"] = new Profile { Scale = 4, Joystick = false };
+        Assert.Null(settings.PanelText);
+        settings.PanelText = 1.5;
         settings.Save();
 
         var read = Settings.Load(SettingsPath);
@@ -58,6 +60,7 @@ public sealed class ProfileTests : IDisposable
         Assert.False(profile.Joystick);
         Assert.Null(profile.Cycles);
         Assert.Equal("no joystick, scale 4", profile.ToString());
+        Assert.Equal(1.5, read.PanelText);
 
         // plain JSON
         Assert.Contains("\"scale\": 4", File.ReadAllText(SettingsPath));
