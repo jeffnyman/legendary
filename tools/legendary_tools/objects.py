@@ -265,8 +265,14 @@ class ObjectTable:
             ),
             {},
         )
-        # the flags' names that are known are Spellcasting 101's
-        self.flags_named = self._layouts is LAYOUTS
+        # whose layouts they are, which says whose names its flags have
+        self.game = (
+            "Spellcasting 101"
+            if self._layouts is LAYOUTS
+            else "Spellcasting 201"
+            if self._layouts is LAYOUTS_201
+            else None
+        )
         self.objects: list[GameObject] = []
         for number, entry in enumerate(entries, 1):
             offset, segment = struct.unpack_from("<HH", memory, entry + 2)

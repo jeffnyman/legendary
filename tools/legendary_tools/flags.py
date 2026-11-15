@@ -60,14 +60,64 @@ PLACE_FLAG_NAMES = {7: "outdoors", 10: "visited"}
 PERSON_FLAG_NAMES = {8: "can be asked things", 9: "female"}
 
 
-def flag_name(flag: int, kind: int | None = None) -> str | None:
+# Spellcasting 201's, the same way. Its table of flags gives a place's and a person's flags
+# numbers of their own, so one name does for each. One that isn't here isn't known
+FLAG_NAMES_201 = {
+    1: "its name takes no article",
+    2: "its name takes `an`",
+    3: "plural: `some`, and `they`",
+    4: "takes `some`, and is still `it`",
+    5: "noted: something to do with it has happened",
+    6: "touched, or for a place visited",
+    7: "taking it is special",
+    8: "not listed among a room's contents",
+    9: "gives light",
+    10: "a door",
+    11: "can't be opened or closed",
+    12: "can be read",
+    13: "open",
+    14: "locked",
+    15: "can be taken",
+    16: "a place in the sewer",
+    17: "a place at the university",
+    18: "left out of `all`",
+    19: "lit",
+    20: "can be seen through",
+    21: "things can be on it",
+    22: "can be got in or on",
+    23: "burns",
+    24: "a container",
+    25: "can be worn",
+    26: "a key",
+    27: "cuts",
+    28: "cuts",
+    29: "can be eaten",
+    30: "what's dropped in it lands outside it",
+    31: "magic: a spell, its box, or the spell book",
+    32: "can be lit",
+    33: "outdoors",
+    34: "a part of the Sorcerer's Appliance",
+    36: "a bed",
+    37: "someone other than you",
+    38: "female",
+}
+GAME_101, GAME_201 = "Spellcasting 101", "Spellcasting 201"
+
+
+def flag_name(flag: int, kind: int | None = None, game: str | None = GAME_101) -> str | None:
     """What a flag is, for an object of a type if one is given; None when it isn't known."""
+    if game == GAME_201:
+        return FLAG_NAMES_201.get(flag)
+    if game != GAME_101:
+        return None
     special = PLACE_FLAG_NAMES if kind == 1 else PERSON_FLAG_NAMES if kind == 7 else {}
     return special.get(flag) or FLAG_NAMES.get(flag)
 
 
-def describe_flag(flag: int) -> str:
+def describe_flag(flag: int, game: str | None = GAME_101) -> str:
     """What a flag is, for every type at once."""
+    if game != GAME_101:
+        return flag_name(flag, None, game) or "not known"
     name = FLAG_NAMES.get(flag, "not known")
     for label, special in (("a place", PLACE_FLAG_NAMES), ("a person", PERSON_FLAG_NAMES)):
         if flag in special:

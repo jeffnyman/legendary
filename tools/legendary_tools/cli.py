@@ -317,11 +317,10 @@ def _show_object(program: Program, table: ObjectTable, found: GameObject) -> Non
         "  flags: "
         + (" ".join(str(flag) for flag in range(1, found.flag_count + 1) if found.has_flag(flag)) or "none")
     )
-    # the names are Spellcasting 101's flags', which the other games number another way
     known = {
-        flag: flag_name(flag, found.type)
+        flag: flag_name(flag, found.type, table.game)
         for flag in range(1, found.flag_count + 1)
-        if found.has_flag(flag) and table.flags_named
+        if found.has_flag(flag)
     }
     print("".join(f"    {flag}: {name}\n" for flag, name in known.items() if name), end="")
     if table.words:
@@ -457,14 +456,14 @@ def actions(args: argparse.Namespace) -> None:
 
 
 def _flag_said(table: ObjectTable, flag: int) -> str:
-    """What a flag is: its name, for Spellcasting 101, or its bit and the types that have it."""
-    if table.flags_named:
-        return describe_flag(flag)
+    """What a flag is: its name, and where the game has a table of flags, its bit and its types."""
+    name = describe_flag(flag, table.game)
     if table.flag_table is None or flag not in table.flag_table:
-        return "not known"
+        return name
     bit, kinds = table.flag_table[flag]
     have = [str(kind) for kind in sorted(table.types) if kinds >> (kind - 1) & 1]
-    return f"bit {bit}, for " + ("every type" if len(have) == len(table.types) else "type " + ", ".join(have))
+    types = "every type" if len(have) == len(table.types) else "type " + ", ".join(have)
+    return f"{name} (bit {bit}, for {types})"
 
 
 def flags(args: argparse.Namespace) -> None:

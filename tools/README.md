@@ -114,10 +114,9 @@ python -m legendary_tools dis ../../legend/sc101/game 3670:054e
   is, whose routine it's in, and what object it asks about, as `313a:2293 in overlay 1: action
   128 (open OBJECT) tests it of the object`. That is how a flag's meaning is found, which is in
   [docs/spellcasting-101.md](../docs/spellcasting-101.md#what-the-flags-are). `objects` with
-  a number says each of the object's flags by name. The names are *Spellcasting 101*'s. For
-  *Spellcasting 201* it gives each flag's bit and the types that have it, from
-  [the game's table of flags](../docs/spellcasting-201.md#a-flag-is-looked-up), with the same
-  lists of who has it and who uses it.
+  a number says each of the object's flags by name. It names *Spellcasting 101*'s flags and
+  [*Spellcasting 201*'s](../docs/spellcasting-201.md#what-the-flags-are), and for the second
+  gives each flag's bit and the types that have it too, from the game's table of flags.
 
 - **`timers`** lists the game's timers, the routines it puts by to run on a later turn or on
   every turn: each one's routine, the routine in an overlay that it calls, and every call that
