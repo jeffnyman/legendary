@@ -9,11 +9,17 @@ string, in order. From then on the code names a string by its place in the array
 the block is the pointer at the array's address plus 100. So the calls to the routine say
 which block is behind an array, and each call is found here by the bytes that push its two
 arguments.
+
+*Spellcasting 201* has no arrays of its own for this. Its code names a string by one word,
+the block in the high byte and the string's place in the block in the low, and hands the
+word to one of two routines: one gives the string's far pointer, loading the block if it
+isn't in memory, and one prints the string.
 """
 
 from __future__ import annotations
 
 import re
+import struct
 from dataclasses import dataclass
 from typing import Optional
 
@@ -151,3 +157,65 @@ class StringNames:
         array = below[-1]
         index, rest = divmod(offset - array[1], 4)
         return (array, index) if rest == 0 else None
+
+
+# mov ax,[bp+6] / mov cl,8 / shr ax,cl / mov [bp-6],ax / mov al,[bp+6] / sub ah,ah /
+# mov [bp-2],ax: a string's word taken apart, into its block and its place there
+_TAKEN_APART = bytes.fromhex("8b4606 b108 d3e8 8946fa 8a4606 2ae4 8946fe")
+_PROLOGUE = b"\x55\x8b\xec"
+
+
+@dataclass(frozen=True)
+class Named:
+    """A call that names a string by its word."""
+
+    linear: int
+    overlay: int | None
+    prints: bool  # the call prints the string; otherwise it takes its pointer
+    block: int
+    string: int
+
+    @property
+    def where(self) -> str:
+        return "root" if self.overlay is None else f"overlay {self.overlay}"
+
+
+def find_namers(program: Program) -> dict[tuple[int, int], bool]:
+    """
+    The two routines a string's word is handed to, each with whether it prints: the one that
+    takes the word apart, and the one after it that calls that and prints what it gets.
+    """
+    image = program.image()
+    memory = image.memory
+    apart = memory.find(_TAKEN_APART, 0, program.root_size)
+    if apart < 0:
+        raise ValueError("the routine that finds a string by its number wasn't found")
+    gives = memory.rindex(_PROLOGUE, 0, apart)
+    segment = max(found for found in image.segment_references() if found * 16 <= gives)
+    found = {(segment, gives - segment * 16): False}
+    # push [bp+6] / push cs / call <the first>, in the routine after it
+    at = memory.find(b"\xff\x76\x06\x0e\xe8", gives + 1)
+    if at >= 0 and at + 7 + struct.unpack_from("<h", memory, at + 5)[0] == gives:
+        found[segment, memory.rindex(_PROLOGUE, 0, at) - segment * 16] = True
+    return found
+
+
+def find_named(program: Program) -> list[Named]:
+    """Every call that names a string by a word that is a constant, in the root and each overlay."""
+    namers = find_namers(program)
+    named: list[Named] = []
+
+    def scan(image: Image, start: int, end: int, overlay: int | None) -> None:
+        for (segment, offset), prints in namers.items():
+            for call in _calls(image, segment, offset, start, end):
+                # mov ax,<word> / push ax
+                if image.memory[call - 4] == 0xB8 and image.memory[call - 1] == 0x50:
+                    string, block = image.memory[call - 3], image.memory[call - 2]
+                    named.append(Named(call, overlay, prints, block, string))
+
+    scan(program.image(), 0, program.root_size, None)
+    for overlay in program.overlays:
+        if not overlay.preloaded:
+            image = program.image(overlay.number)
+            scan(image, overlay.load_segment * 16, overlay.end_segment * 16, overlay.number)
+    return sorted(named, key=lambda call: (call.overlay or 0, call.linear))

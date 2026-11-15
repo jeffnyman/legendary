@@ -13,7 +13,7 @@ from .flags import describe_flag, flag_name, flag_uses
 from .game import GameFolder
 from .grammar import NO_TURN, Form, action_flags, describe_flags, read_grammar
 from .handlers import action_routines, object_routines
-from .loads import StringNames, find_loader, find_loads
+from .loads import StringNames, find_loader, find_loads, find_named, find_namers
 from .mz import MzExecutable
 from .objects import DIRECTIONS, Exit, GameObject, ObjectTable, SavedState, is_pointer
 from .pictures import HUFFMAN, LZW, RAW_PLANE, RAW_PLANES, PictureFile
@@ -169,6 +169,7 @@ def dis(args: argparse.Namespace) -> None:
     image = program.image(*numbers)
     print(f"; {image.where(segment * 16 + offset)}")
     describe = _string_notes(GameFolder(args.folder), program, image.overlay_at(segment * 16 + offset))
+    literal = _literal_notes(GameFolder(args.folder), program, image)
     start = segment * 16 + offset
     disassembler = capstone.Cs(capstone.CS_ARCH_X86, capstone.CS_MODE_16)
     instructions = disassembler.disasm(image.memory[start : start + 16 * args.count], offset)
@@ -183,6 +184,8 @@ def dis(args: argparse.Namespace) -> None:
                 note = f"  ; overlay {thunk.overlay}, {thunk.target_segment:04x}:{thunk.target_offset:04x}"
             elif target[0] == program.loader_segment:
                 note = f"  ; {program.linker}'s loader"
+        elif code[0] == 0xB8 and (said := literal(linear)):
+            note = said
         elif any(linear + index in image.relocations for index in range(instruction.size)):
             note = "  ; a segment"
         elif pointer := _POINTER_OPERAND.search(instruction.op_str):
@@ -203,14 +206,53 @@ def _shown(string: str, limit: int | None = None) -> str:
     return shown if limit is None or len(shown) <= limit else shown[: limit - 3] + "..."
 
 
+def _literal_notes(folder: GameFolder, program: Program, image: Image):
+    """
+    What to say beside mov ax,<a word> when the word is a string's: its number, handed to one
+    of the routines that take one, or where it is, as the offset of a far pointer to text.
+    """
+    memory = image.memory
+    notice = memory.find(b"MS Run-Time Library")
+    try:
+        namers = find_namers(program)
+        file = data.StringFile(folder.read(folder.one("str.dat")))
+    except ValueError:
+        namers, file = {}, None
+
+    def text_at(start: int) -> str:
+        end = memory.find(b"\0", start, start + 400)
+        text = memory[start:end] if end > start else b""
+        if len(text) < 4 or any(byte < 9 or byte > 126 for byte in text):
+            return ""
+        return f'  ; "{_shown(text.decode("ascii"), 70)}"'
+
+    def describe(linear: int) -> str:
+        word = image.word(linear + 1)
+        after = memory[linear + 3 : linear + 9]
+        # push ax / call far <a routine that takes a string's number>
+        if file and after[:2] == b"\x50\x9a" and (image.word(linear + 7), image.word(linear + 5)) in namers:
+            block, string = word >> 8, word & 255
+            if block < len(file.blocks) and string < file.blocks[block].strings:
+                return f"  ; string {block}.{string}: {_shown(file.strings(file.blocks[block])[string], 70)}"
+        # mov dx,<segment> / push dx / push ax: a far pointer
+        if after[0] == 0xBA and linear + 4 in image.relocations:
+            return text_at(image.word(linear + 4) * 16 + word)
+        # push ds / push ax: a far pointer into the data
+        if after[:2] == b"\x1e\x50" and notice >= 8:
+            return text_at(notice - 8 + word)
+        return ""
+
+    return describe
+
+
 def _string_notes(folder: GameFolder, program: Program, overlay: int | None):
     """
     What to say beside an instruction that uses a far pointer in the data at an offset: the
     string it is, when the offset is in an array that the code there loads a block into.
     """
     try:
-        names = StringNames(find_loads(program))
         file = data.StringFile(folder.read(folder.one("str.dat")))
+        names = StringNames(find_loads(program))
     except ValueError:
         return lambda in_ds, offset: ""
     unpacked: dict[int, list[str]] = {}
@@ -235,12 +277,40 @@ def _string_notes(folder: GameFolder, program: Program, overlay: int | None):
     return describe
 
 
+def _named_strings(program: Program, file: data.StringFile) -> None:
+    """Each call that names a string by its number, with the string."""
+    namers = find_namers(program)
+    found = find_named(program)
+    for (segment, offset), prints in sorted(namers.items()):
+        what = "prints a string by its number" if prints else "gives a string's pointer by its number"
+        print(f"the routine that {what} is at {segment:04x}:{offset:04x}")
+    print(f"{len(found)} calls name a string by a number that is a constant\n")
+    print("call      in          string  kind    text")
+    unpacked: dict[int, list[str]] = {}
+    for call in found:
+        text = "not in the file"
+        if call.block < len(file.blocks) and call.string < file.blocks[call.block].strings:
+            strings = unpacked.setdefault(call.block, file.strings(file.blocks[call.block]))
+            text = _shown(strings[call.string], 60)
+        name = f"{call.block}.{call.string}"
+        kind = "prints" if call.prints else "takes"
+        print(f"{call.linear:#07x}   {call.where:10}  {name:>6}  {kind:6}  {text}")
+    named = {call.block for call in found}
+    missing = [str(block.number) for block in file.blocks if block.number not in named]
+    print(f"\nblocks no call names: {', '.join(missing) or 'none'}")
+
+
 def loads(args: argparse.Namespace) -> None:
     """Where the program loads each string block, and the array of pointers it loads it into."""
     folder = GameFolder(args.folder)
     program = _program(folder)
     file = data.StringFile(folder.read(folder.one("str.dat")))
-    segment, offset = find_loader(program)
+    try:
+        segment, offset = find_loader(program)
+    except ValueError:
+        # a program without that routine may name its strings by number
+        _named_strings(program, file)
+        return
     found = find_loads(program)
     print(
         f"the routine that loads a block is at {segment:04x}:{offset:04x}, and {len(found)} calls go to it\n"
@@ -690,7 +760,7 @@ def strings(args: argparse.Namespace) -> None:
         f"\n{len(file.blocks)} blocks, {sum(block.strings for block in file.blocks)} strings,"
         f" {sum(block.unpacked_size for block in file.blocks)} bytes packed into"
         f" {sum(block.packed_size for block in file.blocks)},"
-        f" with a tree of {len(file.tree)} nodes and {len(file.words)} words"
+        f" with a tree of {len(file.tree) // 2} nodes and {len(file.words)} words"
     )
 
 

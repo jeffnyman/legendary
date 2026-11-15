@@ -25,8 +25,8 @@ relative to where the program loads, as the files have them. How the programs ar
 
 These read a program linked by PLINK86, *Spellcasting 101* and *Timequest*, or by
 .RTLink/Plus 4.10, *Spellcasting 201*. The commands from `loads` down read only the first
-two so far, but for `objects`, `grammar`, `actions`, `flags` and `timers`, which read
-*Spellcasting 201* too.
+two so far, but for `loads`, `objects`, `grammar`, `actions`, `flags` and `timers`, which
+read *Spellcasting 201* too.
 
 ```
 python -m legendary_tools exe <the game's folder>
@@ -63,13 +63,19 @@ python -m legendary_tools sentence <the game's folder>
   it goes to, and an instruction with a segment in it is marked as having one. An instruction
   that takes a string's pointer from an array has the string written beside it, as
   `string 2.25: If you want to climb the chimney...`, when the code it's in loads one block
-  into that array; when it loads several, the blocks it could be are listed.
+  into that array; when it loads several, the blocks it could be are listed. A `mov ax` that
+  is the offset of a far pointer to text has the text beside it, as
+  `"The statue is two or three times larger than lifesize."`, and so has one that is a
+  string's number in *Spellcasting 201*.
 - **`loads`** lists every call to the routine that loads a string block: where the call is,
   the block, its count of strings, and the array of pointers it's loaded into. That is how the
   program names a string, which is in
   [docs/spellcasting-101.md](../docs/spellcasting-101.md#how-the-program-names-a-string). It
   ends with the blocks no call names by number. It reads *Spellcasting 101* in full;
-  *Timequest* takes most of its block numbers from variables, which aren't followed.
+  *Timequest* takes most of its block numbers from variables, which aren't followed. For
+  *Spellcasting 201*, which loads no arrays and
+  [names a string by one number](../docs/spellcasting-201.md#how-the-program-names-a-string),
+  it lists every call that does, with the string.
 
 `segments`, `dump` and `dis` build the program's memory first: the root, the data, and the
 overlays `--overlay` names, which can't be two that load at the same place. Given a routine's
@@ -168,8 +174,9 @@ python -m legendary_tools vocab <the game's folder>
   words the text is packed with, each with its code.
 - **`text`** unpacks the text: every block's strings, or one block's, a string to a line, each
   after its block and its number in it, as `2.0`. Line ends and tabs in a string are written
-  `\n` and `\t`. It reads *Spellcasting 101* and *Timequest*; the later games pack their text
-  another way. How the packing works is in
+  `\n` and `\t`. It reads *Spellcasting 101*, *Timequest* and *Spellcasting 201*, whose
+  packing [differs a little](../docs/spellcasting-201.md#the-text); the games after pack
+  their text another way again. How the packing works is in
   [docs/spellcasting-101.md](../docs/spellcasting-101.md#the-text).
 - **`vocab`** lists the vocabulary in `VOCAB.DAT`: each word's number, its parts of speech,
   and, for a synonym, the word it stands for and as what. It reads *Spellcasting 101*'s and
