@@ -509,11 +509,12 @@ def timers(args: argparse.Namespace) -> None:
     names = {found.number: found.name for found in _object_table(folder, program, words).objects}
     shapes = {number: made[0] for number, made in _shapes(read_grammar(program, words), words).items()}
     calls = timer_calls(program, names, shapes)
-    found = sorted({call.timer for call in calls if call.timer})
-    for timer in found:
+    found = sorted({(call.number or 0, call.timer) for call in calls if call.timer})
+    for number, timer in found:
         code = timer_code(program, timer)
-        name = f": {TIMER_NAMES[timer]}" if timer in TIMER_NAMES else ""
-        print(f"timer {timer[0]:04x}:{timer[1]:04x}{name}" + (f", which calls {code}" if code else ""))
+        name = f": {TIMER_NAMES[timer]}" if timer in TIMER_NAMES and not number else ""
+        said = f"{number}, {timer[0]:04x}:{timer[1]:04x}" if number else f"{timer[0]:04x}:{timer[1]:04x}"
+        print(f"timer {said}{name}" + (f", which calls {code}" if code else ""))
         for call in calls:
             if call.timer != timer:
                 continue

@@ -25,8 +25,8 @@ relative to where the program loads, as the files have them. How the programs ar
 
 These read a program linked by PLINK86, *Spellcasting 101* and *Timequest*, or by
 .RTLink/Plus 4.10, *Spellcasting 201*. The commands from `loads` down read only the first
-two so far, but for `objects`, `grammar`, `actions` and `flags`, which read *Spellcasting 201*
-too.
+two so far, but for `objects`, `grammar`, `actions`, `flags` and `timers`, which read
+*Spellcasting 201* too.
 
 ```
 python -m legendary_tools exe <the game's folder>
@@ -123,7 +123,8 @@ python -m legendary_tools dis ../../legend/sc101/game 3670:054e
   starts it, with its count, stops it or asks whether it is going, with whose routine the call
   is in. How the timers work is in
   [docs/spellcasting-101.md](../docs/spellcasting-101.md#the-timers). It reads *Spellcasting
-  101* only.
+  101*, whose timers it names, and *Spellcasting 201*, whose timers are
+  [numbers](../docs/spellcasting-201.md#the-timers) and are listed by them.
 
 - **`sentence`** prints the grammar the parser matches a command against, rule by rule, with
   the names the program has for the rules: `<noun_phrase> ::= <pe_article>

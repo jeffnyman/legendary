@@ -13,10 +13,15 @@ says which timer it is about, and whose routine the call is in says who starts a
 
 A timer's routine is in the root, where the table's far pointer can always find it. Most are
 six bytes there, a call to the routine that does the work, in an overlay, and a return.
+
+*Spellcasting 201* numbers its timers. Its table has four bytes for each of the sixteen, a
+timer's number and its count, and a second table has a far pointer for each number, which
+is the routine or a thunk to it. A fifth routine there gives a timer's count.
 """
 
 from __future__ import annotations
 
+import re
 import struct
 from dataclasses import dataclass
 
@@ -82,6 +87,75 @@ TIMER_NAMES = {
 }
 
 
+# mov es,[segment variable] / call far es:[bx-4], with BX four times a timer's number: its
+# routine, called from the table of them
+_BY_NUMBER = re.compile(rb"\x8e\x06(..)\x26\xff\x9f\xfc\xff", re.DOTALL)
+_PROLOGUE = b"\x55\x8b\xec"
+# what the routines are where timers are numbers, in the order they come in their segment,
+# before the one that runs them
+_KINDS = ("starts", "stops", "asks about", "asks the count of")
+# xor ax,ax / call far: how the one before them starts, which empties the table and has no
+# arguments or variables to make a frame for
+_FRAMELESS = b"\x33\xc0\x9a"
+_NOTICE = b"MS Run-Time Library"
+
+
+@dataclass(frozen=True)
+class Timers:
+    """Where a game's timers are kept: the routines' segment, each routine, and the numbered ones."""
+
+    segment: int
+    routines: dict[int, str]  # where each routine starts in memory, and what it does
+    numbered: (
+        tuple[tuple[int, int], ...] | None
+    )  # the routine of each number, from 1, where they have numbers
+
+
+def find_timers(program: Program) -> Timers:
+    """The routines that keep the timers, where Spellcasting 101 has them or by a table of numbers."""
+    image = program.image()
+    memory = image.memory
+    framed = [offset for offset, kind in ROUTINES.items() if kind != "empties"]
+    if all(memory.startswith(_PROLOGUE, SEGMENT * 16 + offset) for offset in framed):
+        return Timers(SEGMENT, {SEGMENT * 16 + offset: kind for offset, kind in ROUTINES.items()}, None)
+
+    root = memory[: program.root_size]
+    by_number = _BY_NUMBER.search(root)
+    notice = memory.find(_NOTICE)
+    if not by_number or notice < 0:
+        raise ValueError("the routines that keep the timers weren't found")
+    segments = sorted(image.segment_references())
+
+    def segment_of(linear: int) -> int:
+        return max(segment for segment in segments if segment * 16 <= linear)
+
+    # the routine that calls a timer by its number, and the one call to it, from the routine
+    # that runs the timers
+    start = root.rindex(_PROLOGUE, 0, by_number.start())
+    base = segment_of(start)
+    call = root.find(bytes([0x9A, *struct.pack("<HH", start - base * 16, base)]))
+    if call < 0:
+        raise ValueError("the routine that runs the timers wasn't found")
+    segment = segment_of(call)
+    runs = root.rindex(_PROLOGUE, segment * 16, call)
+    starts = [
+        match.start()
+        for match in re.finditer(re.escape(_PROLOGUE), root[:runs])
+        if match.start() >= segment * 16
+    ]
+    empties = root.find(_FRAMELESS, segment * 16, starts[0] if starts else runs)
+    if len(starts) != len(_KINDS) or empties < 0:
+        raise ValueError("the routines that keep the timers aren't the ones that are known")
+    routines = {empties: "empties", **dict(zip(starts, _KINDS))}
+
+    table = image.word(notice - 8 + int.from_bytes(by_number[1], "little")) * 16
+    numbered = []
+    while table + 4 * len(numbered) + 2 in image.relocations:
+        offset, target = struct.unpack_from("<HH", memory, table + 4 * len(numbered))
+        numbered.append((target, offset))
+    return Timers(segment, routines, tuple(numbered))
+
+
 @dataclass(frozen=True)
 class TimerCall:
     """One call about a timer."""
@@ -93,10 +167,17 @@ class TimerCall:
     segment: int
     offset: int
     routine: str  # whose routine the call is in
+    number: int | None = None  # the timer's number, where they have numbers
 
 
 def timer_code(program: Program, timer: tuple[int, int]) -> str | None:
-    """Where a timer's work is done, when its routine in the root is only a call to there and a return."""
+    """
+    Where a timer's work is done, when its routine in the root is only a call to there and a
+    return, or when what the table has for it is a thunk.
+    """
+    thunk = program.thunk_at(*timer)
+    if thunk:
+        return f"{thunk.target_segment:04x}:{thunk.target_offset:04x} in overlay {thunk.overlay}"
     image = program.image()
     at = timer[0] * 16 + timer[1]
     if image.memory[at] != 0x9A or image.memory[at + 5] != 0xCB or at + 3 not in image.relocations:
@@ -108,13 +189,31 @@ def timer_code(program: Program, timer: tuple[int, int]) -> str | None:
     return f"{segment:04x}:{offset:04x} in the root"
 
 
+def _named(before: bytes, kind: str, timers: Timers) -> tuple[tuple[int, int] | None, int | None, int | None]:
+    """The timer a call names, the count it starts it with, and its number, from the code before it."""
+    timer = count = number = None
+    if timers.numbered is None:
+        # mov ax,<offset> / mov dx,<segment> / push dx / push ax: the routine, pushed last
+        if before[4] == 0xB8 and before[7] == 0xBA and before[10:] == b"\x52\x50":
+            offset, segment = struct.unpack_from("<HxH", before, 5)
+            timer = (segment, offset)
+    elif before[8] == 0xB8 and before[11] == 0x50:
+        # mov ax,<number> / push ax: the number, pushed last
+        (number,) = struct.unpack_from("<H", before, 9)
+        if not 1 <= number <= len(timers.numbered):
+            return None, None, None
+        timer = timers.numbered[number - 1]
+    # mov ax,<count> / push ax, before it
+    at = 0 if timers.numbered is None else 4
+    if timer and kind == "starts" and before[at] == 0xB8 and before[at + 3] == 0x50:
+        count = struct.unpack_from("<h", before, at + 1)[0]
+    return timer, count, number
+
+
 def timer_calls(program: Program, names: dict[int, str], shapes: dict[int, str]) -> list[TimerCall]:
     """Every call that starts, stops or asks about a timer, in the root and in each overlay."""
+    timers = find_timers(program)
     root = program.image()
-    # the routines are looked for where Spellcasting 101 has them, and nowhere else yet
-    framed = [offset for offset, kind in ROUTINES.items() if kind != "empties"]
-    if any(not root.memory.startswith(b"\x55\x8b\xec", SEGMENT * 16 + offset) for offset in framed):
-        raise ValueError("the routines that keep the timers weren't found")
     labels = routine_labels(program, names, shapes)
     readers = [CodeReader(root, 0, program.root_size, None, labels.get(None, {}))]
     for overlay in program.overlays:
@@ -122,21 +221,14 @@ def timer_calls(program: Program, names: dict[int, str], shapes: dict[int, str])
             start, end = overlay.load_segment * 16, overlay.end_segment * 16
             image = program.image(overlay.number)
             readers.append(CodeReader(image, start, end, overlay.number, labels.get(overlay.number, {})))
-    routines = {SEGMENT * 16 + offset: kind for offset, kind in ROUTINES.items()}
     calls = []
     for reader in readers:
-        for at, kind in reader.calls(routines, SEGMENT):
-            before = reader.memory[at - 12 : at]
-            timer = count = None
-            # mov ax,<offset> / mov dx,<segment> / push dx / push ax: the routine, pushed last
-            if before[4] == 0xB8 and before[7] == 0xBA and before[10:] == b"\x52\x50":
-                offset, segment = struct.unpack_from("<HxH", before, 5)
-                timer = (segment, offset)
-                # mov ax,<count> / push ax, before it
-                if kind == "starts" and before[0] == 0xB8 and before[3] == 0x50:
-                    count = struct.unpack_from("<h", before, 1)[0]
+        for at, kind in reader.calls(timers.routines, timers.segment):
+            timer, count, number = _named(reader.memory[at - 12 : at], kind, timers)
             base = reader.segment_of(at)
             calls.append(
-                TimerCall(kind, timer, count, reader.overlay, base, at - base * 16, reader.routine(at))
+                TimerCall(
+                    kind, timer, count, reader.overlay, base, at - base * 16, reader.routine(at), number
+                )
             )
     return calls
