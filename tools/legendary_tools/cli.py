@@ -23,7 +23,7 @@ from .regions import read_regions
 from .rtlink import RtlinkProgram, is_rtlink, library_name
 from .sentence import read_sentence_grammar
 from .sound import read_songs, read_sound
-from .timers import EVERY_TURN, TIMER_NAMES, timer_calls, timer_code
+from .timers import EVERY_TURN, TIMER_NAMES, TIMER_NAMES_201, timer_calls, timer_code
 
 
 def _program(folder: GameFolder) -> Program:
@@ -582,7 +582,10 @@ def timers(args: argparse.Namespace) -> None:
     found = sorted({(call.number or 0, call.timer) for call in calls if call.timer})
     for number, timer in found:
         code = timer_code(program, timer)
-        name = f": {TIMER_NAMES[timer]}" if timer in TIMER_NAMES and not number else ""
+        if number:
+            name = f": {TIMER_NAMES_201[number]}" if number in TIMER_NAMES_201 else ""
+        else:
+            name = f": {TIMER_NAMES[timer]}" if timer in TIMER_NAMES else ""
         said = f"{number}, {timer[0]:04x}:{timer[1]:04x}" if number else f"{timer[0]:04x}:{timer[1]:04x}"
         print(f"timer {said}{name}" + (f", which calls {code}" if code else ""))
         for call in calls:

@@ -129,8 +129,9 @@ python -m legendary_tools dis ../../legend/sc101/game 3670:054e
   starts it, with its count, stops it or asks whether it is going, with whose routine the call
   is in. How the timers work is in
   [docs/spellcasting-101.md](../docs/spellcasting-101.md#the-timers). It reads *Spellcasting
-  101*, whose timers it names, and *Spellcasting 201*, whose timers are
-  [numbers](../docs/spellcasting-201.md#the-timers) and are listed by them.
+  101* and *Spellcasting 201*, whose timers are
+  [numbers](../docs/spellcasting-201.md#the-timers), and names each one's by
+  [what its routine does](../docs/spellcasting-201.md#what-each-timer-does).
 
 - **`sentence`** prints the grammar the parser matches a command against, rule by rule, with
   the names the program has for the rules: `<noun_phrase> ::= <pe_article>

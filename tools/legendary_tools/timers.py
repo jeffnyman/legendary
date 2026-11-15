@@ -156,6 +156,60 @@ def find_timers(program: Program) -> Timers:
     return Timers(segment, routines, tuple(numbered))
 
 
+# Spellcasting 201's, by number, from the same reading: most from what its routine prints
+TIMER_NAMES_201 = {
+    1: "the day's initiation",
+    2: "the upperclassmen find you",
+    3: "the serpent heads speak",
+    4: "the simulation ends",
+    5: "sleepiness",
+    6: "the class bell",
+    7: "the tower clock chimes",
+    8: "nothing",
+    9: "a word forgotten",
+    10: "a byte forgotten",
+    11: "what was raised sinks back",
+    12: "the simpleberries wear off",
+    13: "the speed potion wears off",
+    14: "the mascot swells back",
+    15: "the party starts",
+    16: "you open your eyes",
+    17: "the Brus make ready",
+    18: "the Poolside Party",
+    19: "Hiddenmolar and Cowpatty whisper",
+    20: "word of Tickingclock's death",
+    21: "Tickingclock's errand",
+    22: "Tickingclock goes",
+    23: "the sewer gurgles",
+    24: "the last newspaper goes",
+    25: "a second byte forgotten",
+    26: "the Appliance runs",
+    27: "the Sorcerer returns",
+    28: "the banana fetches water",
+    29: "the army of bananas",
+    30: "a knock from the yard",
+    31: "twelve bytes forgotten",
+    32: "everyone out of the pool",
+    33: "the Welcome Back Party fills",
+    34: "the Royal Parade",
+    35: "the hellhounds come",
+    36: "the bier is brought in",
+    37: "you are yourself again",
+    38: "Hiddenmolar tells all",
+    39: "the messenger",
+    40: "the cloak is finished",
+    41: "the cloak is brought",
+    42: "the iron turns to copper",
+    43: "the copper dissolves",
+    44: "the hanging",
+    45: "the cook and the hors d'oevres",
+    46: "the tree is a sapling again",
+    47: "the Social Hall, turn by turn",
+    48: "a count down by sixes",
+    49: "seen in the Ancient Lab",
+}
+
+
 @dataclass(frozen=True)
 class TimerCall:
     """One call about a timer."""
