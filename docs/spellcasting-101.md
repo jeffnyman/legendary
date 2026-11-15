@@ -348,7 +348,7 @@ the string file, checks there's memory enough, and then goes around once for eac
 6. It [performs the action](#from-an-action-to-what-happens), once for each object when the
    command names several.
 7. Unless the action takes no turn, the room's routine is asked once more, with 7 as the
-   reason; the routine at `1272:018C` runs, by its place the game's timers; and the count of
+   reason; the routine at `1272:018C` runs [the game's timers](#the-timers); and the count of
    moves at `4517:0046` goes up by one. The word after it, at `4517:0048`, is the game's clock,
    in steps of five minutes from midnight: [run](the-pc.md#the-notes-checked), it starts at
    187, which is 3:35 in the afternoon, and goes up by one a move.
@@ -604,6 +604,65 @@ action 51: drop love note (74) down writing desk (61)
 sword, which is in the Shop, because that form's second object may be anywhere at all. For
 `take all` nothing is found by name: what `all` takes in is gathered another way, by
 [the routine that says what fits the action](#what-the-flags-are), and where that is called from isn't read yet.
+
+## The timers
+
+Not everything in the game waits for a command. Rottenwood comes to the window on his own, a
+professor loses patience, and a spell wears off. The game does these with timers: routines it
+has put by to run on a later turn, or on every turn. ZIL's games had the same, as interrupts
+and daemons, and here they are one table.
+
+The table is at `3B00:4F30` and holds sixteen timers, six bytes each: a far pointer to a
+routine, and a count. A word at `4517:7858` is how many it has. Five routines in one small
+segment are all that touch it:
+
+| Routine | What it does |
+|---|---|
+| `1272:000E` | Empties the table |
+| `1272:0033` | Starts a timer: given a routine and a count, puts them at the table's end, or gives the routine its new count if it is there already. A seventeenth gets `[ERROR: Queue overflow]` |
+| `1272:00BF` | Stops a timer: takes a routine out, and closes the gap |
+| `1272:013E` | Says whether a routine is in the table |
+| `1272:018C` | Runs the timers, at the end of a turn |
+
+The one that runs them goes down the table once. A timer whose count is above zero has it
+taken down by one, and that is all for this turn. A timer whose count is zero or less has its
+routine called. Afterward a timer whose count is still zero is taken out of the table: it has
+happened. One whose count is -1 stays, and so is called every turn. And a routine can start
+itself again, with a new count, to happen again later. A timer started with a count of 2 in
+the course of a turn is taken down at that turn's end and the next one's, and runs at the end
+of the turn after that.
+
+When the table has been gone down, the same routine moves the clock: the word at `4517:0048`
+goes up by one, which is five minutes. So it is the timers' routine that makes a turn take
+time, and an action that takes no turn skips it. A byte at `4517:3532` turns all of it around:
+while it is set the clock goes down by one and the timers' counts go up. Presumably that is a
+spell, and what sets it isn't read yet. The routine is given two numbers, whether to stop when
+something has happened and how many turns to run, which the main loop gives as no and one;
+other callers, presumably waiting, aren't followed.
+
+The game's source started and stopped each timer by its routine's name, so
+[`timers`](../tools/README.md#the-program) can list every call: 46 timers, in 120 starts, 66
+stops and 5 askings. Whose routine a call is in says what the timer is about:
+
+```
+timer 07ec:06df, which calls 3670:0e53 in overlay 3
+    3670:01be in overlay 3: object 1 Bedchamber starts it with a count of 41
+    3981:0223 in overlay 3: the routine at 3981:019e in overlay 3 stops it
+timer 07ec:06f1, which calls 3670:2dac in overlay 3
+    388e:0882 in overlay 3: object 79 rusty key starts it with a count of 1
+    388e:0a71 in overlay 3: object 154 Miss Beancounter stops it
+    388e:0bd8 in overlay 3: object 154 Miss Beancounter starts it to run every turn
+```
+
+A timer's routine has to be where a far pointer can find it whatever overlays are loaded, so
+it is in the root. Most are six bytes there, one after another from `07EC:06D9`: a call into
+an overlay, where the work is done, and a return.
+
+The Bedchamber's routine starts two as the game begins, before any command. The one with a
+count of 2 runs at the end of the third turn, and then starts itself again with a count of 1,
+turn after turn: by what comes of it, this is Rottenwood on his way to the window. The other
+has a count of 41. The player's `--watch` says each timer as it is started, as it runs and as
+it is stopped, and `--panel` lists the ones that are going with the turns each has to go.
 
 ## From an action to what happens
 
@@ -940,7 +999,7 @@ exactly:
 | 4 | The four bytes at `4517:0488`, not yet understood |
 | 12,862 | The record of every object, in the table's order |
 | 595 | 91 saved variables: the program has a table at `2660:0370` of the pieces of its data that are part of the game's state, a far pointer and a size for each, most of them a byte or a word |
-| 2 | A count, here 0, with six bytes to follow for each it counts; inferred, things due to happen later |
+| 2 | A count, here 0, with six bytes to follow for each it counts: by its shape [the table of timers](#the-timers), none of them going yet |
 
 The records in the file are the ones in the program, byte for byte, except their far pointers:
 all 590 have a segment `0E21` higher. `5338` is the data segment `4517`, and `3522` the
@@ -1174,7 +1233,7 @@ yet by its code: it's used up, and ends only the page it is pressed at.
   and 40 are loaded.
 - What a routine's answer means beyond zero, and 2 from performing; the reasons from 8 to 14.
 - The rest of the actions' bytes.
-- The timers.
+- What the 46 timers each do: their routines are found, and not read. Who has the timers run several turns at once, and what stops one from running for a turn.
 - The rest of an object's record: the fields past the tree. Which of a thing's lists is which, beyond [the second being what's on it](#what-the-flags-are) when it has flag 33.
 - What tells flag 26 from flag 27, and what the 80 things with flag 32 are.
 - How the far pointers in a saved game are made right, and what a saved state's last part counts.
