@@ -119,6 +119,24 @@ public sealed record AnswerPoint(ushort Offset, Asked Asked);
 /// adjectives and the adjectives, and at 26 hex the noun, all as words' numbers.
 /// </param>
 /// <param name="LotCountOffset">In the action's segment, a byte: how many lots the command has.</param>
+/// <param name="TimersOffset">
+/// In the action's segment, the table of timers: six bytes each, a far pointer to a routine
+/// and a count. A count above zero goes down by one a turn, and at zero the routine is called;
+/// a count of -1 is a routine called every turn.
+/// </param>
+/// <param name="TimerCountOffset">In the data, how many timers the table has.</param>
+/// <param name="TimerIndexOffset">In the data, which timer is being run, counting from 0.</param>
+/// <param name="TimerSegment">The segment of the routines that keep the table.</param>
+/// <param name="TimerStartOffset">
+/// There, the routine that puts a routine in the table, or gives one that is there a new
+/// count. It is called far with the routine, a far pointer, and the count.
+/// </param>
+/// <param name="TimerStopOffset">There, the routine that takes one out: called far with the routine.</param>
+/// <param name="TimerRunOffset">There, the call of a timer's routine, as its turn comes.</param>
+/// <param name="TimerStarters">
+/// For a timer's routine, by its segment and offset as one number, the object whose routine
+/// starts it, by name: something to know the timer by.
+/// </param>
 /// <param name="PlaceType">The type of object that is a place.</param>
 /// <param name="PersonType">The type of object that is a person.</param>
 /// <param name="FlagNames">
@@ -140,6 +158,9 @@ public sealed record WorldMap(
     ushort TokenSegment, ushort TokenOffset, ushort AfterStopOffset, ushort AfterAndOffset, ushort TokenWordOffset,
     IReadOnlyDictionary<int, string> WordTokens, IReadOnlyDictionary<int, string> MarkTokens, IReadOnlyList<int> EndTokens,
     ushort FormOffset, ushort FormIndexOffset, ushort FormActionOffset, ushort FoundOffset, ushort LotsOffset, int LotSize, ushort LotCountOffset,
+    ushort TimersOffset, ushort TimerCountOffset, ushort TimerIndexOffset,
+    ushort TimerSegment, ushort TimerStartOffset, ushort TimerStopOffset, ushort TimerRunOffset,
+    IReadOnlyDictionary<int, string> TimerStarters,
     int PlaceType, int PersonType,
     IReadOnlyDictionary<int, string> FlagNames,
     IReadOnlyDictionary<int, string> PlaceFlagNames,
@@ -182,6 +203,25 @@ public sealed record WorldMap(
         MarkTokens: new Dictionary<int, string> { [-18] = ",", [-19] = ".", [-20] = ";" },
         EndTokens: [-1, -17, -20],
         FormOffset: 0x21ED, FormIndexOffset: 0x8AD6, FormActionOffset: 0x54, FoundOffset: 0x0CCB, LotsOffset: 0x3C, LotSize: 12, LotCountOffset: 0x38,
+        TimersOffset: 0x4F30, TimerCountOffset: 0x7858, TimerIndexOffset: 0x785A,
+        TimerSegment: 0x1272, TimerStartOffset: 0x0033, TimerStopOffset: 0x00BF, TimerRunOffset: 0x0250,
+        TimerStarters: new Dictionary<int, string>
+        {
+            [0x07EC04B4] = "castle", [0x07EC06D9] = "Bedchamber", [0x07EC06DF] = "Bedchamber",
+            [0x07EC06E5] = "tiny door", [0x07EC06EB] = "flat rock", [0x07EC06F1] = "rusty key",
+            [0x07EC06F7] = "VIP Suite", [0x07EC06FD] = "VIP Suite", [0x07EC0703] = "SIP Suite",
+            [0x07EC0709] = "Restaurant", [0x07EC070F] = "waiter", [0x07EC0715] = "Meadow", [0x07EC0721] = "Condo East",
+            [0x07EC0727] = "Ocarina", [0x07EC072D] = "garbage", [0x07EC0733] = "Gateroom", [0x07EC0739] = "Gateroom",
+            [0x07EC073F] = "gold X", [0x07EC0745] = "Stunning Climax", [0x07EC074B] = "long line",
+            [0x07EC075A] = "Frogkisser House", [0x07EC0760] = "Cafeteria", [0x07EC0766] = "Sorcerer Stadium",
+            [0x07EC076C] = "Professor's Office", [0x07EC0772] = "I Phelta Thi", [0x07EC0778] = "scribbled note",
+            [0x07EC077E] = "your bed", [0x07EC0784] = "I Phelta Thi", [0x07EC078A] = "I Phelta Thi",
+            [0x07EC07D2] = "Housemaster's Suite", [0x07EC07D8] = "long line", [0x07EC07DE] = "Professor's Office",
+            [0x07EC07E4] = "Professor's Office", [0x07EC07EA] = "Meltingwolf Hall", [0x07EC089F] = "gardening tools",
+            [0x07EC08AD] = "right window", [0x07EC08BA] = "trap door", [0x07EC09F3] = "long line", [0x07EC128A] = "you",
+            [0x07EC12A3] = "Base of Keep", [0x07EC12A9] = "Far Side of Moat", [0x09BB0D1E] = "red button",
+            [0x09BB0D26] = "red button", [0x36700899] = "long line",
+        },
         PlaceType: 1, PersonType: 7,
         FlagNames: new Dictionary<int, string>
         {

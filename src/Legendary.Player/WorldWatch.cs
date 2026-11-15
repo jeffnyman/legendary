@@ -74,6 +74,9 @@ internal sealed class WorldWatch(Machine machine, WorldMap map, TextWriter? outp
             machine.Cpu.Watch((uint)_world.AfterStopAddress, () => Token(Taken.AfterStop));
             machine.Cpu.Watch((uint)_world.AfterAndAddress, () => Token(Taken.AfterAnd));
             machine.Cpu.Watch((uint)_world.FormAddress, Form);
+            machine.Cpu.Watch((uint)_world.TimerStartAddress, () => Timer(started: true));
+            machine.Cpu.Watch((uint)_world.TimerStopAddress, () => Timer(started: false));
+            machine.Cpu.Watch((uint)_world.TimerRunAddress, TimerRuns);
             machine.Cpu.Watch((uint)_world.FoundAddress, Found);
             foreach (var point in map.Answers)
             {
@@ -245,6 +248,13 @@ internal sealed class WorldWatch(Machine machine, WorldMap map, TextWriter? outp
         var exits = world.Exits(room);
         int width = exits.Count == 0 ? 0 : exits.Max(exit => DirectionName(exit.Direction).Length);
         lines.AddRange(exits.Select(exit => new PanelLine($"  {DirectionName(exit.Direction).PadRight(width)}  {Leads(world, exit).TrimStart(' ', ':')}")));
+        if (world.Timers is { Count: > 0 } timers)
+        {
+            lines.Add(new PanelLine(""));
+            lines.Add(new PanelLine("Timers", PanelTone.Dim));
+            lines.AddRange(timers.Select(timer => new PanelLine($"  {TimerName(timer)["timer ".Length..]}: {TimerCount(timer)}")));
+        }
+
         return lines;
     }
 
@@ -430,6 +440,43 @@ internal sealed class WorldWatch(Machine machine, WorldMap map, TextWriter? outp
                 : phrase.All ? "left to the action to gather"
                 : "nothing";
             Say($"  {(lot == 0 ? "object" : "second object")} \"{said}\", looked for {looked}: {found}");
+        }
+    }
+
+    // a timer by its routine's address, and by who starts it when the map says
+    private string TimerName(WorldTimer timer) =>
+        $"timer {timer.Segment:X4}:{timer.Offset:X4}" + (map.TimerStarters.TryGetValue(timer.Key, out string? starter) ? $" ({starter})" : "");
+
+    private static string TimerCount(WorldTimer timer) =>
+        timer.EveryTurn ? "every turn" : timer.Count == 1 ? "1 turn to go" : $"{timer.Count} turns to go";
+
+    // a routine has put a timer in the table, or taken one out: a stop is said only of a timer
+    // that is there, since the game stops timers freely, whether they are going or not
+    private void Timer(bool started)
+    {
+        if (_world is not { IsThere: true } world)
+        {
+            return;
+        }
+
+        var cpu = machine.Cpu;
+        var timer = world.TimerArgument((cpu.Ss * 16) + (ushort)cpu.Esp);
+        if (started)
+        {
+            Say($"  {TimerName(timer)} started: {TimerCount(timer)}");
+        }
+        else if (world.Timers.Any(going => going.Key == timer.Key))
+        {
+            Say($"  {TimerName(timer)} stopped");
+        }
+    }
+
+    // a timer's turn has come, and its routine is about to be called
+    private void TimerRuns()
+    {
+        if (_world is { IsThere: true } world && world.TimerRunning is { } timer)
+        {
+            Say($"  {TimerName(timer)} runs");
         }
     }
 

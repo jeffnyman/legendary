@@ -108,14 +108,17 @@ the room's, the actor's, the objects' and at last the action's own, and stops at
 that answers; the watch says which that was. The rat has its own answer to being examined.
 Climbing the chimney is never answered at all: the chimney's routine started the turn over,
 by a jump back to the game's main loop, and the watch says that too. Going somewhere ends
-the same way, with a jump, once you've been moved. The flags are the way into what the game
+the same way, with a jump, once you've been moved. The game's timers are said as well, each as it
+is started, as it runs at a turn's end, and as it is stopped: things the story has put by to
+happen later, such as the two the Bedchamber starts before you have typed anything. The flags are the way into what the game
 means by them: opening the desk sets its flag 12, so 12 is open. The room and its contents are looked at once a frame,
 so a turn can be seen half done, the room changed and the turn not yet counted. The watch
 reads the game's memory and changes nothing. For now it knows *Spellcasting 101*.
 
 `--panel` shows the same beside the game, in a column down the right of the window: the time,
 the turn and the room at the top, what is in the room with each thing under what holds it,
-the exits, and under those the last of what happened, the newest at the bottom.
+the exits, the timers that are going, and under those the last of what happened, the newest
+at the bottom.
 
 ```
 3:55 pm   turn 4
@@ -130,6 +133,9 @@ Here
 Exits
   south  to Bedchamber (1)
   down   a routine decides
+
+Timers
+  07EC:06DF (Bedchamber): 37 turns to go
 
 Lately
 action 197: go north

@@ -36,6 +36,19 @@ public readonly record struct ObjectState(ulong Flags, int Place, int SecondPlac
 /// <param name="Objects">The objects it could be, by what they are called and where they are.</param>
 public sealed record FoundPhrase(bool All, IReadOnlyList<int> Adjectives, int Noun, IReadOnlyList<int> Objects);
 
+/// <summary>A routine the game has put by to run on a later turn, or on every turn.</summary>
+/// <param name="Segment">The routine's segment, as the program has it when loaded at segment zero.</param>
+/// <param name="Offset">The routine's offset.</param>
+/// <param name="Count">The turns to go before it runs, or -1 for a routine that runs every turn.</param>
+public sealed record WorldTimer(int Segment, int Offset, int Count)
+{
+    /// <summary>Whether it runs every turn.</summary>
+    public bool EveryTurn => Count == -1;
+
+    /// <summary>The segment and offset as one number, as the map's names for timers have them.</summary>
+    public int Key => (Segment << 16) | Offset;
+}
+
 /// <summary>A way out of a room.</summary>
 /// <param name="Direction">The direction's number.</param>
 /// <param name="Kind">
@@ -381,6 +394,36 @@ public sealed class World
 
         return ((lot - Linear(Map.ActionSegment, Map.LotsOffset)) / Map.LotSize, _read(stack + 4), phrases);
     }
+
+    /// <summary>The timers the game has going, in the order it runs them.</summary>
+    public IReadOnlyList<WorldTimer> Timers =>
+        [.. Enumerable.Range(0, Math.Clamp(DataWord(Map.TimerCountOffset), 0, 16)).Select(index => TimerAt(Linear(Map.ActionSegment, Map.TimersOffset) + (6 * index)))];
+
+    /// <summary>The timer whose routine is being run, or null between them.</summary>
+    public WorldTimer? TimerRunning =>
+        DataWord(Map.TimerIndexOffset) is var index && index < Math.Clamp(DataWord(Map.TimerCountOffset), 0, 16)
+            ? TimerAt(Linear(Map.ActionSegment, Map.TimersOffset) + (6 * index))
+            : null;
+
+    /// <summary>The linear address of the routine that starts a timer.</summary>
+    public int TimerStartAddress => Linear(Map.TimerSegment, Map.TimerStartOffset);
+
+    /// <summary>The linear address of the routine that stops a timer.</summary>
+    public int TimerStopAddress => Linear(Map.TimerSegment, Map.TimerStopOffset);
+
+    /// <summary>The linear address of the call of a timer's routine.</summary>
+    public int TimerRunAddress => Linear(Map.TimerSegment, Map.TimerRunOffset);
+
+    /// <summary>
+    /// The timer a program at <see cref="TimerStartAddress"/> or <see cref="TimerStopAddress"/>
+    /// has been given: the routine's arguments, above the far address it returns to. The count
+    /// means something only to the start.
+    /// </summary>
+    /// <param name="stack">The linear address of the top of the stack, SS:SP.</param>
+    public WorldTimer TimerArgument(int stack) => TimerAt(stack + 4);
+
+    // a far pointer and a count, as the table and the stack both have them
+    private WorldTimer TimerAt(int at) => new((Word(at + 2) - LoadSegment) & 0xFFFF, Word(at), (short)Word(at + 4));
 
     private int Linear(ushort segment, int offset) => ((LoadSegment + segment) * 16) + offset;
 

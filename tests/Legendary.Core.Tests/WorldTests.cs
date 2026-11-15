@@ -31,6 +31,10 @@ public sealed class WorldTests
 
         Assert.Equal(0, world.LoadSegment);
         Assert.True(world.IsThere);
+
+        // and before it has run, no timer is going
+        Assert.Empty(world.Timers);
+        Assert.Null(world.TimerRunning);
     }
 
     [Fact]
