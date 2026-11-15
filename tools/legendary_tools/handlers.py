@@ -19,17 +19,22 @@ from dataclasses import dataclass
 
 from .program import Image, Program
 
-# push bp / mov bp,sp / mov ax,[bp+6] / (sub ax,<first>) / cmp ax,<count less one> /
-# jbe / jmp <default>, or ja <default> / add ax,ax / xchg bx,ax / jmp cs:[bx+<table>]
+# mov ax,[bp+6] / (sub ax,<first>) / cmp ax,<count less one> / jbe / jmp <default>, or
+# ja <default> / add ax,ax / xchg bx,ax / jmp cs:[bx+<table>]: a switch made a table of jumps
 _JUMP_TABLE = re.compile(
-    rb"\x55\x8b\xec\x8b\x46\x06(?:\x2d(..))?\x3d(..)(?:\x76\x03\xe9..|\x77.)\x03\xc0\x93\x2e\xff\xa7(..)",
+    rb"\x8b\x46\x06(?:\x2d(..))?\x3d(..)(?:\x76\x03\xe9..|\x77.)\x03\xc0\x93\x2e\xff\xa7(..)",
     re.DOTALL,
 )
+_PROLOGUE = b"\x55\x8b\xec"
+_TAKES_ARGUMENT = b"\x8b\x46\x06"
+# how far into a switch's routine its argument is taken: at once in Spellcasting 101, and in
+# Spellcasting 201 after the stack is checked and, for an action's, the call is noted
+_PREAMBLE = 48
 # cmp ax,<value> / je <case>, with the case near or, by a jump around a jump, far
 _COMPARE = re.compile(rb"\x3d(..)(?:\x74(.)|\x75\x03\xe9(..))", re.DOTALL)
 # an object's type, less one, made the index of a table of jumps
 _BY_TYPE = re.compile(
-    rb"\x26\x8a\x87\xfa\xff\x2a\xe4\x2d\x01\x00\x3d(..)\x77.\x03\xc0\x93\x2e\xff\xa7(..)", re.DOTALL
+    rb"\x26\x8a\x87..\x2a\xe4\x2d\x01\x00\x3d(..)\x77.\x03\xc0\x93\x2e\xff\xa7(..)", re.DOTALL
 )
 # mov al,es:[<the action>] / sub ah,ah / push ax / call far: the action handed to a routine
 _BY_ACTION = re.compile(rb"\x26\xa0..\x2a\xe4\x50\x9a(..)(..)", re.DOTALL)
@@ -85,10 +90,21 @@ class _Code:
             return segment + ((at + 4 + self.word(at + 2) - segment) & 0xFFFF)
         return None
 
+    def switch(self, start: int) -> int | None:
+        """Where a routine takes its argument to switch on, when it starts as a switch's does."""
+        if not self.memory.startswith(_PROLOGUE, start):
+            return None
+        at = self.memory.find(_TAKES_ARGUMENT, start, start + _PREAMBLE)
+        return at if at >= 0 else None
+
+    def jump_table(self, start: int) -> re.Match[bytes] | None:
+        at = self.switch(start)
+        return _JUMP_TABLE.match(self.memory, at) if at is not None else None
+
     def cases(self, start: int) -> dict[int, int]:
         """A switch's cases, from the routine that starts at a place: each value, and where it goes."""
         segment = self.segment_of(start)
-        match = _JUMP_TABLE.match(self.memory, start)
+        match = self.jump_table(start)
         if match:
             first = int.from_bytes(match[1], "little") if match[1] else 0
             count = int.from_bytes(match[2], "little") + 1
@@ -140,9 +156,9 @@ def action_routines(program: Program) -> tuple[dict[int, Routine], dict[int, Rou
     before: dict[int, Routine] = {}
     for match in _BY_ACTION.finditer(code.root):
         start = int.from_bytes(match[2], "little") * 16 + int.from_bytes(match[1], "little")
-        if not code.memory.startswith(b"\x55\x8b\xec\x8b\x46\x06", start):
+        if code.switch(start) is None:
             continue
-        if _JUMP_TABLE.match(code.memory, start):
+        if code.jump_table(start):
             return code.routines(start), before
         # the switch called first, of few cases, is the routines that come before
         before = code.routines(start)

@@ -110,8 +110,12 @@ def timer_code(program: Program, timer: tuple[int, int]) -> str | None:
 
 def timer_calls(program: Program, names: dict[int, str], shapes: dict[int, str]) -> list[TimerCall]:
     """Every call that starts, stops or asks about a timer, in the root and in each overlay."""
-    labels = routine_labels(program, names, shapes)
     root = program.image()
+    # the routines are looked for where Spellcasting 101 has them, and nowhere else yet
+    framed = [offset for offset, kind in ROUTINES.items() if kind != "empties"]
+    if any(not root.memory.startswith(b"\x55\x8b\xec", SEGMENT * 16 + offset) for offset in framed):
+        raise ValueError("the routines that keep the timers weren't found")
+    labels = routine_labels(program, names, shapes)
     readers = [CodeReader(root, 0, program.root_size, None, labels.get(None, {}))]
     for overlay in program.overlays:
         if not overlay.preloaded:

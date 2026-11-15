@@ -25,6 +25,17 @@ ON-GROUND, IN-ROOM, MANY, TAKE and HAVE.
 Before the forms, from the start of their segment, is a byte for each action. Its bit 1 is
 that the action takes no turn: the game's clock doesn't move for it.
 
+*Spellcasting 201* has a byte after the flags in both tables, read here as the flags' high
+byte. It is zero in nearly every entry, and what it is for isn't known. So a form there is
+
+    0  the verb            6  the action with no object
+    2  the preposition     7  the action with one
+    4  flags, a word       8  where its entries start in the second table, and at 9 how many
+
+and a second object's entry is the preposition, the flags' word, the byte not yet understood,
+and the action. A verb and a preposition can have more than one form there, which differ in
+their flags. The code that searches them is the parser's, in an overlay.
+
 A word that is a synonym is looked up as the word it stands for. An action is a number; what
 the game does about one is its own business, and isn't here.
 """
@@ -69,6 +80,7 @@ HELD, CARRIED, ON_GROUND, IN_ROOM, MANY = 0x01, 0x02, 0x04, 0x08, 0x40
 TAKEN_FIRST = 0x20  # the object is taken first when the actor doesn't have it in hand
 MUST_BE_HELD = 0x10  # the object must be somewhere about the actor
 NO_TURN = 0x01  # of an action's byte: the action takes no turn
+PREPOSITION = 8  # of a word's parts of speech
 
 
 def describe_flags(flags: int) -> str:
@@ -93,16 +105,44 @@ def describe_flags(flags: int) -> str:
 def _tables(program: Program) -> tuple[bytes, int, int, int]:
     """The program's memory, the forms' segment, and where the two tables start in it."""
     memory = program.image().memory
-    root = memory[: program.root_size]
-    found = {
-        (int.from_bytes(match[2], "little"), int.from_bytes(match[1], "little"))
-        for match in _RECORD.finditer(root)
-    }
+    found = _records(memory[: program.root_size])
+    for overlay in program.overlays:
+        if len(found) >= 2:
+            break
+        # the parser, and the search with it, can be in an overlay
+        start, end = overlay.load_segment * 16, overlay.end_segment * 16
+        found = _records(program.image(overlay.number).memory[start:end])
     if len(found) < 2:
         raise ValueError("the code that searches the grammar wasn't found")
     # the forms come first, and the second table follows them
     (segment, first), (_, second) = sorted(found)[:2]
     return memory, segment, first, second
+
+
+def _records(code: bytes) -> set[tuple[int, int]]:
+    """The tables whose records a stretch of code hands on to be compared: segment and offset."""
+    return {
+        (int.from_bytes(match[2], "little"), int.from_bytes(match[1], "little"))
+        for match in _RECORD.finditer(code)
+    }
+
+
+def _fits(rows: list[tuple[int, ...]], memory: bytes, seconds_at: int, words: list[Word]) -> bool:
+    """
+    Whether a reading of the forms is right: every entry a form has starts with a preposition,
+    or with none, as the second object of `give the rat the cheese` has none.
+    """
+    for *_, start, many in rows:
+        for index in range(start, start + many):
+            (word,) = struct.unpack_from("<H", memory, seconds_at + 6 * index)
+            if word > len(words) or (word and not words[word - 1].parts & PREPOSITION):
+                return False
+    return True
+
+
+# a form's bytes and a second object's, with the flags a byte, and with them a word
+_NARROW = ("<HHBBBBB", "<HBBB")
+_WIDE = ("<HHHBBBB", "<HHBB")
 
 
 def action_flags(program: Program) -> bytes:
@@ -117,17 +157,24 @@ def read_grammar(program: Program, words: list[Word]) -> list[Form]:
     forms_at = segment * 16 + first
     seconds_at = segment * 16 + second
 
+    count = (seconds_at - forms_at) // 10
+    for layouts in (_NARROW, _WIDE):
+        rows = [struct.unpack_from(layouts[0], memory, forms_at + 10 * index) for index in range(count)]
+        if _fits(rows, memory, seconds_at, words):
+            break
+    else:
+        raise ValueError("the grammar's forms aren't in a form that is known")
+
     forms = []
-    for at in range(forms_at, seconds_at, 10):
-        verb, preposition, flags, alone, with_object, start, count = struct.unpack_from(
-            "<HHBBBBB", memory, at
-        )
+    for at, (verb, preposition, flags, alone, with_object, start, many) in zip(
+        range(forms_at, seconds_at, 10), rows
+    ):
         # every form starts with a verb's number
         if verb > len(words) or (verb and not words[verb - 1].parts & 1):
             raise ValueError(f"the grammar's form at {at - segment * 16:#x} doesn't start with a verb")
         seconds = [
-            Second(*struct.unpack_from("<HBBB", memory, seconds_at + 6 * index))
-            for index in range(start, start + count)
+            Second(*struct.unpack_from(layouts[1], memory, seconds_at + 6 * index))
+            for index in range(start, start + many)
         ]
         forms.append(Form(verb, preposition, flags, alone, with_object, seconds))
     return forms

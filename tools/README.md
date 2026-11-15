@@ -25,7 +25,7 @@ relative to where the program loads, as the files have them. How the programs ar
 
 These read a program linked by PLINK86, *Spellcasting 101* and *Timequest*, or by
 .RTLink/Plus 4.10, *Spellcasting 201*. The commands from `loads` down read only the first
-two so far, but for `objects`, which reads all three.
+two so far, but for `objects`, `grammar` and `actions`, which read *Spellcasting 201* too.
 
 ```
 python -m legendary_tools exe <the game's folder>
@@ -96,15 +96,16 @@ python -m legendary_tools dis ../../legend/sc101/game 3670:054e
   after each preposition it allows, as `drop OBJECT in OBJECT: action 51`. Each line ends
   with where the object, and the second, may be looked for and what's asked of it, from the
   form's flags. With a verb, it lists that verb's forms. It needs `VOCAB.DAT` for the words, and
-  reads *Spellcasting 101* and *Timequest*. How the table is kept is in
-  [docs/spellcasting-101.md](../docs/spellcasting-101.md#the-grammar).
+  reads *Spellcasting 101*, *Timequest* and *Spellcasting 201*. How the table is kept is in
+  [docs/spellcasting-101.md](../docs/spellcasting-101.md#the-grammar), and what the third
+  changes in [docs/spellcasting-201.md](../docs/spellcasting-201.md#the-grammar).
 
 - **`actions`** lists each action with its routine, whether it takes no turn, the routine that comes before it when
   there is one, and the commands that make it, from the grammar: the first four, or all of
   them with an action's number. An object's routine is in what `objects` prints for it. Both
   are read from the code's own switches, which is in
   [docs/spellcasting-101.md](../docs/spellcasting-101.md#from-an-action-to-what-happens), and
-  `dis` at a routine's address shows it. It reads *Spellcasting 101* only.
+  `dis` at a routine's address shows it. It reads all three games.
 
 - **`flags`** lists the objects' flags: for each, what it is, how many objects of which types
   have it as the game starts, and how often the program tests, sets and clears it. With a
