@@ -277,10 +277,18 @@ bit. The table has room for 40 flags before the table of objects starts, and all
 
 So bits 6 to 9 are each two or three flags. That is what *Spellcasting 101* did without
 saying so, where flag 7 was "not listed" for a thing and "outdoors" for a place: here the
-room's bit 6 has a number of its own, 16. For a thing, a flag's bit is, by this table, the
-bit it had before, with the numbers after 15 moved up to make room. Whether each still means
-what it meant hasn't been checked, and there is a reason to doubt it: a door lets you through
-when it has flag 13, which is the bit that was "locked". The tools don't name them.
+room's bit 6 has a number of its own, 16.
+
+Three routines do everything with a flag, as before, each given an object and a flag's
+number: `023C:1660` tests one, `023C:169F` sets it and `023C:16D7` clears it, and each asks
+`023C:1583` where the flag is first. The program calls them 812 times, from the root and
+every overlay, and 803 of the calls name their flag as a constant. So each flag has the list
+of who tests it and who changes it that named *Spellcasting 101*'s.
+
+The numbers aren't the first game's. Flag 13 is open here: the action for `open` sets it and
+the one for `close` clears it, and it is what a door has to have to let you through. It was
+12. So the meanings can't be carried over by number, and the 40 haven't been gone through
+yet; the tools give each flag's bit and types, and who uses it, and no name.
 
 ### The exits are rows of one table
 
@@ -297,7 +305,7 @@ bytes each: 266 rows.
 | Kind | Rows | The word |
 |---|---|---|
 | 1 | 172 | The room it goes to |
-| 2 | 16 | A door's row in a table at `2918:2DF4`, of the room it goes to and the door's own object: the way is taken when the door has flag 13 |
+| 2 | 16 | A door's row in a table at `2918:2DF4`, of the room it goes to and the door's own object: the way is taken when the door has flag 13, which is open |
 | 4 | 78 | A number for a routine at `0777:0000`, which is asked with it and the action |
 
 The kind that only said something, 3, is gone, and so is every pointer: a room's record now
@@ -385,9 +393,9 @@ routines too.
 
 ## Still to do
 
-Everything past the program, the vocabulary, the objects, the grammar and the routines. The
-routines that test and change a flag, and the ones that keep the timers, aren't found yet:
-the tools look for *Spellcasting 101*'s. The rules of the parser's own grammar aren't found
+Everything past the program, the vocabulary, the objects, the grammar and the routines. What
+each of the 40 flags means hasn't been worked out from who uses it. The routines that keep
+the timers aren't found yet: the tools look for *Spellcasting 101*'s. The rules of the parser's own grammar aren't found
 either. The text and the music are each in a form *Spellcasting 101*'s readers don't read:
 
 - `S201STR.DAT` starts as before, with its table of blocks, 87 of them. The tree after it is
