@@ -21,3 +21,8 @@ hold.
   an LZW of pixels and by Huffman's codes, with the rectangles of each that the mouse can
   point at; music kept as MIDI files and as AdLib's own, and sounds in RealSound for the
   PC's speaker.
+- [Spellcasting 201: The Sorcerer's Appliance](spellcasting-201.md): 1991. The same system,
+  linked by .RTLink/Plus in place of PLINK86: a program DOS can't load by itself, kept as
+  records of its segments with their fixups, which the linker's own startup code puts in
+  place; a run-time library the launcher and the game share, linked in as the program loads;
+  and 22 overlays reached by 790 thunks. So far, only how the program is built.

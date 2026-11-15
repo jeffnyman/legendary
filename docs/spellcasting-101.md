@@ -143,7 +143,8 @@ and returns past the number, to the jump. A pointer to a routine in an overlay i
 its thunk, so tables of routines work wherever the routines are.
 
 *Timequest*, a year later, is built the same way, with 768 thunks. From *Spellcasting 201* on,
-the games are linked with .RTLink instead.
+the games are linked with .RTLink instead, which is in
+[*Spellcasting 201*'s notes](spellcasting-201.md#how-the-program-is-built).
 
 ## The objects
 
