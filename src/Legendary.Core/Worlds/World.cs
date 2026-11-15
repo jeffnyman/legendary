@@ -320,6 +320,18 @@ public sealed class World
         return new Grammar(forms, words, Map.ActionNames);
     }
 
+    /// <summary>The linear address of the place where a command's next token has just been taken.</summary>
+    public int TokenAddress => Linear(Map.TokenSegment, Map.TokenOffset);
+
+    /// <summary>The same, of the place where the token after a full stop has been looked ahead to.</summary>
+    public int AfterStopAddress => Linear(Map.TokenSegment, Map.AfterStopOffset);
+
+    /// <summary>The same, of the place where the token after <c>and</c> has been looked ahead to.</summary>
+    public int AfterAndAddress => Linear(Map.TokenSegment, Map.AfterAndOffset);
+
+    /// <summary>The number of the word the token just taken is, or 0 when it isn't a word.</summary>
+    public int TokenWord => Word(Linear(Map.ActionSegment, Map.TokenWordOffset));
+
     private int Linear(ushort segment, int offset) => ((LoadSegment + segment) * 16) + offset;
 
     private int Word(int linear) => _read(linear) | (_read(linear + 1) << 8);

@@ -70,6 +70,9 @@ internal sealed class WorldWatch(Machine machine, WorldMap map, TextWriter? outp
             Say($"the game is in memory, loaded at {_world.LoadSegment:X4}h, with {map.ObjectCount} objects", PanelTone.Dim);
             machine.Cpu.Watch((uint)_world.PerformAddress, Performing);
             machine.Cpu.Watch((uint)_world.JumpBackAddress, JumpedBack);
+            machine.Cpu.Watch((uint)_world.TokenAddress, () => Token(Taken.Next));
+            machine.Cpu.Watch((uint)_world.AfterStopAddress, () => Token(Taken.AfterStop));
+            machine.Cpu.Watch((uint)_world.AfterAndAddress, () => Token(Taken.AfterAnd));
             foreach (var point in map.Answers)
             {
                 machine.Cpu.Watch((uint)_world.AnswerAddress(point), () => Answered(point));
@@ -325,6 +328,86 @@ internal sealed class WorldWatch(Machine machine, WorldMap map, TextWriter? outp
         var (action, first, second) = world.PerformArguments((cpu.Ss * 16) + (ushort)cpu.Esp);
         string inside = new(' ', 2 * Math.Clamp(world.PerformDepth, 0, 8));
         Say($"  {inside}action {action}: {Said(world, action, first, second)}", PanelTone.Action);
+    }
+
+    // how the parser came to take a word off the line: as the command's next, or to see what
+    // comes after a full stop or an "and"
+    private enum Taken
+    {
+        Next,
+        AfterStop,
+        AfterAnd,
+    }
+
+    // the words of the command the parser is gathering, each as it will be said
+    private readonly List<string> _tokens = [];
+
+    // the parser has taken a word off the line and made it a token: the word, and what parts
+    // of speech such a word can be. They are said together, when the command's last has come
+    private void Token(Taken taken)
+    {
+        if (_world is not { IsThere: true } world)
+        {
+            return;
+        }
+
+        int code = (short)machine.Cpu.Eax, number = world.TokenWord;
+        var word = words is not null && number >= 1 && number <= words.Count ? words[number - 1] : null;
+        bool ends = map.EndTokens.Contains(code);
+        if (taken == Taken.AfterStop)
+        {
+            // what follows a full stop is another command's, and taken again for it
+            ends = true;
+            code = -1;
+        }
+        else if (taken == Taken.AfterAnd && word is { IsVerb: true } && (word.Parts & 6) == 0)
+        {
+            // so is a verb after "and", which ends the command there
+            ends = true;
+            code = -1;
+        }
+
+        if (code == 0)
+        {
+            _tokens.Add($"{Typed()} [not known]");
+            ends = true;
+        }
+        else if (map.WordTokens.TryGetValue(code, out string? parts))
+        {
+            _tokens.Add($"{word?.Text ?? "a word"} [{parts}]");
+        }
+        else if (map.MarkTokens.TryGetValue(code, out string? mark))
+        {
+            _tokens.Add(mark);
+        }
+        else if (code != -1)
+        {
+            _tokens.Add(word?.Text ?? $"token {code}");
+        }
+
+        if (ends && _tokens.Count > 0)
+        {
+            Say($"  words: {string.Join(' ', _tokens)}");
+            _tokens.Clear();
+        }
+    }
+
+    // the word the parser has just taken, as it was typed: the line and how far along it the
+    // parser is are the gathering routine's argument, and the word is what ends there
+    private string Typed()
+    {
+        var cpu = machine.Cpu;
+        int frame = (cpu.Ss * 16) + (ushort)cpu.Ebp;
+        int line = (((Read(frame + 8) | (Read(frame + 9) << 8)) * 16) + (Read(frame + 6) | (Read(frame + 7) << 8))) & 0xFFFFF;
+        int end = Read(line + 0x100);
+        var text = new System.Text.StringBuilder();
+        for (int at = 0; at < end && Read(line + at) != 0; at++)
+        {
+            text.Append((char)Read(line + at));
+        }
+
+        string[] typed = text.ToString().Split([' ', '.', ',', ';', '!', '?', '"'], StringSplitOptions.RemoveEmptyEntries);
+        return typed.Length == 0 ? "something" : typed[^1];
     }
 
     // the main loop's setjmp has returned: by a routine's longjmp, when AX isn't 0. Such an

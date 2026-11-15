@@ -41,6 +41,9 @@ public sealed class WorldWatchTests : IDisposable
     {
         ' ' => 0x39,
         '\n' => Enter,
+        ',' => 0x33,
+        '.' => 0x34,
+        ';' => 0x27,
         _ when Top.Contains(key) => (byte)(0x10 + Top.IndexOf(key)),
         _ when Home.Contains(key) => (byte)(0x1E + Home.IndexOf(key)),
         _ => (byte)(0x2C + Bottom.IndexOf(key)),
@@ -137,6 +140,7 @@ public sealed class WorldWatchTests : IDisposable
         Type("open desk\n");
         string[] opened = [.. watch.Panel(46, 60).Select(line => line.Text)];
         Type("take note\n");
+        Type("i. i then i and take frotz\n");
         Type("n\n");
 
         string[] lines = said.ToString().Split('\n', StringSplitOptions.RemoveEmptyEntries);
@@ -154,12 +158,12 @@ public sealed class WorldWatchTests : IDisposable
         Assert.Contains("world:   Bedchamber (1): flag 10, visited, set", lines);
         Assert.Contains("world:   rat (352): flag 6, seen, set", lines);
 
-        // the lines from one that is there to the next action's, or to the end
+        // the lines from one that is there to the next command's words or action, or to the end
         string[] After(string line)
         {
             int at = Array.IndexOf(lines, line);
             Assert.True(at >= 0, $"Not said: {line}");
-            return [.. lines.Skip(at + 1).TakeWhile(next => !next.StartsWith("world:   action ", StringComparison.Ordinal))];
+            return [.. lines.Skip(at + 1).TakeWhile(next => !next.StartsWith("world:   action ", StringComparison.Ordinal) && !next.StartsWith("world:   words: ", StringComparison.Ordinal))];
         }
 
         // the rat's own routine has something to say about being examined, so the asking ends there
@@ -228,8 +232,26 @@ public sealed class WorldWatchTests : IDisposable
         Assert.Equal(12, small.Count);
         Assert.Equal("3:55 pm   turn 4", small[0].Text);
 
-        // five commands, six actions; the exits are said once for each room
-        Assert.Equal(6, lines.Count(line => line.StartsWith("world:   action ", StringComparison.Ordinal)));
+        // each command's words are said before its action, each with the parts of speech such a
+        // word can be: a full stop, "then", and an "and" with a verb after it each end a command,
+        // and a word that isn't in the vocabulary ends the line
+        Assert.Equal(
+            [
+                "world:   words: examine [verb] rat [noun]",
+                "world:   words: climb [verb] chimney [noun]",
+                "world:   words: open [verb or preposition] desk [adjective or noun]",
+                "world:   words: take [verb] note [adjective or noun]",
+                "world:   words: i [verb or adjective] .",
+                "world:   words: i [verb or adjective] then",
+                "world:   words: i [verb or adjective] and",
+                "world:   words: take [verb] frotz [not known]",
+                "world:   words: n [verb or noun]",
+            ],
+            lines.Where(line => line.StartsWith("world:   words: ", StringComparison.Ordinal)));
+        Assert.Equal("world:   words: examine [verb] rat [noun]", lines[Array.IndexOf(lines, "world:   action 60: examine rat (352)") - 1]);
+
+        // six commands, nine actions; the exits are said once for each room
+        Assert.Equal(9, lines.Count(line => line.StartsWith("world:   action ", StringComparison.Ordinal)));
         Assert.Equal(2, lines.Count(line => line.StartsWith("world:   exits: ", StringComparison.Ordinal)));
     }
 }

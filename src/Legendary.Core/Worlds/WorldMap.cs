@@ -85,6 +85,20 @@ public sealed record AnswerPoint(ushort Offset, Asked Asked);
 /// Names for actions the grammar would name badly: going somewhere, which every direction's
 /// word makes, would have a direction's name.
 /// </param>
+/// <param name="TokenSegment">The segment of the routine that gathers a command's tokens.</param>
+/// <param name="TokenOffset">
+/// Where, in that routine, the routine that takes the next word off the line has just given
+/// it the command's next: the instruction after the call, with the token's code in AX.
+/// </param>
+/// <param name="AfterStopOffset">The same, for the word it looks ahead to after a full stop.</param>
+/// <param name="AfterAndOffset">The same, for the word it looks ahead to after <c>and</c>.</param>
+/// <param name="TokenWordOffset">In the action's segment, the number of the word the token is.</param>
+/// <param name="WordTokens">
+/// The codes of the tokens that are a word of the vocabulary, each with the parts of speech
+/// such a word can be: the parser's grammar picks among them.
+/// </param>
+/// <param name="MarkTokens">The codes of the tokens that are a mark, each with the mark.</param>
+/// <param name="EndTokens">The codes of the tokens that end a command.</param>
 /// <param name="PlaceType">The type of object that is a place.</param>
 /// <param name="PersonType">The type of object that is a person.</param>
 /// <param name="FlagNames">
@@ -103,6 +117,8 @@ public sealed record WorldMap(
     ushort JumpBackOffset, int GoAction, ushort DirectionOffset, IReadOnlyList<string> Directions,
     ushort GrammarSegment, ushort FormsOffset, ushort SecondsOffset, string VocabularyFile,
     IReadOnlyDictionary<int, string> ActionNames,
+    ushort TokenSegment, ushort TokenOffset, ushort AfterStopOffset, ushort AfterAndOffset, ushort TokenWordOffset,
+    IReadOnlyDictionary<int, string> WordTokens, IReadOnlyDictionary<int, string> MarkTokens, IReadOnlyList<int> EndTokens,
     int PlaceType, int PersonType,
     IReadOnlyDictionary<int, string> FlagNames,
     IReadOnlyDictionary<int, string> PlaceFlagNames,
@@ -135,6 +151,15 @@ public sealed record WorldMap(
         Directions: ["", "north", "northeast", "east", "southeast", "south", "southwest", "west", "northwest", "up", "down", "in", "out"],
         GrammarSegment: 0x2B6A, FormsOffset: 0x00D1, SecondsOffset: 0x0F81, VocabularyFile: "VOCAB.DAT",
         ActionNames: new Dictionary<int, string> { [197] = "go" },
+        TokenSegment: 0x130E, TokenOffset: 0x00ED, AfterStopOffset: 0x017E, AfterAndOffset: 0x01FC, TokenWordOffset: 0x4AA0,
+        WordTokens: new Dictionary<int, string>
+        {
+            [-2] = "verb", [-3] = "preposition", [-4] = "adjective", [-5] = "noun", [-6] = "article",
+            [-8] = "verb or noun", [-9] = "verb or adjective", [-10] = "verb, adjective or noun",
+            [-11] = "adjective or noun", [-12] = "verb or preposition",
+        },
+        MarkTokens: new Dictionary<int, string> { [-18] = ",", [-19] = ".", [-20] = ";" },
+        EndTokens: [-1, -17, -20],
         PlaceType: 1, PersonType: 7,
         FlagNames: new Dictionary<int, string>
         {
