@@ -82,10 +82,25 @@ _TESTS = bytes.fromhex("268a01 2ae4 8a4ef8 d3e8 250100")
 _SETS = bytes.fromhex("b001 8a4ef8 d2e0 260801")
 # mov al,1 / mov cl,[bp-8] / shl al,cl / not al / and es:[bx+di],al
 _CLEARS = bytes.fromhex("b001 8a4ef8 d2e0 f6d0 262001")
+# Spellcasting 201's three have a routine find the flag's byte and bit first, from its table
+# of flags, and end: les bx,[bp-4] / mov al,es:[bx] / sub ah,ah / mov cl,[bp-6] / shr ax,cl /
+# and ax,1
+_TESTS_LOOKED_UP = bytes.fromhex("c45efc 268a07 2ae4 8a4efa d3e8 250100")
+# les bx,[bp-4] / mov al,1 / mov cl,[bp-6] / shl al,cl / or es:[bx],al
+_SETS_LOOKED_UP = bytes.fromhex("c45efc b001 8a4efa d2e0 260807")
+# the same / not al / and es:[bx],al
+_CLEARS_LOOKED_UP = bytes.fromhex("c45efc b001 8a4efa d2e0 f6d0 262007")
 _PROLOGUE = b"\x55\x8b\xec"
-# the action's segment, where the game keeps what it is performing, and the data's
+# the words the game keeps that a call can take its object from. Spellcasting 101's: in the
+# action's segment, where it keeps what it is performing, and in the data's
 _ACTION_WORDS = {0x00: "the object", 0x56: "the second object"}
 _DATA_WORDS = {0x42: "the room", 0x44: "the actor"}
+# each way the routines end, with the words that go with it: Spellcasting 201's room is the
+# one word of its own that is known
+_ENDINGS = (
+    ((_TESTS, _SETS, _CLEARS), _ACTION_WORDS, _DATA_WORDS),
+    ((_TESTS_LOOKED_UP, _SETS_LOOKED_UP, _CLEARS_LOOKED_UP), {0x2A06: "the room"}, {}),
+)
 
 
 @dataclass(frozen=True)
@@ -101,23 +116,40 @@ class FlagUse:
     routine: str  # whose routine the call is in
 
 
-def flag_routines(program: Program) -> dict[int, str]:
-    """Where the three routines start, in the root, each with what it does."""
+def _find_routines(program: Program) -> tuple[dict[int, str], dict[int, str], dict[int, str]]:
+    """Where the three routines start, and the words a call to them can take its object from."""
     image = program.image()
     root = image.memory[: program.root_size]
-    found: dict[int, str] = {}
-    for kind, ending in (("tests", _TESTS), ("sets", _SETS), ("clears", _CLEARS)):
-        at = root.find(ending)
-        if at < 0 or root.find(ending, at + 1) >= 0:
-            raise ValueError(f"the routine that {kind} a flag wasn't found")
-        found[root.rindex(_PROLOGUE, 0, at)] = kind
-    return found
+    for endings, action_words, data_words in _ENDINGS:
+        found: dict[int, str] = {}
+        for kind, ending in zip(("tests", "sets", "clears"), endings):
+            at = root.find(ending)
+            if at >= 0 and root.find(ending, at + 1) < 0:
+                found[root.rindex(_PROLOGUE, 0, at)] = kind
+        if len(found) == len(endings):
+            return found, action_words, data_words
+    raise ValueError("the routines that test and change a flag weren't found")
+
+
+def flag_routines(program: Program) -> dict[int, str]:
+    """Where the three routines start, in the root, each with what it does."""
+    return _find_routines(program)[0]
 
 
 class CodeReader:
     """The calls in one stretch of code: the root's, or an overlay's."""
 
-    def __init__(self, image: Image, start: int, end: int, overlay: int | None, labels: dict[int, str]):
+    def __init__(  # noqa: PLR0913
+        self,
+        image: Image,
+        start: int,
+        end: int,
+        overlay: int | None,
+        labels: dict[int, str],
+        *,
+        words: tuple[dict[int, str], dict[int, str]] = (_ACTION_WORDS, _DATA_WORDS),
+    ):
+        self.action_words, self.data_words = words
         self.memory = image.memory
         self.image = image
         self.start, self.end, self.overlay = start, end, overlay
@@ -156,7 +188,7 @@ class CodeReader:
         memory = self.memory
 
         def far(offset: int) -> str:
-            return _ACTION_WORDS.get(offset) or _DATA_WORDS.get(offset) or "a word kept far"
+            return self.action_words.get(offset) or self.data_words.get(offset) or "a word kept far"
 
         def numbered(number: int) -> str:
             return f"{number} {names.get(number, '?')}"
@@ -178,7 +210,11 @@ class CodeReader:
                 lambda c: "its argument" if c[2] < 0x80 else "a variable of its own",
             ),
             # push [n]
-            (4, lambda c: c[:2] == b"\xff\x36", lambda c: _DATA_WORDS.get(c[2] | c[3] << 8, "a variable")),
+            (
+                4,
+                lambda c: c[:2] == b"\xff\x36",
+                lambda c: self.data_words.get(c[2] | c[3] << 8, "a variable"),
+            ),
             # push es:[n]
             (5, lambda c: c[:3] == b"\x26\xff\x36", lambda c: far(c[3] | c[4] << 8)),
             # push es:[a register]
@@ -248,12 +284,12 @@ def flag_uses(program: Program, names: dict[int, str], shapes: dict[int, str]) -
     are whose flag isn't a constant. Objects are named from `names`, and actions said with a
     command that makes them from `shapes`.
     """
-    routines = flag_routines(program)
+    routines, *words = _find_routines(program)
     root = program.image()
     segments = sorted(root.segment_references())
     segment = max(found for found in segments if found * 16 <= min(routines))
     labels = routine_labels(program, names, shapes)
-    readers = [CodeReader(root, 0, program.root_size, None, labels.get(None, {}))]
+    readers = [CodeReader(root, 0, program.root_size, None, labels.get(None, {}), words=(words[0], words[1]))]
     for overlay in program.overlays:
         if not overlay.preloaded:
             readers.append(
@@ -263,6 +299,7 @@ def flag_uses(program: Program, names: dict[int, str], shapes: dict[int, str]) -
                     overlay.end_segment * 16,
                     overlay.number,
                     labels.get(overlay.number, {}),
+                    words=(words[0], words[1]),
                 )
             )
     uses = []

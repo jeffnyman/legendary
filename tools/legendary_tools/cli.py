@@ -456,6 +456,17 @@ def actions(args: argparse.Namespace) -> None:
             print(f"    {shape}")
 
 
+def _flag_said(table: ObjectTable, flag: int) -> str:
+    """What a flag is: its name, for Spellcasting 101, or its bit and the types that have it."""
+    if table.flags_named:
+        return describe_flag(flag)
+    if table.flag_table is None or flag not in table.flag_table:
+        return "not known"
+    bit, kinds = table.flag_table[flag]
+    have = [str(kind) for kind in sorted(table.types) if kinds >> (kind - 1) & 1]
+    return f"bit {bit}, for " + ("every type" if len(have) == len(table.types) else "type " + ", ".join(have))
+
+
 def flags(args: argparse.Namespace) -> None:
     """The objects' flags: what has each as the game starts, and where the program tests or changes it."""
     folder = GameFolder(args.folder)
@@ -476,7 +487,7 @@ def flags(args: argparse.Namespace) -> None:
         counts = collections.Counter(use.kind for use in about)
         types = collections.Counter(found.type for found in have)
         by_type = ", ".join(f"{count} of type {kind}" for kind, count in sorted(types.items()))
-        print(f"flag {flag}: {describe_flag(flag)}")
+        print(f"flag {flag}: {_flag_said(table, flag)}")
         print(f"    at the start, on {len(have)} objects" + (f": {by_type}" if have else ""))
         print(f"    tested {counts['tests']} times, set {counts['sets']}, cleared {counts['clears']}")
         if args.flag is None:

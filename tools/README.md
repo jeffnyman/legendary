@@ -25,7 +25,8 @@ relative to where the program loads, as the files have them. How the programs ar
 
 These read a program linked by PLINK86, *Spellcasting 101* and *Timequest*, or by
 .RTLink/Plus 4.10, *Spellcasting 201*. The commands from `loads` down read only the first
-two so far, but for `objects`, `grammar` and `actions`, which read *Spellcasting 201* too.
+two so far, but for `objects`, `grammar`, `actions` and `flags`, which read *Spellcasting 201*
+too.
 
 ```
 python -m legendary_tools exe <the game's folder>
@@ -113,7 +114,10 @@ python -m legendary_tools dis ../../legend/sc101/game 3670:054e
   is, whose routine it's in, and what object it asks about, as `313a:2293 in overlay 1: action
   128 (open OBJECT) tests it of the object`. That is how a flag's meaning is found, which is in
   [docs/spellcasting-101.md](../docs/spellcasting-101.md#what-the-flags-are). `objects` with
-  a number says each of the object's flags by name. It reads *Spellcasting 101* only.
+  a number says each of the object's flags by name. The names are *Spellcasting 101*'s. For
+  *Spellcasting 201* it gives each flag's bit and the types that have it, from
+  [the game's table of flags](../docs/spellcasting-201.md#a-flag-is-looked-up), with the same
+  lists of who has it and who uses it.
 
 - **`timers`** lists the game's timers, the routines it puts by to run on a later turn or on
   every turn: each one's routine, the routine in an overlay that it calls, and every call that
