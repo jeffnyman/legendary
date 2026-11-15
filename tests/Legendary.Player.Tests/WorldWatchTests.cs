@@ -141,6 +141,7 @@ public sealed class WorldWatchTests : IDisposable
         string[] opened = [.. watch.Panel(46, 60).Select(line => line.Text)];
         Type("take note\n");
         Type("i. i then i and take frotz\n");
+        Type("ask rat about sword\n");
         Type("n\n");
 
         string[] lines = said.ToString().Split('\n', StringSplitOptions.RemoveEmptyEntries);
@@ -205,7 +206,7 @@ public sealed class WorldWatchTests : IDisposable
         // stopped at a prompt for more, with your stepfather on the stair
         string[] gone = After("world:   action 197: go north");
         Assert.Contains("world:   you (153) moved: from Bedchamber (1) to Potty Chamber (2)", gone);
-        Assert.Contains("world: 3:55 pm, turn 4, in Potty Chamber (2)", gone);
+        Assert.Contains("world: 4:00 pm, turn 5, in Potty Chamber (2)", gone);
         Assert.Contains("world:   here: you (153) [love note (74), cloak (82)], tiny door (66)", gone);
         Assert.Contains("world:   exits: south to Bedchamber (1); down: a routine decides", gone);
         Assert.Contains("world:     ended by a routine that jumped back to the main loop: done", gone);
@@ -221,7 +222,7 @@ public sealed class WorldWatchTests : IDisposable
         Assert.All(panel, line => Assert.True(line.Text.Length <= 46));
         Assert.True(panel.Count <= 60);
         string[] shown = [.. panel.Select(line => line.Text)];
-        Assert.Equal(["3:55 pm   turn 4", "Potty Chamber (2)", "", "Here", "  you (153)", "    love note (74)", "    cloak (82), list 2", "  tiny door (66)", "", "Exits", "  south  to Bedchamber (1)", "  down   a routine decides", "", "Lately"], shown[..14]);
+        Assert.Equal(["4:05 pm   turn 6", "Potty Chamber (2)", "", "Here", "  you (153)", "    love note (74)", "    cloak (82), list 2", "  tiny door (66)", "", "Exits", "  south  to Bedchamber (1)", "  down   a routine decides", "", "Lately"], shown[..14]);
         Assert.Equal([PanelTone.Title, PanelTone.Title, PanelTone.Text, PanelTone.Dim], panel.Take(4).Select(line => line.Tone));
         Assert.Contains(new PanelLine("action 197: go north", PanelTone.Action), panel);
         Assert.Contains(new PanelLine("you (153) moved: from Bedchamber (1) to Potty", PanelTone.Text), panel);
@@ -230,7 +231,7 @@ public sealed class WorldWatchTests : IDisposable
         // a short panel keeps the top of the world and the end of what was said
         var small = watch.Panel(46, 12);
         Assert.Equal(12, small.Count);
-        Assert.Equal("3:55 pm   turn 4", small[0].Text);
+        Assert.Equal("4:05 pm   turn 6", small[0].Text);
 
         // each command's words are said before its action, each with the parts of speech such a
         // word can be: a full stop, "then", and an "and" with a verb after it each end a command,
@@ -245,13 +246,34 @@ public sealed class WorldWatchTests : IDisposable
                 "world:   words: i [verb or adjective] then",
                 "world:   words: i [verb or adjective] and",
                 "world:   words: take [verb] frotz [not known]",
+                "world:   words: ask [verb] rat [noun] about [preposition] sword [noun]",
                 "world:   words: n [verb or noun]",
             ],
             lines.Where(line => line.StartsWith("world:   words: ", StringComparison.Ordinal)));
-        Assert.Equal("world:   words: examine [verb] rat [noun]", lines[Array.IndexOf(lines, "world:   action 60: examine rat (352)") - 1]);
+        Assert.Equal("world:   words: examine [verb] rat [noun]", lines[Array.IndexOf(lines, "world:   action 60: examine rat (352)") - 3]);
 
-        // six commands, nine actions; the exits are said once for each room
-        Assert.Equal(9, lines.Count(line => line.StartsWith("world:   action ", StringComparison.Ordinal)));
+        // between a command's words and its action: the form of the grammar the words fit, and
+        // for each phrase the objects it could be, with where the form let them be looked for.
+        // Taking doesn't look in your hands; asking about a thing looks everywhere, and finds
+        // the sword, which is in a shop a long way off
+        string[] Before(string action) => [.. lines.Take(Array.IndexOf(lines, action)).Reverse().TakeWhile(line => !line.StartsWith("world:   words: ", StringComparison.Ordinal)).Reverse()];
+        Assert.Equal(
+            ["world:   form 306: take OBJECT, which is action 74", "world:   object \"note\", looked for carried, in the room, in something there: love note (74)"],
+            Before("world:   action 74: get love note (74)"));
+        Assert.Equal(
+            ["world:   form 30: climb OBJECT, which is action 25", "world:   object \"chimney\", looked for in the room, in something there: chimney (185)"],
+            Before("world:   action 25: climb chimney (185)"));
+        Assert.Equal(
+            [
+                "world:   form 2: ask OBJECT about OBJECT, which is action 3",
+                "world:   second object \"sword\", looked for anywhere at all: lead-plated sword (99)",
+                "world:   object \"rat\", looked for in the room: rat (352)",
+            ],
+            Before("world:   action 3: ask rat (352) about lead-plated sword (99)"));
+        Assert.Contains("world:   form 133: inventory, which is action 88", lines);
+
+        // seven commands, ten actions; the exits are said once for each room
+        Assert.Equal(10, lines.Count(line => line.StartsWith("world:   action ", StringComparison.Ordinal)));
         Assert.Equal(2, lines.Count(line => line.StartsWith("world:   exits: ", StringComparison.Ordinal)));
     }
 }

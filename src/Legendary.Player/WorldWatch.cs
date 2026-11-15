@@ -73,6 +73,8 @@ internal sealed class WorldWatch(Machine machine, WorldMap map, TextWriter? outp
             machine.Cpu.Watch((uint)_world.TokenAddress, () => Token(Taken.Next));
             machine.Cpu.Watch((uint)_world.AfterStopAddress, () => Token(Taken.AfterStop));
             machine.Cpu.Watch((uint)_world.AfterAndAddress, () => Token(Taken.AfterAnd));
+            machine.Cpu.Watch((uint)_world.FormAddress, Form);
+            machine.Cpu.Watch((uint)_world.FoundAddress, Found);
             foreach (var point in map.Answers)
             {
                 machine.Cpu.Watch((uint)_world.AnswerAddress(point), () => Answered(point));
@@ -389,6 +391,45 @@ internal sealed class WorldWatch(Machine machine, WorldMap map, TextWriter? outp
         {
             Say($"  words: {string.Join(' ', _tokens)}");
             _tokens.Clear();
+        }
+    }
+
+    // the main loop has searched the grammar for the form the command's verb and prepositions
+    // fit, which says what action the command is
+    private void Form()
+    {
+        if (_world is not { IsThere: true } world)
+        {
+            return;
+        }
+
+        var (form, action, lots) = world.FormFound;
+        Say((short)machine.Cpu.Eax > 0 && form >= 0
+            ? $"  form {form}: {_grammar?.FormShape(form, action, lots) ?? "one"}, which is action {action}"
+            : "  form: none in the grammar fits");
+    }
+
+    // the parser has looked for the objects each phrase of the command could be: each phrase
+    // is said with them, and with where the form let them be looked for
+    private void Found()
+    {
+        if (_world is not { IsThere: true } world)
+        {
+            return;
+        }
+
+        var cpu = machine.Cpu;
+        var (lot, where, phrases) = world.Found((cpu.Ss * 16) + (ushort)cpu.Esp);
+        string[] places = [.. new[] { (1, "held"), (2, "carried"), (4, "in the room"), (8, "in something there") }.Where(place => (where & place.Item1) != 0).Select(place => place.Item2)];
+        string looked = places.Length switch { 0 => "anywhere at all", 4 => "anywhere near", _ => string.Join(", ", places) };
+        string Word(int number) => words is not null && number >= 1 && number <= words.Count ? words[number - 1].Text : "";
+        foreach (var phrase in phrases)
+        {
+            string said = string.Join(' ', new[] { phrase.All ? "all" : "" }.Concat(phrase.Adjectives.Select(Word)).Append(Word(phrase.Noun)).Where(word => word.Length > 0));
+            string found = phrase.Objects.Count > 0 ? string.Join(" or ", phrase.Objects.Select(number => number >= 1 && number <= map.ObjectCount ? Name(world, number) : $"object {number}"))
+                : phrase.All ? "left to the action to gather"
+                : "nothing";
+            Say($"  {(lot == 0 ? "object" : "second object")} \"{said}\", looked for {looked}: {found}");
         }
     }
 

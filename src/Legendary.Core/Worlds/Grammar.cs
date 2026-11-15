@@ -28,6 +28,7 @@ public sealed class Grammar
     public const string Object = "OBJECT";
 
     private readonly Dictionary<int, List<string>> _shapes = [];
+    private readonly Func<int, string> _word;
 
     internal Grammar(IReadOnlyList<CommandForm> forms, IReadOnlyList<VocabularyWord> words, IReadOnlyDictionary<int, string> named)
     {
@@ -40,6 +41,7 @@ public sealed class Grammar
         }
 
         string Word(int number) => number >= 1 && number <= words.Count ? words[number - 1].Text : "";
+        _word = Word;
         void Add(int action, params string[] parts)
         {
             if (action != 0 && !named.ContainsKey(action))
@@ -82,6 +84,32 @@ public sealed class Grammar
     {
         var shapes = Shapes(action);
         return shapes.FirstOrDefault(shape => Count(shape) == objects) ?? shapes.FirstOrDefault();
+    }
+
+    /// <summary>
+    /// How a form makes an action, as a command's shape: its verb and preposition, and the
+    /// objects and the second preposition the action needs. Null when the form doesn't make it.
+    /// </summary>
+    /// <param name="form">The form, counting from 0.</param>
+    /// <param name="action">The action.</param>
+    /// <param name="objects">How many objects the command has, which settles it when the form makes the action two ways.</param>
+    public string? FormShape(int form, int action, int objects)
+    {
+        if (form < 0 || form >= Forms.Count || action == 0)
+        {
+            return null;
+        }
+
+        var found = Forms[form];
+        string Join(params string[] parts) => string.Join(' ', parts.Where(part => part.Length > 0));
+        string verb = _word(found.Verb), preposition = _word(found.Preposition);
+        string?[] shapes =
+        [
+            found.ActionAlone == action ? Join(verb, preposition) : null,
+            found.ActionWithObject == action ? Join(verb, preposition, Object) : null,
+            found.Seconds.FirstOrDefault(second => second.Action == action) is { } second ? Join(verb, preposition, Object, _word(second.Preposition), Object) : null,
+        ];
+        return shapes[Math.Clamp(objects, 0, 2)] ?? shapes.FirstOrDefault(shape => shape is not null);
     }
 
     private static int Count(string shape) => shape.Split(' ').Count(part => part == Object);

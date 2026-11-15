@@ -29,6 +29,13 @@ public readonly record struct ObjectState(ulong Flags, int Place, int SecondPlac
     public bool Has(int flag) => flag is >= 1 and <= 64 && (Flags >> (flag - 1) & 1) != 0;
 }
 
+/// <summary>A phrase of a command, and what the parser found it could be.</summary>
+/// <param name="All">Whether the phrase is <c>all</c>, with or without a noun after it.</param>
+/// <param name="Adjectives">Its adjectives, as words' numbers.</param>
+/// <param name="Noun">Its noun, a word's number, or 0 for none.</param>
+/// <param name="Objects">The objects it could be, by what they are called and where they are.</param>
+public sealed record FoundPhrase(bool All, IReadOnlyList<int> Adjectives, int Noun, IReadOnlyList<int> Objects);
+
 /// <summary>A way out of a room.</summary>
 /// <param name="Direction">The direction's number.</param>
 /// <param name="Kind">
@@ -331,6 +338,49 @@ public sealed class World
 
     /// <summary>The number of the word the token just taken is, or 0 when it isn't a word.</summary>
     public int TokenWord => Word(Linear(Map.ActionSegment, Map.TokenWordOffset));
+
+    /// <summary>The linear address of the place where the grammar has just been searched for the command's form.</summary>
+    public int FormAddress => Linear(Map.PerformSegment, Map.FormOffset);
+
+    /// <summary>
+    /// The form the search found, counting from 0 in the grammar; the action it makes of the
+    /// command; and how many lots of objects the command has. A form of -1 when none fits.
+    /// </summary>
+    public (int Form, int Action, int Lots) FormFound
+    {
+        get
+        {
+            int form = Word(Linear(Map.ActionSegment, Map.FormIndexOffset));
+            return (form == 0xFFFF ? -1 : form, _read(Linear(Map.ActionSegment, Map.FormActionOffset)), _read(Linear(Map.ActionSegment, Map.LotCountOffset)));
+        }
+    }
+
+    /// <summary>The linear address of the place where the objects a lot of phrases could be have just been found.</summary>
+    public int FoundAddress => Linear(Map.PerformSegment, Map.FoundOffset);
+
+    /// <summary>
+    /// What was found, for a program that is at <see cref="FoundAddress"/>: which of the
+    /// command's lots of phrases it was, 0 for the object's and 1 for the second object's;
+    /// where the form let them be looked for; and each phrase with the objects it could be.
+    /// </summary>
+    /// <param name="stack">The linear address of the top of the stack, SS:SP.</param>
+    public (int Lot, int Where, IReadOnlyList<FoundPhrase> Phrases) Found(int stack)
+    {
+        int Far(int at) => ((Word(at + 2) * 16) + Word(at)) & 0xFFFFF;
+        int lot = Far(stack), found = Far(stack + 6), said = Far(lot + 2);
+        var phrases = new List<FoundPhrase>();
+        for (int phrase = 0; phrase < Math.Min((int)_read(lot), 16); phrase++)
+        {
+            int entry = found + (6 * phrase), objects = Far(entry + 2), words = said + (0x28 * phrase);
+            phrases.Add(new FoundPhrase(
+                Word(words) != 0,
+                [.. Enumerable.Range(0, Math.Min(Word(words + 4), 15)).Select(index => Word(words + 6 + (2 * index)))],
+                Word(words + 0x26),
+                [.. Enumerable.Range(0, _read(entry)).Select(index => Word(objects + (2 * index)))]));
+        }
+
+        return ((lot - Linear(Map.ActionSegment, Map.LotsOffset)) / Map.LotSize, _read(stack + 4), phrases);
+    }
 
     private int Linear(ushort segment, int offset) => ((LoadSegment + segment) * 16) + offset;
 

@@ -75,6 +75,8 @@ world:   action 27: climb in fireplace (62)
 world:     answered by fireplace (62), asked as the object: 1
 world: 3:45 pm, turn 2, in Bedchamber (1)
 world:   words: open [verb or preposition] desk [adjective or noun]
+world:   form 208: open OBJECT, which is action 128
+world:   object "desk", looked for anywhere near: writing desk (61)
 world:   action 128: open writing desk (61)
 world:     answered by the action's own routine: 1
 world:   writing desk (61): flag 10, touched, set
@@ -95,7 +97,11 @@ what the desk has in it, and that climbing the chimney, with the fire lit,
 [is turned into entering the fireplace](docs/spellcasting-101.md#from-an-action-to-what-happens).
 Before each action are the command's words as the parser took them, each with the parts of
 speech such a word can be: `desk` is an adjective or a noun, and the game's grammar settles
-which. A word the game doesn't know is said as `[not known]`.
+which. A word the game doesn't know is said as `[not known]`. After the words come the form
+of the game's grammar that they fit, which is what makes them an action, and then each phrase
+with the objects the parser found it could be and where the form let it look: `TAKE` doesn't
+look in your hands, and `ASK RAT ABOUT SWORD` looks everywhere, and finds a sword that is in a
+shop a long way off. The sample has those lines for `OPEN DESK` alone.
 Every action is said, as the game gets to its routine that performs one: the PC tells the
 watch each time the program is there. The game then asks a row of routines about the action,
 the room's, the actor's, the objects' and at last the action's own, and stops at the first

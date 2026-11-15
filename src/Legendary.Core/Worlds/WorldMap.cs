@@ -99,6 +99,26 @@ public sealed record AnswerPoint(ushort Offset, Asked Asked);
 /// </param>
 /// <param name="MarkTokens">The codes of the tokens that are a mark, each with the mark.</param>
 /// <param name="EndTokens">The codes of the tokens that end a command.</param>
+/// <param name="FormOffset">
+/// In the performing routine's segment, where the main loop has just searched the grammar for
+/// the command's form: the instruction after the call, with more than 0 in AX when one fits.
+/// </param>
+/// <param name="FormIndexOffset">In the action's segment, which form was found, counting from 0; FFFF for none.</param>
+/// <param name="FormActionOffset">In the action's segment, a byte: the action the form makes of the command.</param>
+/// <param name="FoundOffset">
+/// In the performing routine's segment, where the objects the phrases of one of the command's
+/// two lots could be have just been found: the instruction after the call, with the call's
+/// arguments still on the stack. They are a far pointer to the lot, in the sentence; where
+/// the form lets the objects be looked for; and a far pointer to what was found, six bytes
+/// for each phrase, a count and at 2 a far pointer to that many objects.
+/// </param>
+/// <param name="LotsOffset">In the action's segment, the first of the sentence's two lots of phrases.</param>
+/// <param name="LotSize">
+/// A lot's size. Its first byte is how many phrases it has, and at 2 is a far pointer to them,
+/// 40 bytes each: the word <c>all</c> if the phrase is that, the article, a count of
+/// adjectives and the adjectives, and at 26 hex the noun, all as words' numbers.
+/// </param>
+/// <param name="LotCountOffset">In the action's segment, a byte: how many lots the command has.</param>
 /// <param name="PlaceType">The type of object that is a place.</param>
 /// <param name="PersonType">The type of object that is a person.</param>
 /// <param name="FlagNames">
@@ -119,6 +139,7 @@ public sealed record WorldMap(
     IReadOnlyDictionary<int, string> ActionNames,
     ushort TokenSegment, ushort TokenOffset, ushort AfterStopOffset, ushort AfterAndOffset, ushort TokenWordOffset,
     IReadOnlyDictionary<int, string> WordTokens, IReadOnlyDictionary<int, string> MarkTokens, IReadOnlyList<int> EndTokens,
+    ushort FormOffset, ushort FormIndexOffset, ushort FormActionOffset, ushort FoundOffset, ushort LotsOffset, int LotSize, ushort LotCountOffset,
     int PlaceType, int PersonType,
     IReadOnlyDictionary<int, string> FlagNames,
     IReadOnlyDictionary<int, string> PlaceFlagNames,
@@ -160,6 +181,7 @@ public sealed record WorldMap(
         },
         MarkTokens: new Dictionary<int, string> { [-18] = ",", [-19] = ".", [-20] = ";" },
         EndTokens: [-1, -17, -20],
+        FormOffset: 0x21ED, FormIndexOffset: 0x8AD6, FormActionOffset: 0x54, FoundOffset: 0x0CCB, LotsOffset: 0x3C, LotSize: 12, LotCountOffset: 0x38,
         PlaceType: 1, PersonType: 7,
         FlagNames: new Dictionary<int, string>
         {
