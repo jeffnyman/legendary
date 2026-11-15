@@ -21,7 +21,7 @@ from .plink86 import Image, Plink86Program
 from .regions import read_regions
 from .sentence import read_sentence_grammar
 from .sound import read_songs, read_sound
-from .timers import EVERY_TURN, timer_calls, timer_code
+from .timers import EVERY_TURN, TIMER_NAMES, timer_calls, timer_code
 
 
 def _program(folder: GameFolder) -> Plink86Program:
@@ -461,7 +461,8 @@ def timers(args: argparse.Namespace) -> None:
     found = sorted({call.timer for call in calls if call.timer})
     for timer in found:
         code = timer_code(program, timer)
-        print(f"timer {timer[0]:04x}:{timer[1]:04x}" + (f", which calls {code}" if code else ""))
+        name = f": {TIMER_NAMES[timer]}" if timer in TIMER_NAMES else ""
+        print(f"timer {timer[0]:04x}:{timer[1]:04x}{name}" + (f", which calls {code}" if code else ""))
         for call in calls:
             if call.timer != timer:
                 continue
