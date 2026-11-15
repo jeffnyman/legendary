@@ -645,6 +645,22 @@ While the fire is in the fireplace, climbing the chimney becomes action 27 on th
 the game says depends on the cloak: on your second list, somewhere else about you, or not
 with you. That settles a question from the tree: a person's second list is what they wear.
 
+### Flags, seen changing
+
+The player's `--watch` says each flag as the game sets or clears it, which is a quicker way
+to a flag's meaning than reading every routine that tests it. Three have shown themselves in
+the game's first few turns:
+
+| Flag | Set when | So it is |
+|---|---|---|
+| 6 | A room is described, on the room and on each thing its description mentions; a container is opened, on what was in it; a thing is named in a command | The player has seen it |
+| 10 | A room is described, on the room, after the things in it have theirs; a thing is opened or taken, on the thing | The room has been visited, or the thing touched |
+| 12 | The writing desk is opened, on the desk | It is open |
+
+Flag 10 on a room is what the chimney's routine above tests of the Rooftop: whether you have
+been there. The fireplace starts with flag 12 set and is never opened, which fits: it is open.
+These are from watching, and each is a guess until the code that tests it is read.
+
 ## A room's exits
 
 A room's record ends with a count of its exits, a byte at offset 16, and a far pointer to
@@ -667,7 +683,7 @@ the four ZIL had:
 |---|---|---|
 | 1 | A word with a room's number | North goes to the Potty Chamber |
 | 2 | Two words, a room's number and a door's | West goes to the Alley by the door |
-| 3 | A message, said in place of going | East, south and down: `If you want to enter the fireplace, then say so.` |
+| 3 | A message, said in place of going | East: `If you want to enter the fireplace, then say so.` South and down: `If you want to jump out the window, then say so.` |
 | 4 | A routine, by its thunk, which decides | Up runs the routine above, in overlay 3 |
 
 The directions are numbered [as the main routine has them](#a-turn): 1 is north, 3 east, 7
@@ -1046,7 +1062,7 @@ yet by its code: it's used up, and ends only the page it is pressed at.
 - What a routine's answer means beyond zero, and 2 from performing; the reasons from 8 to 14.
 - The rest of the actions' bytes, and the flags of objects beyond the four the parser tests.
 - The timers.
-- The rest of an object's record: the flags' meanings, and the fields past the tree. Which of a thing's lists is which.
+- The rest of an object's record: the flags' meanings beyond [the three the watch has shown](#flags-seen-changing), and the fields past the tree. Which of a thing's lists is which.
 - How the far pointers in a saved game are made right, and what a saved state's last part counts.
 - Where the system ends and the game begins among the root's segments and the overlays.
 - How the game names a picture, and the word in a picture's entry that isn't understood.

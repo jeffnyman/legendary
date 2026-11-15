@@ -54,7 +54,8 @@ saves goes to a folder of its own in your application data.
 
 `--watch` has the player say, on the terminal it was started from, what the game has in its
 memory as it's played: the time, the turn and the room, what is in the room and what those
-things hold, and each action as the game performs it, by the numbers
+things hold, the room's exits, each action as the game performs it, and what the action
+changed, any object anywhere that moved or had a flag set or cleared, by the numbers
 [the notes](docs/spellcasting-101.md#the-objects) use. An action is a number to the game; the
 watch names it by the first command in the game's grammar that makes it, so `LOOK AT RAT` is
 said as `examine`, which is the same action.
@@ -62,6 +63,7 @@ said as `examine`, which is the same action.
 ```
 world: 3:35 pm, turn 0, in Bedchamber (1)
 world:   here: rat (352), you (153) [cloak (82)], pile of hay (72), ..., fireplace (62) [fire (63)], writing desk (61) [love note (74), application (73)], door (60)
+world:   exits: north to Potty Chamber (2); east: "If you want to enter the fireplace, then say so."; west to Alley (4) by door (60); ...; up: a routine decides
 world:   action 60: examine rat (352)
 world:     answered by rat (352), asked as the object: 1
 world: 3:40 pm, turn 1, in Bedchamber (1)
@@ -70,9 +72,20 @@ world:     given up by a routine, which starts over with another action
 world:   action 27: climb in fireplace (62)
 world:     answered by fireplace (62), asked as the object: 1
 world: 3:45 pm, turn 2, in Bedchamber (1)
+world:   action 128: open writing desk (61)
+world:     answered by the action's own routine: 1
+world:   writing desk (61): flag 10 set
+world:   writing desk (61): flag 12 set
+world:   love note (74): flag 6 set
+world: 3:50 pm, turn 3, in Bedchamber (1)
+world:   action 74: get love note (74)
+world:     answered by the action's own routine: 1
+world:   love note (74) moved: from writing desk (61) to you (153)
+world:   action 197: go north
+world:   you (153) moved: from Bedchamber (1) to Potty Chamber (2)
 ```
 
-That is `EXAMINE RAT` and then `CLIMB CHIMNEY`, and it shows things the game hasn't told you:
+That is `EXAMINE RAT`, `CLIMB CHIMNEY`, `OPEN DESK`, `TAKE NOTE` and `N`, and it shows things the game hasn't told you:
 what the desk has in it, and that climbing the chimney, with the fire lit,
 [is turned into entering the fireplace](docs/spellcasting-101.md#from-an-action-to-what-happens).
 Every action is said, as the game gets to its routine that performs one: the PC tells the
@@ -81,7 +94,8 @@ the room's, the actor's, the objects' and at last the action's own, and stops at
 that answers; the watch says which that was. The rat has its own answer to being examined.
 Climbing the chimney is never answered at all: the chimney's routine started the turn over,
 by a jump back to the game's main loop, and the watch says that too. Going somewhere ends
-the same way, with a jump, once you've been moved. The room and its contents are looked at once a frame,
+the same way, with a jump, once you've been moved. The flags are the way into what the game
+means by them: opening the desk sets its flag 12, so 12 is open. The room and its contents are looked at once a frame,
 so a turn can be seen half done, the room changed and the turn not yet counted. The watch
 reads the game's memory and changes nothing. For now it knows *Spellcasting 101*.
 
