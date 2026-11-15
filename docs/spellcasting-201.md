@@ -4,7 +4,7 @@ Legend Entertainment, 1991. The second *Spellcasting*, by Steve Meretzky, on the
 [*Spellcasting 101*](spellcasting-101.md) was built on, a year on.
 
 This is what the first look found, and so far it is how the program is built, its
-vocabulary, its objects, its grammar and which routine is whose. What is
+vocabulary, its objects, its grammar, which routine is whose and its timers. What is
 known for certain is said plainly; what is inferred says so. Addresses are `segment:offset` in
 hex, with segments relative to where the program loads. Every one of them can be looked at
 with the [tools](../tools/README.md).
@@ -443,11 +443,53 @@ calls too, before they take it to switch on.
 *Timequest*'s action switch starts the same way, and reading it this way found its actions'
 routines too.
 
+## The timers
+
+The timers work as [they did](spellcasting-101.md#the-timers): a table of sixteen, each with a
+count that goes down a turn at a time, a routine run when the count is zero or less, and -1
+for a routine that runs every turn. What changed is how a timer is named. It was a far pointer
+to its routine. It is a number now.
+
+| What | Where |
+|---|---|
+| The table, 16 entries of four bytes: a timer's number in a byte, a byte unused, and its count | `3FA7:5D2A` |
+| How many are in it | `4974:7EF0` |
+| Which one is running, or `FFFF` | `4974:7EF2` |
+| The routines by number, a far pointer each, from 1 | `2E00:0000` |
+
+There are 49 numbers. For 43 of them the pointer is a thunk, to a routine in an overlay, and
+for six it is a routine in the root. The routines of a room's exits are numbered the same
+way, through a table of their own. A number is two bytes less than a far pointer in every
+call and in the table, and it leaves the far pointers in one place.
+
+The routines are in a segment of their own, at `13A2`:
+
+| Routine | What it does |
+|---|---|
+| `13A2:0002` | Empties the table |
+| `13A2:0027` | Starts a timer: a number and a count. One already there gets the new count |
+| `13A2:009E` | Stops one, and closes the table up |
+| `13A2:0110` | Says whether one is in the table |
+| `13A2:014D` | Gives one's count, or `7FFF` when it isn't there. New, and nothing calls it with a number that is a constant |
+| `13A2:018F` | Runs them, for a number of turns |
+
+The one that runs them goes down the table as before, and calls a timer's routine through
+`0D63:0006`, which takes the number, looks it up in the table of routines, and calls what it
+finds. After each turn's timers it adds one to the clock, at `4974:2A0C`, and asks the room's
+own routine, with a reason of 27, before the next.
+
+The program starts a timer 155 times, stops one 52 times and asks about one 50 times, and 250
+of those 257 calls name their timer as a constant. Of the starts, 81 are for the next turn
+and 16 are for every turn. Timers 8 and 17 are never named by a constant: something works
+their numbers out.
+
+What each of the 49 does hasn't been read.
+
 ## Still to do
 
-Everything past the program, the vocabulary, the objects, the grammar and the routines. Flags
-35, 39 and 40 have no meaning yet, and six more are named from who has them. The routines that keep
-the timers aren't found yet: the tools look for *Spellcasting 101*'s. The rules of the parser's own grammar aren't found
+Everything past the program, the vocabulary, the objects, the grammar, the routines and the
+timers' workings. Flags 35, 39 and 40 have no meaning yet, and six more are named from who
+has them. What each timer does hasn't been read. The rules of the parser's own grammar aren't found
 either. The text and the music are each in a form *Spellcasting 101*'s readers don't read:
 
 - `S201STR.DAT` starts as before, with its table of blocks, 87 of them. The tree after it is
