@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Reflection;
 using Legendary.Core.Text;
 using Legendary.Pc;
@@ -58,6 +59,7 @@ internal static class Program
         bool headless = false;
         bool watch = false;
         bool panel = false;
+        double panelText = 0;
         bool list = false;
         bool remember = false;
         bool forget = false;
@@ -173,6 +175,17 @@ internal static class Program
                 case "--panel":
                     panel = true;
                     break;
+                case "--panel-text":
+                {
+                    // the panel's text at a size, which asks for the panel too
+                    const string What = "a size from 1 to 4, as in 1.5";
+                    string size = Next("--panel-text", What);
+                    panelText = double.TryParse(size, NumberStyles.Float, CultureInfo.InvariantCulture, out double times) && times >= 1 && times <= 4
+                        ? times
+                        : throw new UsageException($"--panel-text needs {What}, not '{size}'");
+                    panel = true;
+                    break;
+                }
                 case "--documents":
                     // a number, or all, may follow; anything else is the game's name or an option
                     documents = 0;
@@ -450,6 +463,7 @@ internal static class Program
                     Icon = GameIcons.For(game),
                     EachFrame = watching is null ? null : watching.Look,
                     Panel = panel ? watching!.Panel : null,
+                    PanelText = panelText,
                 };
 
                 using var player = new SdlPlayer(machine, options);
@@ -605,6 +619,8 @@ internal static class Program
                                  game whose world is known: Spellcasting 101)
               --panel            the same in a panel down the window's right side: the world as
                                  it is now, and under it the last of what happened
+              --panel-text <n>   the panel, with its text n times its size, from 1 to 4, as in
+                                 1.5 (its size is 8 pixels, doubled on a tall window)
               --documents [n]    list the documents a game keeps, rather than play it, or show the
                                  one numbered n, or all of them (no game here keeps any yet)
 

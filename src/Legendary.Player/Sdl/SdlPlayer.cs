@@ -48,6 +48,12 @@ internal sealed class PlayerOptions
     /// rows; null for no panel.
     /// </summary>
     public Func<int, int, IReadOnlyList<PanelLine>>? Panel { get; init; }
+
+    /// <summary>
+    /// How many times its size the panel's text is drawn, its size being 8 pixels; 0 for a
+    /// size chosen by the window's height.
+    /// </summary>
+    public double PanelText { get; init; }
 }
 
 /// <summary>
@@ -122,7 +128,7 @@ internal sealed unsafe class SdlPlayer : IDisposable
         SdlException.ThrowIfFalse(
             SDL_Init(SDL_InitFlags.SDL_INIT_VIDEO | SDL_InitFlags.SDL_INIT_EVENTS | SDL_InitFlags.SDL_INIT_GAMEPAD),
             "SDL_Init");
-        _window = new SdlWindow(options.Title, options.Scale, options.Fullscreen, options.SquarePixels, options.Panel is null ? 0 : PanelColumns)
+        _window = new SdlWindow(options.Title, options.Scale, options.Fullscreen, options.SquarePixels, options.Panel is null ? 0 : PanelColumns, (float)options.PanelText)
         {
             Panel = options.Panel,
         };

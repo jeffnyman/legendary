@@ -126,6 +126,11 @@ you (153) moved: from Bedchamber (1) to Potty
 The cloak is on your second list, which is what you wear. `--watch` and `--panel` can be given
 together, for the panel and the terminal's full record of the play.
 
+The panel's text is small: 8 pixels, doubled once the window is 960 high. `--panel-text 1.5`
+asks for the panel with its text one and a half times that size, and any size from 1 to 4 can
+be asked for. The panel stays 46 characters wide, so bigger text makes a wider panel and a
+wider window. On a screen that isn't high-density, whole sizes are the sharpest.
+
 ## What's here
 
 - **`src/Legendary.Player`** is the player: a window, the keyboard, the mouse and sound around

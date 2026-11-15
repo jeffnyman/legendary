@@ -33,10 +33,14 @@ internal sealed unsafe class SdlWindow : IDisposable
     // a panel of text down the window's right side, so many characters wide; 0 for none
     private readonly int _panelColumns;
 
-    public SdlWindow(string title, int scale, bool fullscreen, bool squarePixels, int panelColumns = 0)
+    // how many times its size the panel's text is; 0 for a size chosen by the window's height
+    private readonly float _panelText;
+
+    public SdlWindow(string title, int scale, bool fullscreen, bool squarePixels, int panelColumns = 0, float panelText = 0)
     {
         _title = title;
         _panelColumns = Math.Max(0, panelColumns);
+        _panelText = Math.Max(0, panelText);
         SquarePixels = squarePixels;
         var flags = SDL_WindowFlags.SDL_WINDOW_RESIZABLE;
         if (fullscreen)
@@ -150,11 +154,13 @@ internal sealed unsafe class SdlWindow : IDisposable
         SDL_RenderPresent(_renderer);
     }
 
-    // the panel's text is SDL's own small font, 8 pixels square, drawn bigger on a big window
+    // the panel's text is SDL's own small font, 8 pixels square, drawn bigger on a big window,
+    // or as big as was asked for
     private const int Glyph = 8, LineHeight = 10, Margin = 8;
 
     /// <summary>How many times its size the panel's text is drawn, in pixels, for a window of a height.</summary>
-    private static float TextScale(int windowHeight, float density) => Math.Max(1, (int)(windowHeight / density) / 480) * density;
+    private float TextScale(int windowHeight, float density) =>
+        (_panelText > 0 ? _panelText : Math.Max(1, (int)(windowHeight / density) / 480)) * density;
 
     /// <summary>The panel's width, in the units the height is in: none with no panel.</summary>
     private float PanelWidth(int windowHeight, float density) =>
