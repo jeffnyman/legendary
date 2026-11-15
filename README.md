@@ -99,6 +99,33 @@ means by them: opening the desk sets its flag 12, so 12 is open. The room and it
 so a turn can be seen half done, the room changed and the turn not yet counted. The watch
 reads the game's memory and changes nothing. For now it knows *Spellcasting 101*.
 
+`--panel` shows the same beside the game, in a column down the right of the window: the time,
+the turn and the room at the top, what is in the room with each thing under what holds it,
+the exits, and under those the last of what happened, the newest at the bottom.
+
+```
+3:55 pm   turn 4
+Potty Chamber (2)
+
+Here
+  you (153)
+    love note (74)
+    cloak (82), list 2
+  tiny door (66)
+
+Exits
+  south  to Bedchamber (1)
+  down   a routine decides
+
+Lately
+action 197: go north
+you (153) moved: from Bedchamber (1) to Potty
+  Chamber (2)
+```
+
+The cloak is on your second list, which is what you wear. `--watch` and `--panel` can be given
+together, for the panel and the terminal's full record of the play.
+
 ## What's here
 
 - **`src/Legendary.Player`** is the player: a window, the keyboard, the mouse and sound around
