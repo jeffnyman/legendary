@@ -17,7 +17,7 @@ import re
 import struct
 from dataclasses import dataclass
 
-from .plink86 import Image, Plink86Program
+from .program import Image, Program
 
 # push bp / mov bp,sp / mov ax,[bp+6] / (sub ax,<first>) / cmp ax,<count less one> /
 # jbe / jmp <default>, or ja <default> / add ax,ax / xchg bx,ax / jmp cs:[bx+<table>]
@@ -51,11 +51,11 @@ class Routine:
 class _Code:
     """The root's code, with what's needed to read a switch from it."""
 
-    def __init__(self, program: Plink86Program):
+    def __init__(self, program: Program):
         self.program = program
         self.image: Image = program.image()
         self.memory = self.image.memory
-        self.root = self.memory[: len(program.mz.image)]
+        self.root = self.memory[: program.root_size]
         self.segments = sorted(self.image.segment_references())
 
     def segment_of(self, linear: int) -> int:
@@ -116,7 +116,7 @@ class _Code:
         return found
 
 
-def object_routines(program: Plink86Program) -> dict[int, Routine]:
+def object_routines(program: Program) -> dict[int, Routine]:
     """Each object's routine, by the object's number, for the objects that have one."""
     code = _Code(program)
     for match in _BY_TYPE.finditer(code.root):
@@ -134,7 +134,7 @@ def object_routines(program: Plink86Program) -> dict[int, Routine]:
     raise ValueError("the code that calls an object's routine wasn't found")
 
 
-def action_routines(program: Plink86Program) -> tuple[dict[int, Routine], dict[int, Routine]]:
+def action_routines(program: Program) -> tuple[dict[int, Routine], dict[int, Routine]]:
     """Each action's routine, by the action's number, and the routines some have before it."""
     code = _Code(program)
     before: dict[int, Routine] = {}

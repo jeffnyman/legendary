@@ -17,7 +17,7 @@ import re
 from dataclasses import dataclass
 from typing import Optional
 
-from .plink86 import Image, Plink86Program
+from .program import Image, Program
 
 # the routine is the one that says this, when an array it's given already has a block
 _MESSAGE = b"[WARNING: string block loading over existing block]"
@@ -56,7 +56,7 @@ def _word(code: bytes | None) -> int | None:
     return None if code is None else int.from_bytes(code, "little")
 
 
-def find_loader(program: Plink86Program) -> tuple[int, int]:
+def find_loader(program: Program) -> tuple[int, int]:
     """The address of the routine that loads a block."""
     image = program.image()
     memory = image.memory
@@ -98,7 +98,7 @@ def _calls(image: Image, segment: int, offset: int, start: int, end: int) -> lis
     return found
 
 
-def find_loads(program: Plink86Program) -> list[Load]:
+def find_loads(program: Program) -> list[Load]:
     """Every call to the routine that loads a block, in the root and in each overlay."""
     segment, offset = find_loader(program)
     loads: list[Load] = []
@@ -117,7 +117,7 @@ def find_loads(program: Plink86Program) -> list[Load]:
                 array = (_word(match["segment"]), _word(match["offset"]) or 0)
             loads.append(Load(call, overlay, block, array, bool(match and match["local"])))
 
-    scan(program.image(), 0, len(program.mz.image), None)
+    scan(program.image(), 0, program.root_size, None)
     for overlay in program.overlays:
         if not overlay.preloaded:
             image = program.image(overlay.number)

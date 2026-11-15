@@ -25,7 +25,7 @@ import struct
 from dataclasses import dataclass, field
 
 from .data import Word
-from .plink86 import Image, Plink86Program
+from .program import Image, Program
 
 # mov es,[segment variable] / mov al,es:[si-6]: an object's type, with SI six times its number
 _TABLE = re.compile(rb"\x8e\x06(..)\x26\x8a\x84\xfa\xff", re.DOTALL)
@@ -147,11 +147,11 @@ class TypeEntry:
 class ObjectTable:
     """The objects, read from the program's memory as it is before the game changes it."""
 
-    def __init__(self, program: Plink86Program, words: list[Word] | None = None):
+    def __init__(self, program: Program, words: list[Word] | None = None):
         self.words = words
         self.image = program.image()
         memory = self.image.memory
-        root = memory[: len(program.mz.image)]
+        root = memory[: program.root_size]
         notice = memory.find(_NOTICE)
         if notice < 0:
             raise ValueError("the program's data segment wasn't found")
@@ -336,9 +336,9 @@ class SavedState:
     What it counts is taken here to be timers, things due to happen later; that is a guess.
     """
 
-    def __init__(self, program: Plink86Program, objects: ObjectTable):
+    def __init__(self, program: Program, objects: ObjectTable):
         memory = objects.image.memory
-        root = memory[: len(program.mz.image)]
+        root = memory[: program.root_size]
 
         def word(code: bytes) -> int:
             return int.from_bytes(code, "little")

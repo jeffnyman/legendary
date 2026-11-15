@@ -17,7 +17,7 @@ import re
 from dataclasses import dataclass
 
 from .handlers import action_routines, object_routines
-from .plink86 import Image, Plink86Program
+from .program import Image, Program
 
 # what the flags are, as Spellcasting 101's code uses them. A flag that isn't here is one
 # that nothing has and nothing asks about
@@ -101,10 +101,10 @@ class FlagUse:
     routine: str  # whose routine the call is in
 
 
-def flag_routines(program: Plink86Program) -> dict[int, str]:
+def flag_routines(program: Program) -> dict[int, str]:
     """Where the three routines start, in the root, each with what it does."""
     image = program.image()
-    root = image.memory[: len(program.mz.image)]
+    root = image.memory[: program.root_size]
     found: dict[int, str] = {}
     for kind, ending in (("tests", _TESTS), ("sets", _SETS), ("clears", _CLEARS)):
         at = root.find(ending)
@@ -217,7 +217,7 @@ class CodeReader:
 
 
 def routine_labels(
-    program: Plink86Program, names: dict[int, str], shapes: dict[int, str]
+    program: Program, names: dict[int, str], shapes: dict[int, str]
 ) -> dict[int | None, dict[int, str]]:
     """Whose routine starts where, by overlay: the actions' and the objects' routines."""
     labels: dict[int | None, dict[int, str]] = {}
@@ -242,9 +242,7 @@ def routine_labels(
     return labels
 
 
-def flag_uses(
-    program: Plink86Program, names: dict[int, str], shapes: dict[int, str]
-) -> tuple[list[FlagUse], int]:
+def flag_uses(program: Program, names: dict[int, str], shapes: dict[int, str]) -> tuple[list[FlagUse], int]:
     """
     Every call about a flag, in the root and in each overlay, and how many more calls there
     are whose flag isn't a constant. Objects are named from `names`, and actions said with a
@@ -255,7 +253,7 @@ def flag_uses(
     segments = sorted(root.segment_references())
     segment = max(found for found in segments if found * 16 <= min(routines))
     labels = routine_labels(program, names, shapes)
-    readers = [CodeReader(root, 0, len(program.mz.image), None, labels.get(None, {}))]
+    readers = [CodeReader(root, 0, program.root_size, None, labels.get(None, {}))]
     for overlay in program.overlays:
         if not overlay.preloaded:
             readers.append(

@@ -17,14 +17,15 @@ from .loads import StringNames, find_loader, find_loads
 from .mz import MzExecutable
 from .objects import DIRECTIONS, Exit, GameObject, ObjectTable, SavedState, is_pointer
 from .pictures import HUFFMAN, LZW, RAW_PLANE, RAW_PLANES, PictureFile
-from .plink86 import Image, Plink86Program
+from .plink86 import Plink86Program
+from .program import Image, Program
 from .regions import read_regions
 from .sentence import read_sentence_grammar
 from .sound import read_songs, read_sound
 from .timers import EVERY_TURN, TIMER_NAMES, timer_calls, timer_code
 
 
-def _program(folder: GameFolder) -> Plink86Program:
+def _program(folder: GameFolder) -> Program:
     exe = folder.read(folder.main_program())
     ovl = folder.ending("main.ovl")
     try:
@@ -186,7 +187,7 @@ def _shown(string: str, limit: int | None = None) -> str:
     return shown if limit is None or len(shown) <= limit else shown[: limit - 3] + "..."
 
 
-def _string_notes(folder: GameFolder, program: Plink86Program, overlay: int | None):
+def _string_notes(folder: GameFolder, program: Program, overlay: int | None):
     """
     What to say beside an instruction that uses a far pointer in the data at an offset: the
     string it is, when the offset is in an array that the code there loads a block into.
@@ -253,7 +254,7 @@ def _named(table: ObjectTable, number: int) -> str:
     return f"{number} {table.get(number).name}" if 1 <= number <= table.count else str(number)
 
 
-def _exit_target(program: Plink86Program, table: ObjectTable, row: Exit) -> str:
+def _exit_target(program: Program, table: ObjectTable, row: Exit) -> str:
     """Where an exit's pointer goes, by its kind."""
     target = f"{row.segment:04x}:{row.offset:04x}"
     thunk = program.thunk_at(row.segment, row.offset)
@@ -271,7 +272,7 @@ def _exit_target(program: Plink86Program, table: ObjectTable, row: Exit) -> str:
     return target
 
 
-def _show_object(program: Plink86Program, table: ObjectTable, found: GameObject) -> None:
+def _show_object(program: Program, table: ObjectTable, found: GameObject) -> None:
     entry = table.types[found.type]
     print(f"object {found.number}: {found.name}" + (f" ({found.second_name})" if found.second_name else ""))
     print(f"  type {found.type}, {entry.size} bytes at {found.segment:04x}:{found.offset:04x}")

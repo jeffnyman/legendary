@@ -21,7 +21,7 @@ import struct
 from dataclasses import dataclass
 
 from .flags import CodeReader, routine_labels
-from .plink86 import Plink86Program
+from .program import Program
 
 # Spellcasting 101's: the segment the routines are in, and where each starts
 SEGMENT = 0x1272
@@ -95,7 +95,7 @@ class TimerCall:
     routine: str  # whose routine the call is in
 
 
-def timer_code(program: Plink86Program, timer: tuple[int, int]) -> str | None:
+def timer_code(program: Program, timer: tuple[int, int]) -> str | None:
     """Where a timer's work is done, when its routine in the root is only a call to there and a return."""
     image = program.image()
     at = timer[0] * 16 + timer[1]
@@ -108,11 +108,11 @@ def timer_code(program: Plink86Program, timer: tuple[int, int]) -> str | None:
     return f"{segment:04x}:{offset:04x} in the root"
 
 
-def timer_calls(program: Plink86Program, names: dict[int, str], shapes: dict[int, str]) -> list[TimerCall]:
+def timer_calls(program: Program, names: dict[int, str], shapes: dict[int, str]) -> list[TimerCall]:
     """Every call that starts, stops or asks about a timer, in the root and in each overlay."""
     labels = routine_labels(program, names, shapes)
     root = program.image()
-    readers = [CodeReader(root, 0, len(program.mz.image), None, labels.get(None, {}))]
+    readers = [CodeReader(root, 0, program.root_size, None, labels.get(None, {}))]
     for overlay in program.overlays:
         if not overlay.preloaded:
             start, end = overlay.load_segment * 16, overlay.end_segment * 16

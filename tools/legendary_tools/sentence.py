@@ -24,7 +24,7 @@ import re
 import struct
 from dataclasses import dataclass
 
-from .plink86 import Plink86Program
+from .program import Program
 
 _NOTICE = b"MS Run-Time Library"
 # a way's name is its rule's with a number before the closing bracket
@@ -40,7 +40,7 @@ class Way:
     symbols: list[str]
 
 
-def read_sentence_grammar(program: Plink86Program) -> list[Way]:
+def read_sentence_grammar(program: Program) -> list[Way]:
     """Every way of every rule, in the order the program has them."""
     image = program.image()
     memory = image.memory

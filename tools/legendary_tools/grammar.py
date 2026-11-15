@@ -36,7 +36,7 @@ import struct
 from dataclasses import dataclass, field
 
 from .data import Word
-from .plink86 import Plink86Program
+from .program import Program
 
 # lea ax,[bx+table] / mov dx,<segment> / push dx / push ax / push [bp+8] / push [bp+6] /
 # push cs / call: a record of either table handed to the routine that compares it
@@ -90,10 +90,10 @@ def describe_flags(flags: int) -> str:
     return "; ".join(parts)
 
 
-def _tables(program: Plink86Program) -> tuple[bytes, int, int, int]:
+def _tables(program: Program) -> tuple[bytes, int, int, int]:
     """The program's memory, the forms' segment, and where the two tables start in it."""
     memory = program.image().memory
-    root = memory[: len(program.mz.image)]
+    root = memory[: program.root_size]
     found = {
         (int.from_bytes(match[2], "little"), int.from_bytes(match[1], "little"))
         for match in _RECORD.finditer(root)
@@ -105,13 +105,13 @@ def _tables(program: Plink86Program) -> tuple[bytes, int, int, int]:
     return memory, segment, first, second
 
 
-def action_flags(program: Plink86Program) -> bytes:
+def action_flags(program: Program) -> bytes:
     """A byte for each action, the first for action 1: what's in the forms' segment before them."""
     memory, segment, first, _ = _tables(program)
     return memory[segment * 16 : segment * 16 + first]
 
 
-def read_grammar(program: Plink86Program, words: list[Word]) -> list[Form]:
+def read_grammar(program: Program, words: list[Word]) -> list[Form]:
     """The forms, in the table's order."""
     memory, segment, first, second = _tables(program)
     forms_at = segment * 16 + first
