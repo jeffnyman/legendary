@@ -226,7 +226,7 @@ The names are made up; the numbers and the shape are the program's. `why` is
 routine that starts over with a new action. The flag it sets is a byte at `4517:3BD7`, one of the variables
 the game saves.
 
-Other routines found on the way: `01B9:1694` tests a flag of an object and `01B9:16E8` sets
+Other routines found on the way: `01B9:1694` tests [a flag](#what-the-flags-are) of an object and `01B9:16E8` sets
 one, `01B9:344C` gives the object an object is in, `01B9:3659` the first on one of its lists,
 and `01B9:37F6` the next on the list it's on.
 
@@ -645,21 +645,71 @@ While the fire is in the fireplace, climbing the chimney becomes action 27 on th
 the game says depends on the cloak: on your second list, somewhere else about you, or not
 with you. That settles a question from the tree: a person's second list is what they wear.
 
-### Flags, seen changing
+### What the flags are
 
-The player's `--watch` says each flag as the game sets or clears it, which is a quicker way
-to a flag's meaning than reading every routine that tests it. Three have shown themselves in
-the game's first few turns:
+An object has 16 flags, or 48 if it is a thing, and the record says nothing of what any of
+them is for. The code does. Three routines, one after another, are the only code that reads
+or writes a flag: `01B9:1694` tests one, `01B9:16E8` sets one and `01B9:1735` clears one,
+each given an object and the flag's number. The game's source called them with the flag as a
+constant, so every call says which flag it is about, and whose routine the call is in says
+what the flag is for. The routine for `open` sets flag 12 of its object and the one for
+`close` clears it: 12 is open.
 
-| Flag | Set when | So it is |
+There are 684 such calls in the root and the overlays, and
+[`flags`](../tools/README.md#the-program) lists them by flag, 679 with the flag read from the
+code. With what has each flag as the game starts, they give this:
+
+| Flag | What it is | How it's known |
 |---|---|---|
-| 6 | A room is described, on the room and on each thing its description mentions; a container is opened, on what was in it; a thing is named in a command | The player has seen it |
-| 10 | A room is described, on the room, after the things in it have theirs; a thing is opened or taken, on the thing | The room has been visited, or the thing touched |
-| 12 | The writing desk is opened, on the desk | It is open |
+| 2 | Its name takes `an` | The routine that writes an article, `01B9:000C`, adds `n` to `a`. The Alley, the application and the old horse have it |
+| 3 | It is plural | The same routine writes `some` for `a`, and `they` and `them` for it. The overalls, your hands, the potatoes |
+| 4 | It takes `some`, and is still `it` | With flag 4 the routine writes `some` but not `they`. The wine, the cow manure, the graffiti |
+| 5 | Its name takes no article | The routine writes neither `the` nor `a`. Batguano Court, Your Room, Lola Tigerbelly |
+| 6 | The player has seen it | Nothing has it at the start. A room's routine sets it on each thing its description mentions, 198 calls in all. The routine for `cast` with nothing named tests it of thirteen people, one by one |
+| 7 | It isn't listed among a room's contents | The routine that lists what is in a room, `01B9:0993`, passes over what has it: the door, the desk, the fireplace, you. Taking a thing clears it. 165 objects start with it |
+| 7, of a place | It is outdoors | The word for what is underfoot is `ground` with it and `floor` without. The Rooftop, the Alley and the Meadow have it, and the Bedchamber and the Library don't |
+| 8 | Taking it is special | A thing that can be taken isn't picked up along the way, with `[Taking it first]`, when it has flag 8, and `take all` tries a thing that has it though it can't be taken. A click on it offers `Take`. The grate, the rusty key, the flat rock, whose own routines clear it |
+| 8, of a person | They can be asked things | `ask for` with nobody named looks in the room for a person with it, and to `ask about` a person with it answers `"I don't know much about that."` You, the dragon and the whale don't have it |
+| 9 | It gives light | By what has it, more than by the code: 57 of the 59 rooms, the two without it being the Maze and the Meeting Room, and one thing, the fire. `01B9:125D` asks it of places and things only |
+| 9, of a person | She is female | The pronoun is `she` and `her` with it, `he` and `him` without. Miss Beancounter, Hillary, Gretchen, Lola |
+| 10 | It has been touched | Nothing has it at the start. Taking a thing sets it, and opening one. The routine that lists a room's contents asks a thing's routine one question until it is set and another after, presumably for how it is described before it's disturbed |
+| 10, of a place | It has been visited | The routine that moves the player, `07EC:13A8`, sets it of the room arrived in |
+| 11 | It is a door | Every door and window has it. A click on one offers `Open` or `Close` |
+| 12 | It is open | `open` sets it and `close` clears it |
+| 13 | It is locked | `open`, `close` and `unlock` test it, and the doors' own routines set and clear it. The Bedchamber's door, the shed door and the trap door start locked |
+| 14 | It can't be opened or closed | `open` and `close` test it, and a click on a container that has it offers neither. The fireplace, the potty, the cart: open, and with no lid |
+| 15 | It is a container | `open`, `close`, `look in`, `put in` and `empty` test it |
+| 16 | It is left out of `all` | The routine that says what `all` takes in, `0000:0937`, leaves it out. Nothing has it, and nothing sets it |
+| 17 | It is lit | `light` sets it and `blow out` clears it, of a thing with flag 31 |
+| 19 | It can be seen through | [What's in a container can be seen](#a-sentence-into-objects) when it is open or has this. The windows, the display case, the spell book |
+| 20 | It can be read | A click on it offers `Read`. The love note, the notebook, the newspaper |
+| 21 | It can be got in or on | `climb in` tests it, and a click offers `Get in`, or `Get on` with flag 33. The fireplace, the old horse, your bed |
+| 22 | It burns | `burn` tests it, and the fire's routine and the flamethrower's. The pile of hay, the love note |
+| 23 | It can be taken | `get` tests it, and a click offers `Take`. 77 things |
+| 24 | It can be worn | `wear` tests it. The cloak, the overalls, the bonnet, the lipstick |
+| 25 | It is a key | `unlock` and `open` test it of the second object. The three keys |
+| 26, 27 | It cuts | `cut` goes ahead when what it's done with has either, and says `If you think that will cut...` otherwise. Only the sword has them, and both. What tells them apart isn't known |
+| 28 | It can be eaten | `eat` tests it, and a click offers `Eat` |
+| 29 | What is dropped in it lands outside it | `drop` starts from what you are in, and goes out from it while it has this flag. The old horse, the beds, the lecture seat |
+| 30 | It is magic | The spells, their boxes and the spell book. Opening a box with it moves the spell inside to the book |
+| 31 | It can be lit | `light` and `blow out` test it. Nothing has it, and nothing sets it: this game has no lamp to light |
+| 32 | It is to be looked for | `find` says `Keep looking! You might get lucky.` of a thing with it. 80 things have it, objects 246 to 325, with names like `pronoun atop the wooden structure`. What they are hasn't been followed |
+| 33 | Things can be on it | `drop` puts a thing on its second list rather than its first, and what is on that list can always be seen. A click offers `Get on` rather than `Get in`. The writing desk, the old horse, the surfboard |
 
-Flag 10 on a room is what the chimney's routine above tests of the Rooftop: whether you have
-been there. The fireplace starts with flag 12 set and is never opened, which fits: it is open.
-These are from watching, and each is a guess until the code that tests it is read.
+Four of the flags are two things: 7 to 10 mean one thing of a place or a person and another
+of a thing, and the code asks for the type before it asks for the flag. The other flags of a
+thing, 1, 18 and 34 to 48, nothing has and nothing asks about. 16 and 31 are asked about, but
+nothing ever has them. These are presumably the system's, written for more games than this
+one.
+
+A few routines have turned up on the way. `0000:123C` picks the verb a click on an object
+offers, from its type and flags: `Take`, `Open` or `Close`, `Read`, `Get on` or `Get in`,
+`Eat`, and for a room `Go to` or `Look at`, for a person `Greet`. `0000:0C8B` is the taking
+of a thing along the way. `0000:0C0A` says whether what is in an object, or on it, can be
+seen.
+
+The player's `--watch` says each flag by name as the game sets or clears it, and `--panel`
+says what is open, locked or lit beside its name.
 
 ## A room's exits
 
@@ -1060,9 +1110,10 @@ yet by its code: it's used up, and ends only the page it is pressed at.
 - What picks the block in the three calls that take it from a table, and where blocks 19, 39
   and 40 are loaded.
 - What a routine's answer means beyond zero, and 2 from performing; the reasons from 8 to 14.
-- The rest of the actions' bytes, and the flags of objects beyond the four the parser tests.
+- The rest of the actions' bytes.
 - The timers.
-- The rest of an object's record: the flags' meanings beyond [the three the watch has shown](#flags-seen-changing), and the fields past the tree. Which of a thing's lists is which.
+- The rest of an object's record: the fields past the tree. Which of a thing's lists is which, beyond [the second being what's on it](#what-the-flags-are) when it has flag 33.
+- What tells flag 26 from flag 27, and what the 80 things with flag 32 are.
 - How the far pointers in a saved game are made right, and what a saved state's last part counts.
 - Where the system ends and the game begins among the root's segments and the overlays.
 - How the game names a picture, and the word in a picture's entry that isn't understood.
