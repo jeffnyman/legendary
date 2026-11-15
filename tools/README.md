@@ -38,6 +38,7 @@ python -m legendary_tools objects <the game's folder> [<number>] [--tree] [--sav
 python -m legendary_tools grammar <the game's folder> [<verb>]
 python -m legendary_tools actions <the game's folder> [<number>]
 python -m legendary_tools flags <the game's folder> [<flag>]
+python -m legendary_tools timers <the game's folder>
 python -m legendary_tools sentence <the game's folder>
 ```
 
@@ -106,6 +107,13 @@ python -m legendary_tools dis ../../legend/sc101/game 3670:054e
   128 (open OBJECT) tests it of the object`. That is how a flag's meaning is found, which is in
   [docs/spellcasting-101.md](../docs/spellcasting-101.md#what-the-flags-are). `objects` with
   a number says each of the object's flags by name. It reads *Spellcasting 101* only.
+
+- **`timers`** lists the game's timers, the routines it puts by to run on a later turn or on
+  every turn: each one's routine, the routine in an overlay that it calls, and every call that
+  starts it, with its count, stops it or asks whether it is going, with whose routine the call
+  is in. How the timers work is in
+  [docs/spellcasting-101.md](../docs/spellcasting-101.md#the-timers). It reads *Spellcasting
+  101* only.
 
 - **`sentence`** prints the grammar the parser matches a command against, rule by rule, with
   the names the program has for the rules: `<noun_phrase> ::= <pe_article>

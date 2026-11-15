@@ -21,6 +21,7 @@ from .plink86 import Image, Plink86Program
 from .regions import read_regions
 from .sentence import read_sentence_grammar
 from .sound import read_songs, read_sound
+from .timers import EVERY_TURN, timer_calls, timer_code
 
 
 def _program(folder: GameFolder) -> Plink86Program:
@@ -449,6 +450,41 @@ def flags(args: argparse.Namespace) -> None:
         print(f"\n{len(uses)} calls about a flag; {missed} more aren't read", file=sys.stderr)
 
 
+def timers(args: argparse.Namespace) -> None:
+    """The game's timers: each routine it puts by to run on a later turn, and who starts and stops it."""
+    folder = GameFolder(args.folder)
+    program = _program(folder)
+    words = data.vocabulary(folder.read(folder.one("vocab.dat")))
+    names = {found.number: found.name for found in ObjectTable(program, words).objects}
+    shapes = {number: made[0] for number, made in _shapes(read_grammar(program, words), words).items()}
+    calls = timer_calls(program, names, shapes)
+    found = sorted({call.timer for call in calls if call.timer})
+    for timer in found:
+        code = timer_code(program, timer)
+        print(f"timer {timer[0]:04x}:{timer[1]:04x}" + (f", which calls {code}" if code else ""))
+        for call in calls:
+            if call.timer != timer:
+                continue
+            where = "the root" if call.overlay is None else f"overlay {call.overlay}"
+            what = call.kind
+            if call.kind == "starts":
+                what += (
+                    " it with a count worked out"
+                    if call.count is None
+                    else " it to run every turn"
+                    if call.count == EVERY_TURN
+                    else f" it with a count of {call.count}"
+                )
+            else:
+                what += " it"
+            print(f"    {call.segment:04x}:{call.offset:04x} in {where}: {call.routine} {what}")
+    other = sum(1 for call in calls if call.timer is None)
+    print(
+        f"\n{len(found)} timers in {len(calls) - other} calls; {other} more calls aren't read",
+        file=sys.stderr,
+    )
+
+
 def grammar(args: argparse.Namespace) -> None:
     """The forms a command can take: each verb, its prepositions and objects, and the action made."""
     folder = GameFolder(args.folder)
@@ -665,6 +701,7 @@ def main() -> None:
         "number", type=int, nargs="?", help="only this action, with every command that makes it"
     )
     command(grammar).add_argument("verb", nargs="?", help="only this verb's forms")
+    command(timers)
     command(flags).add_argument(
         "flag", type=int, nargs="?", help="only this flag, with every object that has it and every call"
     )

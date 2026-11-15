@@ -114,7 +114,7 @@ def flag_routines(program: Plink86Program) -> dict[int, str]:
     return found
 
 
-class _Reader:
+class CodeReader:
     """The calls in one stretch of code: the root's, or an overlay's."""
 
     def __init__(self, image: Image, start: int, end: int, overlay: int | None, labels: dict[int, str]):
@@ -216,7 +216,7 @@ class _Reader:
         return sorted(found)
 
 
-def _labels(
+def routine_labels(
     program: Plink86Program, names: dict[int, str], shapes: dict[int, str]
 ) -> dict[int | None, dict[int, str]]:
     """Whose routine starts where, by overlay: the actions' and the objects' routines."""
@@ -254,12 +254,12 @@ def flag_uses(
     root = program.image()
     segments = sorted(root.segment_references())
     segment = max(found for found in segments if found * 16 <= min(routines))
-    labels = _labels(program, names, shapes)
-    readers = [_Reader(root, 0, len(program.mz.image), None, labels.get(None, {}))]
+    labels = routine_labels(program, names, shapes)
+    readers = [CodeReader(root, 0, len(program.mz.image), None, labels.get(None, {}))]
     for overlay in program.overlays:
         if not overlay.preloaded:
             readers.append(
-                _Reader(
+                CodeReader(
                     program.image(overlay.number),
                     overlay.load_segment * 16,
                     overlay.end_segment * 16,
