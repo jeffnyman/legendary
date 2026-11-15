@@ -27,4 +27,5 @@ hold.
   place; a run-time library the launcher and the game share, linked in as the program loads;
   and 22 overlays reached by 790 thunks; a vocabulary of 1,609 words, packed by
   Huffman's codes; and a world of 482 objects, with their names moved out to a file, their
-  flags looked up in a table, and every room's exits in one. So far, only those.
+  flags looked up in a table, and every room's exits in one; a grammar of 405 forms that makes
+  226 actions; and the routine of each action and of 445 of the objects. So far, only those.

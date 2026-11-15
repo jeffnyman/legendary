@@ -4,7 +4,7 @@ Legend Entertainment, 1991. The second *Spellcasting*, by Steve Meretzky, on the
 [*Spellcasting 101*](spellcasting-101.md) was built on, a year on.
 
 This is what the first look found, and so far it is how the program is built, its
-vocabulary and its objects. What is
+vocabulary, its objects, its grammar and which routine is whose. What is
 known for certain is said plainly; what is inferred says so. Addresses are `segment:offset` in
 hex, with segments relative to where the program loads. Every one of them can be looked at
 with the [tools](../tools/README.md).
@@ -328,11 +328,67 @@ Read this way the world comes out whole: `Your Room` holds a refrigerator, a duc
 a bedsheet, your desk and your bed, with an envelope on the bed and a letter in the envelope,
 and goes down and out to `Hu Delta Phart`.
 
+## The grammar
+
+The grammar is the two tables [it was](spellcasting-101.md#the-grammar), in a segment of their
+own at `2C03`: 405 forms of ten bytes from `2C03:00E2`, and 149 ways on to a second object,
+of six bytes, from `2C03:10B4`. Before the forms is a byte for each action, 226 of them.
+
+Two things are different. The code that searches the tables is the parser's, and the parser
+is in overlay 3 now, not the root. And the flags that say where an object may be looked for
+have a byte after them in both tables, which moves what follows:
+
+| Offset | A form | Offset | A second object |
+|---|---|---|---|
+| 0 | The verb | 0 | The preposition before it, or 0 for none |
+| 2 | The preposition after it, or 0 | 2 | Flags, and at 3 the new byte |
+| 4 | Flags, and at 5 the new byte | 4 | A byte not yet understood |
+| 6 | The action with no object | 5 | The action |
+| 7 | The action with one | | |
+| 8 | Where its entries start in the second table | | |
+| 9 | How many it has | | |
+
+The new byte is zero in all but one form and nine second objects, where it is from `1A` to
+`1D`. Whether it is more flags or a number of its own isn't known; the tools read it as the
+flags' high byte and say nothing of it. The tools tell the two layouts apart by reading the forms each way and keeping the one in which
+every entry a form points at starts with a preposition.
+
+A verb and a preposition can now have more than one form. `apply` alone has two: one for
+`apply OBJECT`, whose object may be anywhere about and is taken first, and one for `apply
+OBJECT to OBJECT`, whose first object must be in hand and may be several. In *Spellcasting
+101* a form's one set of flags had to do for both.
+
+After the second table, at `2C03:1432`, is a third the same code searches, of ten bytes each,
+with three rows: `ask`, `order` and `tell`. It isn't read yet; by the verbs, it is for
+commands given to someone else.
+
+## Which routine is whose
+
+As before, no table says which routine is an object's or an action's. The source had a C
+switch for each, and [the cases are read from the code](spellcasting-101.md#which-routine-is-whose).
+
+- **An object's**: the routine at `077C:16EC` takes the object's type from the table and goes
+  by a table of jumps to one of eight switches, one for each type, on the object's number.
+  445 of the 482 objects have a routine of their own, as 395 of *Spellcasting 101*'s 427
+  did. All but 15 of them are in overlays 2 and 7 to 22.
+- **An action's**: the switch at `08F8:08CB` has a case for each of the 226 actions, and the
+  one at `08F8:06C2`, of compares, has the 38 that have a routine before their own.
+
+The switches themselves are the same code. What had to change to find them is how each
+starts. This program was compiled to check its stack, so every routine begins with a far call
+to the run-time, at `1408:0276`, before its first real instruction; and the two switches on
+the action first hand the action to a routine at `0D68:0BFC`, which every switch on an object
+calls too, before they take it to switch on.
+
+*Timequest*'s action switch starts the same way, and reading it this way found its actions'
+routines too.
+
 ## Still to do
 
-Everything past the program, the vocabulary and the objects. The tools stop next at the code
-that calls an object's routine and the code that searches the grammar, which they don't find.
-The text and the music are each in a form *Spellcasting 101*'s readers don't read:
+Everything past the program, the vocabulary, the objects, the grammar and the routines. The
+routines that test and change a flag, and the ones that keep the timers, aren't found yet:
+the tools look for *Spellcasting 101*'s. The rules of the parser's own grammar aren't found
+either. The text and the music are each in a form *Spellcasting 101*'s readers don't read:
 
 - `S201STR.DAT` starts as before, with its table of blocks, 87 of them. The tree after it is
   nearly twice the size, with more at its leaves than single characters.
