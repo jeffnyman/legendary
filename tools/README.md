@@ -25,7 +25,7 @@ relative to where the program loads, as the files have them. How the programs ar
 
 These read a program linked by PLINK86, *Spellcasting 101* and *Timequest*, or by
 .RTLink/Plus 4.10, *Spellcasting 201*. The commands from `loads` down read only the first
-two so far: *Spellcasting 201*'s own tables haven't been found in its code yet.
+two so far, but for `objects`, which reads all three.
 
 ```
 python -m legendary_tools exe <the game's folder>
@@ -86,7 +86,10 @@ python -m legendary_tools dis ../../legend/sc101/game 3670:054e
   `--tree`, it prints each room and holder with what's in it, and in that. With `--saved`, it
   prints the parts of `RESTART.DAT` and their sizes, which come to the file's. How the objects
   are kept is in [docs/spellcasting-101.md](../docs/spellcasting-101.md#the-objects). It reads
-  *Spellcasting 101* only: the code that finds the tables isn't *Timequest*'s.
+  *Spellcasting 101* and, with its names from `OBJECT.DAT` and its other differences,
+  [*Spellcasting 201*](../docs/spellcasting-201.md#the-objects); the flags' names are the first's
+  alone. For *Timequest* it finds the table and lists each object's number, type and names,
+  and no more: its records are laid out another way.
 
 - **`grammar`** lists the forms a command can take, from the program's tables: for each verb
   and the preposition after it, the action made with no object, with one, and with a second

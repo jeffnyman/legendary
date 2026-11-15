@@ -265,6 +265,12 @@ def loads(args: argparse.Namespace) -> None:
     print(f"\nblocks no call names by number: {', '.join(missing) or 'none'}")
 
 
+def _object_table(folder: GameFolder, program: Program, words: list[data.Word] | None = None) -> ObjectTable:
+    """The game's objects, with their names from OBJECT.DAT when the game has one."""
+    names = folder.find("object.dat")
+    return ObjectTable(program, words, folder.read(names) if names else None)
+
+
 def _named(table: ObjectTable, number: int) -> str:
     """An object's number and name, or its number alone when it isn't an object's."""
     return f"{number} {table.get(number).name}" if 1 <= number <= table.count else str(number)
@@ -272,6 +278,13 @@ def _named(table: ObjectTable, number: int) -> str:
 
 def _exit_target(program: Program, table: ObjectTable, row: Exit) -> str:
     """Where an exit's pointer goes, by its kind."""
+    if row.value is not None:
+        if row.kind == 1:
+            return f"to {_named(table, row.value)}"
+        door = table.door(row.value) if row.kind == 2 else None
+        if door:
+            return f"to {_named(table, door[0])} by {_named(table, door[1])}"
+        return f"a routine, numbered {row.value}" if row.kind == 4 else str(row.value)
     target = f"{row.segment:04x}:{row.offset:04x}"
     thunk = program.thunk_at(row.segment, row.offset)
     if thunk:
@@ -288,6 +301,14 @@ def _exit_target(program: Program, table: ObjectTable, row: Exit) -> str:
     return target
 
 
+def _routine_of(program: Program, number: int) -> str:
+    """An object's routine, or that the code that calls the routines wasn't found."""
+    try:
+        return str(object_routines(program).get(number) or "none")
+    except ValueError as error:
+        return f"not known ({error})"
+
+
 def _show_object(program: Program, table: ObjectTable, found: GameObject) -> None:
     entry = table.types[found.type]
     print(f"object {found.number}: {found.name}" + (f" ({found.second_name})" if found.second_name else ""))
@@ -296,15 +317,18 @@ def _show_object(program: Program, table: ObjectTable, found: GameObject) -> Non
         "  flags: "
         + (" ".join(str(flag) for flag in range(1, found.flag_count + 1) if found.has_flag(flag)) or "none")
     )
+    # the names are Spellcasting 101's flags', which the other games number another way
     known = {
-        flag: flag_name(flag, found.type) for flag in range(1, found.flag_count + 1) if found.has_flag(flag)
+        flag: flag_name(flag, found.type)
+        for flag in range(1, found.flag_count + 1)
+        if found.has_flag(flag) and table.flags_named
     }
     print("".join(f"    {flag}: {name}\n" for flag, name in known.items() if name), end="")
     if table.words:
         for label, numbers in (("nouns", found.nouns), ("adjectives", found.adjectives)):
             if numbers:
                 print(f"  {label}: " + ", ".join(table.words[number - 1].text for number in numbers))
-    print(f"  routine: {object_routines(program).get(found.number) or 'none'}")
+    print(f"  routine: {_routine_of(program, found.number)}")
     for place in found.places:
         print(
             f"  in {_named(table, place)}"
@@ -344,7 +368,7 @@ def objects(args: argparse.Namespace) -> None:
     folder = GameFolder(args.folder)
     program = _program(folder)
     vocabulary = folder.find("vocab.dat")
-    table = ObjectTable(program, data.vocabulary(folder.read(vocabulary)) if vocabulary else None)
+    table = _object_table(folder, program, data.vocabulary(folder.read(vocabulary)) if vocabulary else None)
     if args.number is not None:
         _show_object(program, table, table.get(args.number))
         return
@@ -437,7 +461,7 @@ def flags(args: argparse.Namespace) -> None:
     folder = GameFolder(args.folder)
     program = _program(folder)
     words = data.vocabulary(folder.read(folder.one("vocab.dat")))
-    table = ObjectTable(program, words)
+    table = _object_table(folder, program, words)
     names = {found.number: found.name for found in table.objects}
     shapes = {number: made[0] for number, made in _shapes(read_grammar(program, words), words).items()}
     uses, missed = flag_uses(program, names, shapes)
@@ -472,7 +496,7 @@ def timers(args: argparse.Namespace) -> None:
     folder = GameFolder(args.folder)
     program = _program(folder)
     words = data.vocabulary(folder.read(folder.one("vocab.dat")))
-    names = {found.number: found.name for found in ObjectTable(program, words).objects}
+    names = {found.number: found.name for found in _object_table(folder, program, words).objects}
     shapes = {number: made[0] for number, made in _shapes(read_grammar(program, words), words).items()}
     calls = timer_calls(program, names, shapes)
     found = sorted({call.timer for call in calls if call.timer})
@@ -579,7 +603,7 @@ def regions(args: argparse.Namespace) -> None:
     """The regions of the pictures in the game's .RGN files: what object is where in each."""
     folder = GameFolder(args.folder)
     try:
-        table: ObjectTable | None = ObjectTable(_program(folder))
+        table: ObjectTable | None = _object_table(folder, _program(folder))
     except ValueError:
         # the objects' names are a help, and the regions can be listed by number without them
         table = None
