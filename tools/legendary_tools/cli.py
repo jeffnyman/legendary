@@ -3,11 +3,13 @@
 from __future__ import annotations
 
 import argparse
+import collections
 import os
 import re
 import sys
 
 from . import data
+from .flags import describe_flag, flag_name, flag_uses
 from .game import GameFolder
 from .grammar import NO_TURN, Form, action_flags, describe_flags, read_grammar
 from .handlers import action_routines, object_routines
@@ -276,6 +278,10 @@ def _show_object(program: Plink86Program, table: ObjectTable, found: GameObject)
         "  flags: "
         + (" ".join(str(flag) for flag in range(1, found.flag_count + 1) if found.has_flag(flag)) or "none")
     )
+    known = {
+        flag: flag_name(flag, found.type) for flag in range(1, found.flag_count + 1) if found.has_flag(flag)
+    }
+    print("".join(f"    {flag}: {name}\n" for flag, name in known.items() if name), end="")
     if table.words:
         for label, numbers in (("nouns", found.nouns), ("adjectives", found.adjectives)):
             if numbers:
@@ -406,6 +412,41 @@ def actions(args: argparse.Namespace) -> None:
             made = [*made[:4], f"and {len(made) - 4} more"]
         for shape in made or ["no command makes it"]:
             print(f"    {shape}")
+
+
+def flags(args: argparse.Namespace) -> None:
+    """The objects' flags: what has each as the game starts, and where the program tests or changes it."""
+    folder = GameFolder(args.folder)
+    program = _program(folder)
+    words = data.vocabulary(folder.read(folder.one("vocab.dat")))
+    table = ObjectTable(program, words)
+    names = {found.number: found.name for found in table.objects}
+    shapes = {number: made[0] for number, made in _shapes(read_grammar(program, words), words).items()}
+    uses, missed = flag_uses(program, names, shapes)
+    most = max(found.flag_count for found in table.objects)
+    for flag in range(1, most + 1):
+        if args.flag not in (None, flag):
+            continue
+        have = [found for found in table.objects if flag <= found.flag_count and found.has_flag(flag)]
+        about = [use for use in uses if use.flag == flag]
+        if not have and not about and args.flag is None:
+            continue
+        counts = collections.Counter(use.kind for use in about)
+        types = collections.Counter(found.type for found in have)
+        by_type = ", ".join(f"{count} of type {kind}" for kind, count in sorted(types.items()))
+        print(f"flag {flag}: {describe_flag(flag)}")
+        print(f"    at the start, on {len(have)} objects" + (f": {by_type}" if have else ""))
+        print(f"    tested {counts['tests']} times, set {counts['sets']}, cleared {counts['clears']}")
+        if args.flag is None:
+            continue
+        for found in have:
+            print(f"    has it: {found.number} {found.name}")
+        for use in about:
+            where = "the root" if use.overlay is None else f"overlay {use.overlay}"
+            at = f"{use.segment:04x}:{use.offset:04x} in {where}"
+            print(f"    {at}: {use.routine} {use.kind} it of {use.asked_of}")
+    if args.flag is None:
+        print(f"\n{len(uses)} calls about a flag; {missed} more aren't read", file=sys.stderr)
 
 
 def grammar(args: argparse.Namespace) -> None:
@@ -624,6 +665,9 @@ def main() -> None:
         "number", type=int, nargs="?", help="only this action, with every command that makes it"
     )
     command(grammar).add_argument("verb", nargs="?", help="only this verb's forms")
+    command(flags).add_argument(
+        "flag", type=int, nargs="?", help="only this flag, with every object that has it and every call"
+    )
     command(loads)
     command(music).add_argument(
         "--out", metavar="FOLDER", help="write each song there as a .mid or .rol file"

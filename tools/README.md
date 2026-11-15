@@ -37,6 +37,7 @@ python -m legendary_tools loads <the game's folder>
 python -m legendary_tools objects <the game's folder> [<number>] [--tree] [--saved]
 python -m legendary_tools grammar <the game's folder> [<verb>]
 python -m legendary_tools actions <the game's folder> [<number>]
+python -m legendary_tools flags <the game's folder> [<flag>]
 python -m legendary_tools sentence <the game's folder>
 ```
 
@@ -97,6 +98,14 @@ python -m legendary_tools dis ../../legend/sc101/game 3670:054e
   are read from the code's own switches, which is in
   [docs/spellcasting-101.md](../docs/spellcasting-101.md#from-an-action-to-what-happens), and
   `dis` at a routine's address shows it. It reads *Spellcasting 101* only.
+
+- **`flags`** lists the objects' flags: for each, what it is, how many objects of which types
+  have it as the game starts, and how often the program tests, sets and clears it. With a
+  flag's number, it lists every object that has it and every call about it: where the call
+  is, whose routine it's in, and what object it asks about, as `313a:2293 in overlay 1: action
+  128 (open OBJECT) tests it of the object`. That is how a flag's meaning is found, which is in
+  [docs/spellcasting-101.md](../docs/spellcasting-101.md#what-the-flags-are). `objects` with
+  a number says each of the object's flags by name. It reads *Spellcasting 101* only.
 
 - **`sentence`** prints the grammar the parser matches a command against, rule by rule, with
   the names the program has for the rules: `<noun_phrase> ::= <pe_article>
