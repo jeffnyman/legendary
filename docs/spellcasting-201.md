@@ -287,8 +287,60 @@ of who tests it and who changes it that named *Spellcasting 101*'s.
 
 The numbers aren't the first game's. Flag 13 is open here: the action for `open` sets it and
 the one for `close` clears it, and it is what a door has to have to let you through. It was
-12. So the meanings can't be carried over by number, and the 40 haven't been gone through
-yet; the tools give each flag's bit and types, and who uses it, and no name.
+12. So the meanings can't be carried over by number, and each was found again from who has
+it and who uses it.
+
+### What the flags are
+
+| Flag | What | In *101* | How it's known |
+|---|---|---|---|
+| 1 | Its name takes no article | 5 | `Your Room`, `Gramma Eta Pi` and the people with names have it; the routine that writes an article, `023C:0002`, tests it |
+| 2 | Its name takes `an` | 2 | `envelope`, `ancient key`, `emerald`; the same routine |
+| 3 | Plural | 3 | `eyeglasses`, `nerds`, `cookies`; the same routine |
+| 4 | Takes `some` | 4 | `water`, `pizza`, `ale`, `graffiti`; the same routine |
+| 5 | Noted: something to do with it has happened | | Nothing but what you start with has it; set 201 times, nearly all by one object's routine of another, and tested by the routines that ask whether a thing has been done yet. *101*'s 6, seen, may be the same |
+| 6 | Touched; for a place, visited | 10 | Nothing has it at the start. Taking a thing sets it, and so does opening one; the routine that describes the room sets it of the room |
+| 7 | Taking it is special | 8 | `torch`, `crocodile`, the spell boxes, the donuts. Taking one clears it and sets 15 |
+| 8 | Not listed among a room's contents | 7 | 202 objects, most of them type 8, the scenery; taking one clears it |
+| 9 | Gives light | 9 | 73 of the 78 rooms, and `fire`, `torch` and `firefly` |
+| 10 | A door | 11 | The six doors, and nothing else |
+| 11 | Can't be opened or closed | 14 | `pool`, `bathtub`, `sink`, `mixing bowl`: each is open too. `open` and `close` test it |
+| 12 | Can be read | 20 | `notebook`, `letter`, `billboard`, `poster` |
+| 13 | Open | 12 | `open` sets it and `close` clears it |
+| 14 | Locked | 13 | A desk and four doors; `unlock` tests it |
+| 15 | Can be taken | 23 | 101 things; the actions that drop, put and throw test it first |
+| 16 | A place in the sewer | | Five rooms: `Access Chamber`, `Active Sewer Node`, `Sewer Valve`. Tested 25 times, by `drop`, `sit`, `lie down`, `smell`, `hear`; what each does about it isn't read |
+| 17 | A place at the university | | 40 rooms, from `Main Entrance` to `President's Quarters`, and none of the places beyond it |
+| 18 | Left out of `all` | 16 | What is in the trophy case; `get` clears it, and so does the cushions' routine, of each of them. Tested by the routine that tests 7, 15 and 25 together |
+| 19 | Lit | 17 | `light` sets it and `blow out` clears it |
+| 20 | Can be seen through | 19 | `trophy case`, `glass case`, `spell book` |
+| 21 | Things can be on it | 33 | Beds, desks, `shelf`, `tray`, `lab bench` |
+| 22 | Can be got in or on | 21 | Beds, `bathtub`, `pool`, `simulation chair`; `climb in` tests it |
+| 23 | Burns | 22 | 37 things, paper most of them; `burn` tests it |
+| 24 | A container | 15 | `envelope`, `bag`, `dresser`; `open`, `close`, `fill` and `empty` test it |
+| 25 | Can be worn | 24 | The two cloaks, the eyeglasses and the goggles |
+| 26 | A key | 25 | The three keys; `unlock` tests it |
+| 27, 28 | Cuts | 26, 27 | `fruit slicer` alone has them, and `cut` tests each. As in *101*, what tells them apart isn't known |
+| 29 | Can be eaten | 28 | `serving of casserole`, `banana`; `eat` tests it |
+| 30 | What's dropped in it lands outside it | 29 | `lecture seat`, `simulation chair`; `drop` tests it. Named from *101*'s, whose uses are the same |
+| 31 | Magic | 30 | The spell book, the spells and their boxes |
+| 32 | Can be lit | 31 | Nothing has it, as nothing had; `light` and `blow out` test it |
+| 33 | Outdoors | 7, for a place | 27 rooms, the quads, the roads and the forest; `look up` tests it of the room |
+| 34 | A part of the Sorcerer's Appliance | | The eleven attachments, `The Antenna of Putzburg` and the rest; the Appliance's own routine tests it |
+| 35 | Not known | | `banana`, `fruit slicer`, `package`, `pile of gold pieces`, three spell boxes; `drop`, `throw` and `frimp` test it |
+| 36 | A bed | | The four beds |
+| 37 | Someone other than you | | 30 of the 31 people: all but `you` |
+| 38 | Female | 9, for a person | Hillary, Lola, the barmaids, the sisters, the Queen; the routine that writes an article tests it, for `she` and `her` |
+| 39 | Not known | | `you` and eight more, the students among the people |
+| 40 | Not known | | Eight dials and knobs, of type 8 |
+
+Thirty-one of the forty are a flag *Spellcasting 101* had, most under a new number. The ones without
+are this game's own: its sewer, its campus, its Appliance and its beds. *101*'s flag 32, on
+80 objects and never explained, has no heir here, unless 34 is one: both mark the things a
+game is a search for.
+
+Flags 5, 16, 17, 30, 36 and 37 are named from who has them more than from code that was read,
+and say so in the table.
 
 ### The exits are rows of one table
 
@@ -393,8 +445,8 @@ routines too.
 
 ## Still to do
 
-Everything past the program, the vocabulary, the objects, the grammar and the routines. What
-each of the 40 flags means hasn't been worked out from who uses it. The routines that keep
+Everything past the program, the vocabulary, the objects, the grammar and the routines. Flags
+35, 39 and 40 have no meaning yet, and six more are named from who has them. The routines that keep
 the timers aren't found yet: the tools look for *Spellcasting 101*'s. The rules of the parser's own grammar aren't found
 either. The text and the music are each in a form *Spellcasting 101*'s readers don't read:
 
