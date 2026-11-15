@@ -392,14 +392,39 @@ word's number.
 | Something in quotation marks | The word `_string` |
 | Any other word | By its part of speech |
 
-A word of several parts of speech is one token or another by what came before it: the routine
-keeps the last token at `4517:7850`. That is how a word like `board`, a verb and a noun, can be
-either.
+A word of one part of speech has a code for it. A word of several has a code for the mix, and
+which it is in this command is left to the grammar:
+
+| Code | A word that is |
+|---|---|
+| -2 | A verb |
+| -3 | A preposition |
+| -4 | An adjective |
+| -5 | A noun |
+| -6 | An article |
+| -8 | A verb or a noun |
+| -9 | A verb or an adjective |
+| -10 | A verb, an adjective or a noun |
+| -11 | An adjective or a noun |
+| -12 | A verb or a preposition |
+| 0 | Not in the vocabulary |
+
+`open` is -12 and `desk` -11; `note`, which is in the love note's name and is a thing itself, is
+-11 as well. The code is what the routine returns, and the word's number is left in a word at
+`3B00:4AA0`. Some of the choosing goes by what came before: the routine keeps the last token
+at `4517:7850`. How isn't read through yet.
+
+The player's `--watch` says each command's words this way before the action they make, as
+`words: open [verb or preposition] desk [adjective or noun]`.
 
 ### Tokens into a sentence
 
 The routine at `130E:005E` gathers a command's tokens, to a full stop, a semicolon, `then`, an
-`and` with a verb after it, or the end of the line. Then it hands them to a matcher, at
+`and` with a verb after it, or the end of the line. It looks a word ahead twice: after a full
+stop, for the end of the line, and after `and`, where a word that is a verb and neither a noun
+nor an adjective ends the command and starts the next. So `i and take note` is two commands,
+and `i and i` is one that fails, `i` being an adjective too. A word that isn't in the
+vocabulary ends the gathering, and the rest of the line is dropped. Then it hands them to a matcher, at
 `135C:0072`, with a rule to match them against.
 
 The matcher knows nothing of English. It is given a grammar: rules, each with the ways it can
