@@ -20,16 +20,23 @@ from .pictures import HUFFMAN, LZW, RAW_PLANE, RAW_PLANES, PictureFile
 from .plink86 import Plink86Program
 from .program import Image, Program
 from .regions import read_regions
+from .rtlink import RtlinkProgram, is_rtlink, library_name
 from .sentence import read_sentence_grammar
 from .sound import read_songs, read_sound
 from .timers import EVERY_TURN, TIMER_NAMES, timer_calls, timer_code
 
 
 def _program(folder: GameFolder) -> Program:
+    """The game's program, read as the linker that made it left it."""
     exe = folder.read(folder.main_program())
-    ovl = folder.ending("main.ovl")
+    found = folder.ending("main.ovl")
+    ovl = folder.read(found[0]) if found else None
     try:
-        return Plink86Program(exe, folder.read(ovl[0]) if ovl else None)
+        if is_rtlink(exe):
+            name = library_name(exe)
+            path = folder.find(name) if name else None
+            return RtlinkProgram(exe, ovl, folder.read(path) if path else None)
+        return Plink86Program(exe, ovl)
     except ValueError as error:
         raise ValueError(f"{folder.main_program()}: {error}") from error
 
@@ -60,12 +67,21 @@ def exe(args: argparse.Namespace) -> None:
 
 
 def overlays(args: argparse.Namespace) -> None:
-    """PLINK86's table of overlays, by where they load."""
+    """The loader's table of overlays, by where they load."""
     program = _program(GameFolder(args.folder))
     mz = program.mz
-    print(
-        f"root      0000-{mz.image_paragraphs:04x}  {len(mz.image)} bytes, {len(mz.relocations)} relocations"
-    )
+    print(f"linker    {program.linker}")
+    if isinstance(program, RtlinkProgram):
+        _, relocations = program.root()
+        print(f"root      {len(program.records)} records, {len(relocations)} relocations")
+        print(f"library   {program.library_name}, {len(program.library_records)} records")
+        print(f"segments  {len(program.segments)}")
+        print(f"starts at {program.start_segment:04x}:{program.start_offset:04x}")
+    else:
+        print(
+            f"root      0000-{mz.image_paragraphs:04x}  {len(mz.image)} bytes,"
+            f" {len(mz.relocations)} relocations"
+        )
     print(f"loader    {program.loader_segment:04x}")
     print(f"table     {program.table_segment:04x}, with {len(program.thunks)} thunks after it")
     print(f"memory    ends at {program.memory_end_segment:04x}")
@@ -166,7 +182,7 @@ def dis(args: argparse.Namespace) -> None:
             if thunk:
                 note = f"  ; overlay {thunk.overlay}, {thunk.target_segment:04x}:{thunk.target_offset:04x}"
             elif target[0] == program.loader_segment:
-                note = "  ; PLINK86's loader"
+                note = f"  ; {program.linker}'s loader"
         elif any(linear + index in image.relocations for index in range(instruction.size)):
             note = "  ; a segment"
         elif pointer := _POINTER_OPERAND.search(instruction.op_str):

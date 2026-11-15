@@ -23,7 +23,9 @@ relative to where the program loads, as the files have them. How the programs ar
 
 ## The program
 
-These read a program linked by PLINK86: *Spellcasting 101* and *Timequest*.
+These read a program linked by PLINK86, *Spellcasting 101* and *Timequest*, or by
+.RTLink/Plus 4.10, *Spellcasting 201*. The commands from `loads` down read only the first
+two so far: they need *Spellcasting 201*'s vocabulary and text, which are packed another way.
 
 ```
 python -m legendary_tools exe <the game's folder>
@@ -44,8 +46,9 @@ python -m legendary_tools sentence <the game's folder>
 
 - **`exe`** prints each program's MZ header: its image, what's in the file after it, the memory
   it asks for, and where it starts.
-- **`overlays`** prints PLINK86's table: each overlay under the place it loads at, with its
-  size, its relocations, and where it is in which file.
+- **`overlays`** prints the linker and its loader's table: each overlay under the place it
+  loads at, with its size, its relocations, and where it is in which file. For a .RTLink
+  program it also counts the records the program and its run-time library are kept as.
 - **`thunks`** lists the ways into the overlays: each thunk's address, its overlay, and the
   routine it goes to.
 - **`segments`** lists every segment the relocations name, with how often and what it's in.
@@ -166,8 +169,13 @@ python -m legendary_tools vocab <the game's folder>
 ## The modules
 
 - **`mz.py`**: a DOS program's MZ header, image and relocations.
-- **`plink86.py`**: PLINK86's table of overlays, the thunks, and the program's memory with
-  overlays loaded. `src/Legendary.Core/Programs` is the same in C#.
+- **`program.py`**: what the two linkers' programs share: an overlay, a thunk, and the
+  program's memory with overlays loaded.
+- **`plink86.py`**: PLINK86's table of overlays and its thunks.
+  `src/Legendary.Core/Programs` is the same in C#.
+- **`rtlink.py`**: a .RTLink/Plus program: its records and their fixups, its run-time
+  library linked in, and the overlay manager's table and thunks. How it works is in
+  [docs/spellcasting-201.md](../docs/spellcasting-201.md#how-the-program-is-built).
 - **`handlers.py`**: the routine of each object and each action, read from the switches in the
   code that call them.
 - **`sentence.py`**: the rules of the parser's grammar and the ways each can go, found by the
