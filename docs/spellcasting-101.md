@@ -567,6 +567,44 @@ the answer. With nothing found at all it says so, and the turn is over.
 One object for one phrase goes straight into the words the action is performed on. Several,
 from `ALL` or a list, are performed one at a time.
 
+### Where the parse is kept
+
+What the parser makes of a command is in the action's segment, from `3B00:0004`, and the
+player's `--watch` reads it there as the game goes:
+
+| At | What |
+|---|---|
+| `3B00:0038` | A byte: how many lots of objects the command has, none, one or two |
+| `3B00:0039` | A byte for each lot: the form's flags for it, where its objects may be looked for |
+| `3B00:003C` | The lots, 12 bytes each: a count of phrases, and at 2 a far pointer to them |
+| `3B00:0054` | A byte: the action the form makes of the command, copied from here to `3B00:0058` when it is performed |
+| `3B00:8AD6` | Which form the search found, counting from 0, or FFFF |
+| `3B00:8B78` | What was found, 60 hex bytes for each lot: six for each phrase, a count and at 2 a far pointer to that many objects' numbers |
+
+A phrase is 40 bytes of words' numbers: the word `all` when the phrase is that, the article, a
+count of adjectives and the adjectives, and at 26 hex the noun. The lists of objects found
+are in memory the program asks for as it goes, and grow one object at a time.
+
+The main loop calls the search of the grammar from `0C35:21E8`, and the routine that finds
+the objects from `0C35:0CC6`, once for each lot and the second object's lot first, with the
+lot, its flags and where to put what's found. So a command is four things, one after another,
+and the watch says each:
+
+```
+words: put [verb] note [adjective or noun] in [verb or preposition] writing [adjective] desk [adjective or noun]
+form 236: put OBJECT in OBJECT, which is action 51
+second object "writing desk", looked for anywhere near: writing desk (61)
+object "note", looked for held: love note (74)
+action 51: drop love note (74) down writing desk (61)
+```
+
+`note` is looked for in your hands alone, since only what you hold can be put somewhere.
+`examine window` finds two, `left window (65) or right window (64)`, and the game asks which.
+`take sword` in the Bedchamber finds nothing; `ask rat about sword` finds the lead-plated
+sword, which is in the Shop, because that form's second object may be anywhere at all. For
+`take all` nothing is found by name: what `all` takes in is gathered another way, by
+[the routine that says what fits the action](#what-the-flags-are), and where that is called from isn't read yet.
+
 ## From an action to what happens
 
 The parser's work ends in three numbers: an action, and up to two objects. The program keeps
