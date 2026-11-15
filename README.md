@@ -128,7 +128,7 @@ together, for the panel and the terminal's full record of the play.
 
 The panel's text is small: 8 pixels, doubled once the window is 960 high. `--panel-text 1.5`
 asks for the panel with its text one and a half times that size, and any size from 1 to 4 can
-be asked for. While playing, Ctrl+F8 makes the text half a size bigger and Ctrl+F7 half a size
+be asked for. While playing, Ctrl+plus makes the text half a size bigger and Ctrl+minus half a size
 smaller, and the window widens or narrows with the panel. The size the text ends at is kept in
 the settings, and is the size the panel has the next time, for any game. The panel stays 46
 characters wide, so bigger text makes a wider panel. On a screen that isn't high-density, whole

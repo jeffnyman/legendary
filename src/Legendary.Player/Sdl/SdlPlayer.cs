@@ -152,7 +152,7 @@ internal sealed unsafe class SdlPlayer : IDisposable
     /// Returns whether the program is still running.
     /// </summary>
     /// <summary>
-    /// The size the panel's text was last asked to be, by the options or by Ctrl+F7 and Ctrl+F8;
+    /// The size the panel's text was last asked to be, by the options or by Ctrl+minus and Ctrl+plus;
     /// 0 when it never was, and the window's height chooses.
     /// </summary>
     public double PanelText => _window.PanelText;
@@ -454,15 +454,18 @@ internal sealed unsafe class SdlPlayer : IDisposable
                 }
 
                 return;
-            case SDL_Scancode.SDL_SCANCODE_F7 or SDL_Scancode.SDL_SCANCODE_F8
+            case SDL_Scancode.SDL_SCANCODE_MINUS or SDL_Scancode.SDL_SCANCODE_EQUALS
+                or SDL_Scancode.SDL_SCANCODE_KP_MINUS or SDL_Scancode.SDL_SCANCODE_KP_PLUS
                 when (key.mod & SDL_Keymod.SDL_KMOD_CTRL) != 0 && _options.Panel is not null:
                 if (key.down && !key.repeat)
                 {
-                    // the panel's text, half a size smaller or bigger
-                    float step = key.scancode == SDL_Scancode.SDL_SCANCODE_F8 ? 0.5f : -0.5f;
-                    if (_window.StepPanelText(step) is { } size)
+                    // the panel's text, half a size smaller or bigger: the keys a browser zooms
+                    // with, since the systems keep some of Ctrl and a function key for themselves
+                    bool bigger = key.scancode is SDL_Scancode.SDL_SCANCODE_EQUALS or SDL_Scancode.SDL_SCANCODE_KP_PLUS;
+                    if (_window.StepPanelText(bigger ? 0.5f : -0.5f) is { } size)
                     {
-                        Message(string.Create(CultureInfo.InvariantCulture, $"panel text {size:0.#}"));
+                        string limit = size <= SdlWindow.SmallestPanelText ? ", the smallest" : size >= SdlWindow.BiggestPanelText ? ", the biggest" : "";
+                        Message(string.Create(CultureInfo.InvariantCulture, $"panel text {size:0.#}{limit}"));
                     }
                 }
 

@@ -642,7 +642,7 @@ internal static class Program
               the mouse is the PC's once a click in the window captures it; Ctrl+F10 frees it
               F11 full screen, Shift+F11 pixel shape, F12 full speed on and off, Pause pauses
               Ctrl+F5 saves the whole machine's state, Ctrl+F9 loads it back
-              Ctrl+F7 and Ctrl+F8 make the panel's text smaller and bigger
+              Ctrl+minus and Ctrl+plus make the panel's text smaller and bigger
               Ctrl+F1 to Ctrl+F4 put disk 1 to 4 in drive A:, for a game played from its disks
               Ctrl+F11 switches a CGA game between an RGB and a composite monitor
             """);
