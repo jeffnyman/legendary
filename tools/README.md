@@ -25,7 +25,7 @@ relative to where the program loads, as the files have them. How the programs ar
 
 These read a program linked by PLINK86, *Spellcasting 101* and *Timequest*, or by
 .RTLink/Plus 4.10, *Spellcasting 201*. The commands from `loads` down read only the first
-two so far: they need *Spellcasting 201*'s vocabulary and text, which are packed another way.
+two so far: *Spellcasting 201*'s own tables haven't been found in its code yet.
 
 ```
 python -m legendary_tools exe <the game's folder>
@@ -164,7 +164,9 @@ python -m legendary_tools vocab <the game's folder>
   another way. How the packing works is in
   [docs/spellcasting-101.md](../docs/spellcasting-101.md#the-text).
 - **`vocab`** lists the vocabulary in `VOCAB.DAT`: each word's number, its parts of speech,
-  and, for a synonym, the word it stands for and as what.
+  and, for a synonym, the word it stands for and as what. It reads *Spellcasting 101*'s and
+  *Timequest*'s plain file and *Spellcasting 201*'s packed one, which is in
+  [docs/spellcasting-201.md](../docs/spellcasting-201.md#the-vocabulary).
 
 ## The modules
 

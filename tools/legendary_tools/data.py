@@ -104,15 +104,24 @@ class Word:
 
 
 def vocabulary(data: bytes) -> list[Word]:
-    """
-    VOCAB.DAT: the size of the words' text, the text, each word ending in a zero, then a count
-    and eight bytes for each word: where its text starts, its parts of speech, the number of a
-    word it is a synonym of, and the parts of speech it is that word's synonym as.
-    """
+    """VOCAB.DAT, in whichever of its two forms: plain, as Spellcasting 101 has it, or packed."""
     (size,) = struct.unpack_from("<H", data, 0)
-    (count,) = struct.unpack_from("<H", data, 2 + size)
-    if 2 + size + 2 + 8 * count != len(data):
-        raise ValueError("the vocabulary's words don't end where its file does")
+    if 2 + size + 2 <= len(data):
+        (count,) = struct.unpack_from("<H", data, 2 + size)
+        if 2 + size + 2 + 8 * count == len(data):
+            return _plain_vocabulary(data, size, count)
+    try:
+        return _packed_vocabulary(data)
+    except (struct.error, IndexError, UnicodeDecodeError):
+        raise ValueError("the vocabulary's words don't end where its file does") from None
+
+
+def _plain_vocabulary(data: bytes, size: int, count: int) -> list[Word]:
+    """
+    The size of the words' text, the text, each word ending in a zero, then a count and eight
+    bytes for each word: where its text starts, its parts of speech, the number of a word it
+    is a synonym of, and the parts of speech it is that word's synonym as.
+    """
     words = []
     for number in range(1, count + 1):
         start, parts, synonym, synonym_parts = struct.unpack_from(
@@ -121,3 +130,54 @@ def vocabulary(data: bytes) -> list[Word]:
         text = data[2 + start : data.index(b"\0", 2 + start)].decode("ascii")
         words.append(Word(number, text, parts, synonym, synonym_parts))
     return words
+
+
+def _packed_vocabulary(data: bytes) -> list[Word]:
+    """
+    Spellcasting 201's: the words' text packed by Huffman's codes, and the synonyms apart.
+
+    The file is a tree, the text, a table of the words, and the synonyms. The tree is a count
+    of words and then the words, in pairs, one for a 0 bit and one for a 1: a word from zero
+    up is where in the tree the next pair is, and one below zero is a character, as its
+    complement, and ends the code. The last pair is the root. The text is its size unpacked
+    and then the codes, read from each byte's low bit up; each word ends in a zero, and they
+    are in no order. The table is a count and four bytes for each word, in alphabetical
+    order: where its text starts, and its parts of speech. The synonyms are a count of groups,
+    and each group a word's number, a count, and that many pairs: a word that stands for it,
+    and the parts of speech it stands for it as.
+    """
+    (links,) = struct.unpack_from("<H", data, 0)
+    tree = struct.unpack_from(f"<{links}h", data, 2)
+    at = 2 + 2 * links
+    (size,) = struct.unpack_from("<H", data, at)
+    bit = (at + 2) * 8
+    text = bytearray()
+    node = links - 2
+    while len(text) < size:
+        link = tree[node + (data[bit >> 3] >> (bit & 7) & 1)]
+        bit += 1
+        if link >= 0:
+            node = link
+        else:
+            text.append(~link)
+            node = links - 2
+    at = (bit + 7) >> 3
+
+    (count,) = struct.unpack_from("<H", data, at)
+    table = [struct.unpack_from("<HH", data, at + 2 + 4 * index) for index in range(count)]
+    at += 2 + 4 * count
+    synonyms: dict[int, tuple[int, int]] = {}
+    (groups,) = struct.unpack_from("<H", data, at)
+    at += 2
+    for _ in range(groups):
+        head, members = struct.unpack_from("<HH", data, at)
+        for member in range(members):
+            word, parts = struct.unpack_from("<HH", data, at + 4 + 4 * member)
+            synonyms[word] = (head, parts)
+        at += 4 + 4 * members
+    if at != len(data):
+        raise ValueError("the vocabulary's words don't end where its file does")
+    return [
+        Word(number, text[start : text.index(0, start)].decode("ascii"), parts, *synonyms.get(number, (0, 0)))
+        for number, (start, parts) in enumerate(table, 1)
+    ]
