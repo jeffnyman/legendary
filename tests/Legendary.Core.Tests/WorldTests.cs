@@ -98,4 +98,61 @@ public sealed class WorldTests
             Assert.All(world.Contents(number), inside => Assert.Contains(number, world.Object(inside).Places));
         }
     }
+
+    [Fact]
+    public void A_rooms_exits_are_read_with_where_each_goes()
+    {
+        if (Load() is not { } world)
+        {
+            return;
+        }
+
+        // the Bedchamber's: north to the Potty Chamber, west to the Alley by the door, three
+        // that only say something, and up, which a routine decides
+        var exits = world.Exits(1);
+        Assert.Equal([1, 3, 7, 5, 10, 9], exits.Select(exit => exit.Direction));
+        Assert.Equal([1, 3, 2, 3, 3, 4], exits.Select(exit => exit.Kind));
+        Assert.Equal((2, 0), (exits[0].Room, exits[0].Door));
+        Assert.Equal((4, 60), (exits[2].Room, exits[2].Door));
+        Assert.Equal("If you want to enter the fireplace, then say so.", exits[1].Message);
+        Assert.Equal("If you want to jump out the window, then say so.", exits[3].Message);
+        Assert.Null(exits[0].Message);
+        Assert.Equal((0, 0, null), (exits[5].Room, exits[5].Door, exits[5].Message));
+
+        // what isn't a room has none
+        Assert.Empty(world.Exits(153));
+        Assert.Equal("north", world.Map.Directions[exits[0].Direction]);
+    }
+
+    [Fact]
+    public void An_objects_state_is_its_flags_and_where_it_is()
+    {
+        if (Load() is not { } world)
+        {
+            return;
+        }
+
+        // you: flags 5 and 7, in the Bedchamber on its first list
+        var you = world.State(153);
+        Assert.Equal((0x50ul, 1, 0, 0), (you.Flags, you.Place, you.SecondPlace, you.Relation));
+        Assert.True(you.Has(5) && you.Has(7));
+        Assert.False(you.Has(6) || you.Has(0) || you.Has(65));
+
+        // a thing has six bytes of flags: the fireplace's are 7, 12, 14, 15 and 21
+        var fireplace = world.State(62);
+        Assert.Equal(0x106840ul, fireplace.Flags);
+        Assert.Equal([7, 12, 14, 15, 21], Enumerable.Range(1, 64).Where(fireplace.Has));
+
+        // a room is nowhere, and on no list
+        Assert.Equal((0x100ul, 0, 0, -1), (world.State(1).Flags, world.State(1).Place, world.State(1).SecondPlace, world.State(1).Relation));
+
+        // and every object's state agrees with the object read whole
+        for (int number = 1; number <= world.Map.ObjectCount; number++)
+        {
+            var whole = world.Object(number);
+            var state = world.State(number);
+            Assert.Equal(whole.Places.Count > 0 ? whole.Places[0] : 0, state.Place);
+            Assert.Equal(whole.Relation, state.Relation);
+        }
+    }
 }

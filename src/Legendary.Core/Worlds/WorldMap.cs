@@ -9,7 +9,11 @@ namespace Legendary.Core.Worlds;
 /// <param name="Relation">A byte: which of its parent's lists it's on.</param>
 /// <param name="Next">The next object on that list.</param>
 /// <param name="Lists">The first object on each of its own lists, a word each.</param>
-public sealed record RecordLayout(int Size, int Places = -1, int Relation = -1, int Next = -1, int Lists = -1);
+/// <param name="FlagBytes">How many bytes of flags it has, from offset 8.</param>
+/// <param name="ExitCount">A room's: a byte, how many exits it has.</param>
+/// <param name="Exits">A room's: a far pointer to its exits, six bytes each.</param>
+public sealed record RecordLayout(
+    int Size, int Places = -1, int Relation = -1, int Next = -1, int Lists = -1, int FlagBytes = 2, int ExitCount = -1, int Exits = -1);
 
 /// <summary>Whose routine the game has asked about an action it is performing.</summary>
 public enum Asked
@@ -67,6 +71,9 @@ public sealed record AnswerPoint(ushort Offset, Asked Asked);
 /// <c>longjmp</c>. 1 is an action given up and started over as another, and more than 1 an
 /// action that is done.
 /// </param>
+/// <param name="GoAction">The action that is going somewhere.</param>
+/// <param name="DirectionOffset">In the action's segment, a byte: the direction to go in.</param>
+/// <param name="Directions">The directions' names, by number; the first, for 0, is empty.</param>
 /// <param name="GrammarSegment">The segment with the grammar's two tables.</param>
 /// <param name="FormsOffset">There, the forms a command can take, ten bytes each.</param>
 /// <param name="SecondsOffset">
@@ -84,7 +91,7 @@ public sealed record WorldMap(
     ushort RoomOffset, ushort ActorOffset, ushort MovesOffset, ushort ClockOffset,
     ushort ActionSegment, ushort ActionOffset, ushort ObjectOffset, ushort SecondObjectOffset,
     ushort PerformSegment, ushort PerformOffset, ushort DepthOffset, IReadOnlyList<AnswerPoint> Answers,
-    ushort JumpBackOffset,
+    ushort JumpBackOffset, int GoAction, ushort DirectionOffset, IReadOnlyList<string> Directions,
     ushort GrammarSegment, ushort FormsOffset, ushort SecondsOffset, string VocabularyFile,
     IReadOnlyDictionary<int, string> ActionNames,
     IReadOnlyDictionary<int, RecordLayout> Layouts)
@@ -104,13 +111,14 @@ public sealed record WorldMap(
             new(0x128D, Asked.Object), new(0x12AB, Asked.Object), new(0x12E6, Asked.Object), new(0x1304, Asked.Object),
             new(0x1320, Asked.Action),
         ],
-        JumpBackOffset: 0x2916,
+        JumpBackOffset: 0x2916, GoAction: 197, DirectionOffset: 0x59,
+        Directions: ["", "north", "northeast", "east", "southeast", "south", "southwest", "west", "northwest", "up", "down", "in", "out"],
         GrammarSegment: 0x2B6A, FormsOffset: 0x00D1, SecondsOffset: 0x0F81, VocabularyFile: "VOCAB.DAT",
         ActionNames: new Dictionary<int, string> { [197] = "go" },
         Layouts: new Dictionary<int, RecordLayout>
         {
-            [1] = new(28, Lists: 0x0E),
-            [2] = new(36, Places: 0x12, Relation: 0x14, Next: 0x16, Lists: 0x18),
+            [1] = new(28, Lists: 0x0E, ExitCount: 0x16, Exits: 0x18),
+            [2] = new(36, Places: 0x12, Relation: 0x14, Next: 0x16, Lists: 0x18, FlagBytes: 6),
             [3] = new(14),
             [4] = new(22, Lists: 0x0E),
             [5] = new(22, Lists: 0x0E),

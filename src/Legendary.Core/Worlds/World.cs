@@ -16,6 +16,31 @@ public sealed record WorldObject(
     int Number, int Type, string Name, string? SecondName, IReadOnlyList<int> Places, int Relation, int Next, IReadOnlyList<int> Lists);
 
 /// <summary>
+/// What of an object the game changes as it's played: its flags, where it is, and which of
+/// that place's lists it is on.
+/// </summary>
+/// <param name="Flags">Its flags, flag 1 the lowest bit.</param>
+/// <param name="Place">The object it's in, or 0; for one in two places, the first.</param>
+/// <param name="SecondPlace">The second object it's in, for one in two places; otherwise 0.</param>
+/// <param name="Relation">Which of its place's lists it's on, or -1 for a type on none.</param>
+public readonly record struct ObjectState(ulong Flags, int Place, int SecondPlace, int Relation)
+{
+    /// <summary>Whether a flag is set; they are numbered from 1.</summary>
+    public bool Has(int flag) => flag is >= 1 and <= 64 && (Flags >> (flag - 1) & 1) != 0;
+}
+
+/// <summary>A way out of a room.</summary>
+/// <param name="Direction">The direction's number.</param>
+/// <param name="Kind">
+/// What kind of exit: 1 to a room, 2 to a room by a door, 3 a message said in place of going,
+/// 4 a routine that decides.
+/// </param>
+/// <param name="Room">For kinds 1 and 2, the room it goes to; otherwise 0.</param>
+/// <param name="Door">For kind 2, the door it goes by; otherwise 0.</param>
+/// <param name="Message">For kind 3, what is said; otherwise null.</param>
+public sealed record WorldExit(int Direction, int Kind, int Room, int Door, string? Message);
+
+/// <summary>
 /// A game's world, read from its memory as it is at the moment of asking: where the player is,
 /// what time it is, what was last done, and the tree its objects are in. Nothing is kept, so
 /// what it says is what the game has now, and nothing is written.
@@ -185,6 +210,69 @@ public sealed class World
     }
 
     /// <summary>
+    /// What of an object changes as the game is played, read without its names: cheap enough
+    /// to ask of every object every frame.
+    /// </summary>
+    public ObjectState State(int number)
+    {
+        ArgumentOutOfRangeException.ThrowIfLessThan(number, 1);
+        ArgumentOutOfRangeException.ThrowIfGreaterThan(number, Map.ObjectCount);
+        int entry = Linear(Map.TableSegment, 6 * (number - 1));
+        int type = _read(entry);
+        int record = (Word(entry + 4) * 16) + Word(entry + 2);
+        if (!Map.Layouts.TryGetValue(type, out var layout))
+        {
+            return new ObjectState(0, 0, 0, -1);
+        }
+
+        ulong flags = 0;
+        for (int index = 0; index < layout.FlagBytes; index++)
+        {
+            flags |= (ulong)_read(record + 8 + index) << (8 * index);
+        }
+
+        // how many places a type has is the game's to say
+        int places = layout.Places < 0 ? 0 : _read(Linear(Map.DataSegment, Map.TypesOffset + (3 * type)));
+        return new ObjectState(
+            flags,
+            places > 0 ? Word(record + layout.Places) : 0,
+            places > 1 ? Word(record + layout.Places + 2) : 0,
+            layout.Relation < 0 ? -1 : _read(record + layout.Relation));
+    }
+
+    /// <summary>A room's exits, in the order its record has them; none for what isn't a room.</summary>
+    public IReadOnlyList<WorldExit> Exits(int room)
+    {
+        ArgumentOutOfRangeException.ThrowIfLessThan(room, 1);
+        ArgumentOutOfRangeException.ThrowIfGreaterThan(room, Map.ObjectCount);
+        int entry = Linear(Map.TableSegment, 6 * (room - 1));
+        int record = (Word(entry + 4) * 16) + Word(entry + 2);
+        if (!Map.Layouts.TryGetValue(_read(entry), out var layout) || layout.Exits < 0)
+        {
+            return [];
+        }
+
+        // six bytes each: a direction, a kind, and a far pointer to what the kind needs
+        var exits = new List<WorldExit>();
+        int rows = (Word(record + layout.Exits + 2) * 16) + Word(record + layout.Exits);
+        for (int row = rows, end = rows + (6 * _read(record + layout.ExitCount)); row < end; row += 6)
+        {
+            int kind = _read(row + 1), segment = Word(row + 4), offset = Word(row + 2);
+            int at = (segment * 16) + offset;
+            exits.Add(new WorldExit(
+                _read(row), kind,
+                kind is 1 or 2 ? Word(at) : 0,
+                kind == 2 ? Word(at + 2) : 0,
+                kind == 3 ? Text(segment, offset, 200) : null));
+        }
+
+        return exits;
+    }
+
+    /// <summary>The direction the action of going is to go in: its number.</summary>
+    public int Direction => _read(Linear(Map.ActionSegment, Map.DirectionOffset));
+
+    /// <summary>
     /// What is in an object, on each of its lists in turn: the objects' numbers. An object
     /// that is in two places, as a door is, is on neither's list and isn't found this way.
     /// </summary>
@@ -242,7 +330,7 @@ public sealed class World
 
     // a far pointer's text, to its zero; pointers in the game's memory are whole, with the
     // load segment already in them
-    private string? Text(int segment, int offset)
+    private string? Text(int segment, int offset, int most = 80)
     {
         if (segment == 0 && offset == 0)
         {
@@ -251,7 +339,7 @@ public sealed class World
 
         var text = new StringBuilder();
         int at = (segment * 16) + offset;
-        for (byte next; text.Length < 80 && (next = _read(at)) != 0; at++)
+        for (byte next; text.Length < most && (next = _read(at)) != 0; at++)
         {
             text.Append((char)next);
         }
