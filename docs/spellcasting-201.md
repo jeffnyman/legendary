@@ -3,7 +3,8 @@
 Legend Entertainment, 1991. The second *Spellcasting*, by Steve Meretzky, on the system
 [*Spellcasting 101*](spellcasting-101.md) was built on, a year on.
 
-This is what the first look found, and so far it is only how the program is built. What is
+This is what the first look found, and so far it is how the program is built and its
+vocabulary. What is
 known for certain is said plainly; what is inferred says so. Addresses are `segment:offset` in
 hex, with segments relative to where the program loads. Every one of them can be looked at
 with the [tools](../tools/README.md).
@@ -177,13 +178,61 @@ segment, and the number comes after the jump, not before it.
 `0262`: by the same reading, 5.02 and 6.10. Their records haven't been read, and the tools say
 so and stop.
 
+## The vocabulary
+
+`VOCAB.DAT` has 1,609 words, and is packed, where *Spellcasting 101*'s was plain text. It is
+14,118 bytes; the same words in the old form would be 23,984. The file is four things, one
+after another.
+
+**A tree** of Huffman's codes: a count, 64, and that many words, taken in pairs, one for a 0
+bit and one for a 1. A word from zero up is where in the tree the next pair is. A word below
+zero is a character, kept as its complement, so that `FFFF` is the zero that ends a word and
+`FF9E` is `a`. The last pair is the root. It is the tree of [the text's
+packing](spellcasting-101.md#the-text) again, with two differences: there a pair was named by
+its number and a character was negated.
+
+**The words' text**: its size unpacked, 11,108, and then the codes, read from each byte's low
+bit up. Each word ends in a zero. They aren't in alphabetical order any more. They are, by
+the look of them, in the order the game's source first used them: the parser's own words,
+`_integer`, `_string`, `a`, `again`, `all`; then `entrance`, `main`, `pi`, `frat`, `gep`,
+`building`, `gramma`, `eta`, which are the first rooms' names; and so on.
+
+**A table of the words**, which is in alphabetical order: a count, and four bytes for each.
+
+| Bytes | What |
+|---|---|
+| 2 | Where the word's text starts |
+| 2 | Its parts of speech, a bit each, as before |
+
+A word's number is its place in this table, from 1, as it was.
+
+**The synonyms**, which had four bytes in every word's entry and now are apart, since most
+words have none: a count of groups, 125, and for each group a word's number, a count, and
+that many pairs.
+
+| Bytes | What |
+|---|---|
+| 2 | A word that stands for the group's |
+| 2 | The parts of speech it stands for it as |
+
+So `on` has four, `atop`, `onto`, `top` and `upon`, each as a preposition, and `old` has
+`ancient` as an adjective. 264 words stand for another, and none for two.
+
+This was read from the file alone, not from the code that unpacks it. It is taken as right
+because the four parts end at the file's last byte, the table's words come out in
+alphabetical order, and the synonyms are synonyms.
+
+*Spellcasting 301* and the two *Gateway* games start their `VOCAB.DAT` with a tree too, and
+the same first words come out, but the text stops short of the size given: something in the
+form is different again.
+
 ## Still to do
 
-Everything past the program. The vocabulary, the text and the music are each in a form
-*Spellcasting 101*'s readers don't read:
+Everything past the program and the vocabulary. With the words read, the tools get as far as
+looking for the code that searches the grammar and the code that reads the table of objects,
+and find neither: the program's own tables are next. The text and the music are each in a
+form *Spellcasting 101*'s readers don't read:
 
-- `VOCAB.DAT` is packed. It starts with what looks like a tree of Huffman's codes, where
-  *Spellcasting 101*'s was plain words.
 - `S201STR.DAT` starts as before, with its table of blocks, 87 of them. The tree after it is
   nearly twice the size, with more at its leaves than single characters.
 - A song in a `.MUS` file has two more bytes in its entry.

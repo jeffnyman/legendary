@@ -25,4 +25,5 @@ hold.
   linked by .RTLink/Plus in place of PLINK86: a program DOS can't load by itself, kept as
   records of its segments with their fixups, which the linker's own startup code puts in
   place; a run-time library the launcher and the game share, linked in as the program loads;
-  and 22 overlays reached by 790 thunks. So far, only how the program is built.
+  and 22 overlays reached by 790 thunks; and a vocabulary of 1,609 words, packed by
+  Huffman's codes. So far, only those.
