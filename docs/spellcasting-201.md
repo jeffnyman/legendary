@@ -483,7 +483,69 @@ of those 257 calls name their timer as a constant. Of the starts, 81 are for the
 and 16 are for every turn. Timers 8 and 17 are never named by a constant: something works
 their numbers out.
 
-What each of the 49 does hasn't been read.
+### What each timer does
+
+Each was named by reading its routine, and for most that is reading what it prints, which
+the tools now write beside the code. Who starts it and with what count is from the calls.
+
+| Timer | What | What its routine does |
+|---|---|---|
+| 1 | The day's initiation | Pledgemaster Cowpatty comes down the stairs with the rubber chicken and gives each Pledge the day's assignment |
+| 2 | The upperclassmen find you | They haul you back to the cellar, where Cowpatty goes down the line asking who did what |
+| 3 | The serpent heads speak | At Frogkisser House, every turn: prints a line it takes from the string file |
+| 4 | The simulation ends | `The world dissolves around you...`, and the monitoring professor grades you |
+| 5 | Sleepiness | `You begin to feel kind of sleepy`, then worse, then asleep where you are, or drowned in the pool |
+| 6 | The class bell | A bell for the start and the finish of each class; the lecture hall fills and empties; in the wrong place you get `A Truancy` |
+| 7 | The tower clock chimes | Restarts itself |
+| 8 | Nothing | A routine that only returns. Nothing starts it by a number that is a constant |
+| 9 | A word forgotten | Clears a word at `4974:4418` a turn after `burp`, `kiss`, `naughty` or `score` set it |
+| 10 | A byte forgotten | Clears a byte at `4974:441A`, a turn after any of seven objects' routines |
+| 11 | What was raised sinks back | `%s sinks back down.`, a turn after `frimp` |
+| 12 | The simpleberries wear off | `The feeling of furtiveness passes`, eight turns after the bush; Lyle, Hiddenmolar or Hillary notices you |
+| 13 | The speed potion wears off | `You suddenly feel sluggish`, eight turns on |
+| 14 | The mascot swells back | Twelve turns on: `A wall of flesh smashes you to one side` |
+| 15 | The party starts | At I Phelta Thi or Tappa Kegga Bru: `Let the party begin!` |
+| 16 | You open your eyes | A turn after closing them |
+| 17 | The Brus make ready | Seniors in TKB sweaters guard the stadium and decorate the pool. Never started by a constant |
+| 18 | The Poolside Party | Every turn in the Pool Room: the toast, the tenth keg, the Sacred Tuxedo Removal |
+| 19 | Hiddenmolar and Cowpatty whisper | Every turn, from the jukebox, in the Pub |
+| 20 | Word of Tickingclock's death | Simon Sudsywater tells you how the President died |
+| 21 | Tickingclock's errand | Otto comes in, tells the legend of the Appliance, and gives you the key to the laboratory |
+| 22 | Tickingclock goes | Twelve turns after the letter: takes the President away, unless you are in the President's House |
+| 23 | The sewer gurgles | 32 turns after `ugugoowah` |
+| 24 | The last newspaper goes | `Someone takes the last newspaper in the pile.` |
+| 25 | A second byte forgotten | Clears a byte at `4974:6158` |
+| 26 | The Appliance runs | A turn after the silver lever: arcs of magical energy, and what comes out |
+| 27 | The Sorcerer returns | 24 turns into the simulation: he looks over the bathtub and the daiquiri |
+| 28 | The banana fetches water | Every turn: up the hill with the bucket, and back to the bathtub |
+| 29 | The army of bananas | Every turn, the same by the dozen |
+| 30 | A knock from the yard | Three turns on: the package |
+| 31 | Twelve bytes forgotten | Clears twelve bytes at `3FA7:00BA`, a turn after any of the plunger, keys, lever, valve and pedals |
+| 32 | Everyone out of the pool | From the right galumph pedal: and at your feet, the cookie cutter |
+| 33 | The Welcome Back Party fills | The dining workers, then Barmaid U's finest |
+| 34 | The Royal Parade | Every turn: the heralds, the Queen's float, the largesse, the marching band |
+| 35 | The hellhounds come | A turn after the whistle |
+| 36 | The bier is brought in | Pall bearers carry in President Tickingclock |
+| 37 | You are yourself again | Sixteen turns after the Appliance changed you |
+| 38 | Hiddenmolar tells all | Every turn at the end: his story, the magic monitor, the Trustees |
+| 39 | The messenger | `I had an important letter for you, but I didn't want to interrupt` |
+| 40 | The cloak is finished | Ten turns on, at Heftysum Hall |
+| 41 | The cloak is brought | Twenty turns on, she climbs up to you with it |
+| 42 | The iron turns to copper | From the pouches and the bottle of the Alchemy Lab |
+| 43 | The copper dissolves | From the same |
+| 44 | The hanging | 24 turns after the Queen: the drums, the noose, the charges, the platform |
+| 45 | The cook and the hors d'oevres | Every turn: the tray, the pastry cart, the dumbwaiter |
+| 46 | The tree is a sapling again | Fifteen turns after it grew |
+| 47 | The Social Hall, turn by turn | Every turn at the party; it prints nothing of its own, and what it does isn't read |
+| 48 | A count down by sixes | Takes one from a byte at `4974:52EB` and starts itself again for six turns, until the byte is gone. From the pellet and the two daiquiris; what the byte is isn't read |
+| 49 | Seen in the Ancient Lab | Sets a byte when you are in the Ancient Lab with object 235 there |
+
+Three of them, 9, 10 and 25, are *Spellcasting 101*'s one-turn memories again: a routine
+sets a variable and starts the timer for the next turn, and all the timer does is clear it.
+Sleepiness, the class bell and the party are back from the first game too, as timers 5, 6
+and 15.
+
+Timers 47, 48 and 49 are named from what they touch and not from what they mean.
 
 ## The text
 
@@ -533,8 +595,8 @@ numbers worked out, the jokes of block 0 among them.
 ## Still to do
 
 Everything past the program, the vocabulary, the objects, the grammar, the routines, the
-timers' workings and the text. Flags 35, 39 and 40 have no meaning yet, and six more are
-named from who has them. What each timer does hasn't been read. The rules of the parser's
+timers and the text. Flags 35, 39 and 40 have no meaning yet, and six more are named from
+who has them. Three timers are named only from what they touch. The rules of the parser's
 own grammar aren't found either. The music is in a form *Spellcasting 101*'s reader doesn't
 read: a song in a `.MUS` file has two more bytes in its entry.
 
