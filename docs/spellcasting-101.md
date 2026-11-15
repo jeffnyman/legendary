@@ -645,10 +645,10 @@ The game's source started and stopped each timer by its routine's name, so
 stops and 5 askings. Whose routine a call is in says what the timer is about:
 
 ```
-timer 07ec:06df, which calls 3670:0e53 in overlay 3
+timer 07ec:06df: the man with the whip, which calls 3670:0e53 in overlay 3
     3670:01be in overlay 3: object 1 Bedchamber starts it with a count of 41
     3981:0223 in overlay 3: the routine at 3981:019e in overlay 3 stops it
-timer 07ec:06f1, which calls 3670:2dac in overlay 3
+timer 07ec:06f1: Miss Beancounter's spectacles, which calls 3670:2dac in overlay 3
     388e:0882 in overlay 3: object 79 rusty key starts it with a count of 1
     388e:0a71 in overlay 3: object 154 Miss Beancounter stops it
     388e:0bd8 in overlay 3: object 154 Miss Beancounter starts it to run every turn
@@ -656,13 +656,80 @@ timer 07ec:06f1, which calls 3670:2dac in overlay 3
 
 A timer's routine has to be where a far pointer can find it whatever overlays are loaded, so
 it is in the root. Most are six bytes there, one after another from `07EC:06D9`: a call into
-an overlay, where the work is done, and a return.
+an overlay, where the work is done, and a return. One isn't in the root: the registration
+line's is in overlay 4 itself, and is started and stopped only by the long line's routine,
+in the same overlay.
 
 The Bedchamber's routine starts two as the game begins, before any command. The one with a
 count of 2 runs at the end of the third turn, and then starts itself again with a count of 1,
-turn after turn: by what comes of it, this is Rottenwood on his way to the window. The other
-has a count of 41. The player's `--watch` says each timer as it is started, as it runs and as
-it is stopped, and `--panel` lists the ones that are going with the turns each has to go.
+turn after turn: footsteps on the stair, footsteps closer, and your stepfather through the
+door. The other has a count of 41, and is the man with the whip, who comes if you are still
+there. The player's `--watch` says each timer as it is started, as it runs and as it is
+stopped, and `--panel` lists the ones that are going with the turns each has to go.
+
+### What each timer does
+
+A timer's routine says what it is: the text it prints, the objects it moves, the room it
+asks whether you are in. These are all 46, named here by what they do; the names are made
+up, and the tools and the player use them. Most were read from their text and what they
+move, not instruction by instruction, and where less than that was read the table says so.
+
+| Timer | What it is | What its routine does |
+|---|---|---|
+| `07EC:04B4` | The simulation ends | The castle's routine starts it with a count of 8. It says `The world dissolves around you...` and puts you back in the simulation chair |
+| `07EC:06D9` | The stepfather on the stairs | The Bedchamber starts it with 2, and it starts itself again with 1: footsteps on the stair, footsteps closer, and then your stepfather bursts in, throws down the application and locks the door behind him |
+| `07EC:06DF` | The man with the whip | The Bedchamber starts it with 41: a vicious-looking man bursts in, cracking a whip. Getting out in time stops it |
+| `07EC:06E5` | The potty door closes | Started with 4 by the tiny door: `The potty door creaks slowly closed.` |
+| `07EC:06EB` | The voice at the gate | Started with 2 by the flat rock: a familiar voice from the far side of the gate |
+| `07EC:06F1` | Miss Beancounter's spectacles | Every turn while she rummages for them, finds them, cleans them and puts them on |
+| `07EC:06F7` | The amazon leader | In the VIP Suite: she comes in behind you and gets down to business |
+| `07EC:06FD` | The amazons' visits | Every turn in the VIP Suite: one amazon warrior after another comes for the Man, and leaves if you are dressed as a woman |
+| `07EC:0703` | The chambermaid | Started with 2 by the SIP Suite: a chambermaid comes in with linens |
+| `07EC:0709` | The waiter comes | Every turn in the Restaurant until the waiter has come to your table |
+| `07EC:070F` | The waiter brings it | Started with 1 by the waiter: what you ordered is brought to your table |
+| `07EC:0715` | The islanders gather | Every turn in the Meadow: a count kept at `4517:7202` goes up, by chance, toward 80 |
+| `07EC:071B` | The islanders' thanks | Started with 1: `80 cheering islanders carry you off on their shoulders`, and you are given the big key |
+| `07EC:0721` | Ocarina at home | The longest of them, started by the two condos and the curtains: people approach, Ocarina and Glockenspiel argue, he leaves, and she turns to you, or to her crossword |
+| `07EC:0727` | Glockenspiel comes back | Started with 1 by Ocarina and by the crossword puzzle: he bursts in and sets you to clearing the garbage dump |
+| `07EC:072D` | The gods quarrel | Started with 1 by the garbage: the other gods pour out of the condo and fall to fighting, and a thunderstorm begins |
+| `07EC:0733` | The gold gate shuts | Started with 1: clears the gate's flag 12, and says so if you are there to see |
+| `07EC:0739` | The silver gate shuts | The same, for the silver gate |
+| `07EC:073F` | The bronze gate shuts | The same, for the bronze gate |
+| `07EC:0745` | The ending | Every turn at the Stunning Climax: Joey explains himself, presses the two buttons, the Appliance does its work, and `THE END` |
+| `07EC:074B` | To Batguano Court | Six instructions: it moves you to Batguano Court. The long line's routine starts it, with a count it works out; why isn't followed |
+| `07EC:075A` | The role-players' game | Every turn in Frogkisser House: the Malls 'n' Muggers players' game, a line at a time |
+| `07EC:0760` | Meals at the Cafeteria | Every turn: the cook strikes the cowbell, and the staff start or stop serving breakfast, lunch or dinner |
+| `07EC:0766` | The Stadium's day | Every turn: Physical Skills class comes and goes, and later the fans file in |
+| `07EC:076C` | The professor tires | Started with 60 by the Professor's Office: `it's getting rather late` |
+| `07EC:0772` | The party starts | At the two fraternities: a band starts, and the house fills with partygoers |
+| `07EC:0778` | The party's chatter | Every turn at a fraternity after eight in the evening: by chance, one of a set of lines about the party |
+| `07EC:077E` | Gretchen with you | Every turn: Gretchen follows you, asks your name, and in the end passes out in your arms, or leaves |
+| `07EC:0784` | Gretchen arrives | At I Phelta Thi: it moves Gretchen in and starts the timer above. Inferred from what it moves; its text isn't read |
+| `07EC:078A` | The fratman | At a fraternity: `A fratman with a build like a Pokkaball star claps you on the shoulder` |
+| `07EC:07D2` | Dinner with Hillary | In the Housemaster's Suite: the pheasant, the potatoes and the wine come and go, and Hillary has her eye on you |
+| `07EC:07D8` | The class bell | A bell rings for the start or the finish of a class, the lecture hall empties, and the last newspaper is taken from the pile |
+| `07EC:07DE` | The dinner invitation | Professor Tickingclock waves to you and reminds you that you are expected at the suite |
+| `07EC:07E4` | Tickingclock comes in | It moves the professor into his office: `Professor Tickingclock creaks into the room` |
+| `07EC:07EA` | The lecture | Every turn in Meltingwolf Hall while a class is on: the professor lectures, and praises a spell well cast |
+| `07EC:07F0` | The day's first look | Started with 45 by the routine that starts a day: it describes the room again, and at the Boat Dock, once, brings Professor Peelerofsmallfigs. Only partly read |
+| `07EC:089F` | A word forgotten | Four instructions: it clears a word at `3B00:3BD4`. A dozen actions start it with 1, so the word lasts one turn. What the word is isn't read |
+| `07EC:08AD` | A byte forgotten | The same for a byte at `3B00:3BD6`, started with 1 by several rooms and objects |
+| `07EC:08BA` | FRIMP wears off | Started with 1 by `frimp` and by the beds: what was floating `sinks back down` |
+| `07EC:09F3` | Sleepiness | Started with a long count: `You begin to feel kind of sleepy`, then `really really tired`, and then you fall asleep where you are and the next day starts |
+| `07EC:128A` | ZEM wears off | Started with 5: `You suddenly feel less robust as the ZEM spell wears off.` |
+| `07EC:12A3` | The dragon's breath | At the Base of Keep: the atomic dragon breathes fire, which you dodge once |
+| `07EC:12A9` | The pendulum | Started with 7 at the Far Side of Moat: the pendulum reaches Lola, with a different line for how near you are. The lever stops it |
+| `09BB:0D1E` | The red button resets | Three instructions: it clears a byte at `4517:37AE`, a turn after the red button is pressed |
+| `09BB:0D26` | The surfboard's trip | Every turn while the surfboard is under way: it crosses the water, arrives, or sputters to a stop |
+| `3670:0899` | The registration line | Every turn in Donkeydung Hall: the line moves, you reach the registrar, and you are registered and given the spell book, the notebook and the rest |
+
+They are the story's clockwork, and nearly all of it. A place that is alive while you are
+there has a timer that runs every turn: the Cafeteria's meals, the Stadium's day, the
+lecture, the party. A thing that is going to happen has one with a count: the man with the
+whip in 41 turns, the pendulum in 7, the professor's patience in 60. A scene told a line at
+a time is a timer that starts itself again with a count of 1, as the stepfather's is. And
+four are only housekeeping, a few instructions that clear a variable a turn after something
+set it. Sleepiness is one too, and its routine is the one that goes on to start the next day.
 
 ## From an action to what happens
 
@@ -1233,7 +1300,7 @@ yet by its code: it's used up, and ends only the page it is pressed at.
   and 40 are loaded.
 - What a routine's answer means beyond zero, and 2 from performing; the reasons from 8 to 14.
 - The rest of the actions' bytes.
-- What the 46 timers each do: their routines are found, and not read. Who has the timers run several turns at once, and what stops one from running for a turn.
+- Of the timers: why the long line sends you to Batguano Court, what the two variables are that a timer forgets after a turn, and the rest of the routine that starts a day, at `07EC:0B9F`. Who has the timers run several turns at once, and what stops one from running for a turn.
 - The rest of an object's record: the fields past the tree. Which of a thing's lists is which, beyond [the second being what's on it](#what-the-flags-are) when it has flag 33.
 - What tells flag 26 from flag 27, and what the 80 things with flag 32 are.
 - How the far pointers in a saved game are made right, and what a saved state's last part counts.
