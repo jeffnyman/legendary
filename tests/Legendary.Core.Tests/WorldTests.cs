@@ -143,6 +143,12 @@ public sealed class WorldTests
         Assert.Equal(0x106840ul, fireplace.Flags);
         Assert.Equal([7, 12, 14, 15, 21], Enumerable.Range(1, 64).Where(fireplace.Has));
 
+        // a flag has a name, which for a place or a person can be another
+        Assert.Equal("open", world.Map.FlagName(12, 2));
+        Assert.Equal(("touched", "visited"), (world.Map.FlagName(10, 2), world.Map.FlagName(10, 1)));
+        Assert.Equal(("gives light", "gives light", "female"), (world.Map.FlagName(9, 1), world.Map.FlagName(9, 2), world.Map.FlagName(9, 7)));
+        Assert.Null(world.Map.FlagName(18, 2));
+
         // a room is nowhere, and on no list
         Assert.Equal((0x100ul, 0, 0, -1), (world.State(1).Flags, world.State(1).Place, world.State(1).SecondPlace, world.State(1).Relation));
 

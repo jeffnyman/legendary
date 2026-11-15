@@ -85,6 +85,15 @@ public sealed record AnswerPoint(ushort Offset, Asked Asked);
 /// Names for actions the grammar would name badly: going somewhere, which every direction's
 /// word makes, would have a direction's name.
 /// </param>
+/// <param name="PlaceType">The type of object that is a place.</param>
+/// <param name="PersonType">The type of object that is a person.</param>
+/// <param name="FlagNames">
+/// What each flag is, by its number, as the program's code uses it: a flag that isn't here is
+/// one nothing has and nothing asks about.
+/// </param>
+/// <param name="PlaceFlagNames">The flags that are something else for a place.</param>
+/// <param name="PersonFlagNames">The flags that are something else for a person.</param>
+/// <param name="StateFlags">The flags that say how a thing is for now, worth saying beside its name.</param>
 /// <param name="Layouts">The records' layouts, by type.</param>
 public sealed record WorldMap(
     ushort DataSegment, ushort TableSegment, int ObjectCount, ushort CountOffset, ushort TypesOffset,
@@ -94,8 +103,19 @@ public sealed record WorldMap(
     ushort JumpBackOffset, int GoAction, ushort DirectionOffset, IReadOnlyList<string> Directions,
     ushort GrammarSegment, ushort FormsOffset, ushort SecondsOffset, string VocabularyFile,
     IReadOnlyDictionary<int, string> ActionNames,
+    int PlaceType, int PersonType,
+    IReadOnlyDictionary<int, string> FlagNames,
+    IReadOnlyDictionary<int, string> PlaceFlagNames,
+    IReadOnlyDictionary<int, string> PersonFlagNames,
+    IReadOnlyList<int> StateFlags,
     IReadOnlyDictionary<int, RecordLayout> Layouts)
 {
+    /// <summary>What a flag is for an object of a type, or null when it isn't known.</summary>
+    public string? FlagName(int flag, int type) =>
+        type == PlaceType && PlaceFlagNames.TryGetValue(flag, out string? place) ? place
+        : type == PersonType && PersonFlagNames.TryGetValue(flag, out string? person) ? person
+        : FlagNames.GetValueOrDefault(flag);
+
     /// <summary><i>Spellcasting 101: Sorcerers Get All the Girls</i> (1990).</summary>
     public static WorldMap Spellcasting101 { get; } = new(
         DataSegment: 0x4517, TableSegment: 0x2929, ObjectCount: 427, CountOffset: 0x34E4, TypesOffset: 0x34C9,
@@ -115,6 +135,44 @@ public sealed record WorldMap(
         Directions: ["", "north", "northeast", "east", "southeast", "south", "southwest", "west", "northwest", "up", "down", "in", "out"],
         GrammarSegment: 0x2B6A, FormsOffset: 0x00D1, SecondsOffset: 0x0F81, VocabularyFile: "VOCAB.DAT",
         ActionNames: new Dictionary<int, string> { [197] = "go" },
+        PlaceType: 1, PersonType: 7,
+        FlagNames: new Dictionary<int, string>
+        {
+            [2] = "its name takes an",
+            [3] = "plural",
+            [4] = "takes some",
+            [5] = "its name takes no article",
+            [6] = "seen",
+            [7] = "not listed",
+            [8] = "special to take",
+            [9] = "gives light",
+            [10] = "touched",
+            [11] = "a door",
+            [12] = "open",
+            [13] = "locked",
+            [14] = "can't be opened or closed",
+            [15] = "a container",
+            [16] = "left out of all",
+            [17] = "lit",
+            [19] = "can be seen through",
+            [20] = "can be read",
+            [21] = "can be got in or on",
+            [22] = "burns",
+            [23] = "can be taken",
+            [24] = "can be worn",
+            [25] = "a key",
+            [26] = "cuts",
+            [27] = "cuts",
+            [28] = "can be eaten",
+            [29] = "what's dropped in it lands outside",
+            [30] = "magic",
+            [31] = "can be lit",
+            [32] = "to be looked for",
+            [33] = "things can be on it",
+        },
+        PlaceFlagNames: new Dictionary<int, string> { [7] = "outdoors", [10] = "visited" },
+        PersonFlagNames: new Dictionary<int, string> { [8] = "can be asked things", [9] = "female" },
+        StateFlags: [12, 13, 17],
         Layouts: new Dictionary<int, RecordLayout>
         {
             [1] = new(28, Lists: 0x0E, ExitCount: 0x16, Exits: 0x18),

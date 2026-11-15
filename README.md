@@ -74,9 +74,9 @@ world:     answered by fireplace (62), asked as the object: 1
 world: 3:45 pm, turn 2, in Bedchamber (1)
 world:   action 128: open writing desk (61)
 world:     answered by the action's own routine: 1
-world:   writing desk (61): flag 10 set
-world:   writing desk (61): flag 12 set
-world:   love note (74): flag 6 set
+world:   writing desk (61): flag 10, touched, set
+world:   writing desk (61): flag 12, open, set
+world:   love note (74): flag 6, seen, set
 world: 3:50 pm, turn 3, in Bedchamber (1)
 world:   action 74: get love note (74)
 world:     answered by the action's own routine: 1

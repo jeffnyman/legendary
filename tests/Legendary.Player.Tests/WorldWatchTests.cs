@@ -135,6 +135,7 @@ public sealed class WorldWatchTests : IDisposable
         Type("examine rat\n");
         Type("climb chimney\n");
         Type("open desk\n");
+        string[] opened = [.. watch.Panel(46, 60).Select(line => line.Text)];
         Type("take note\n");
         Type("n\n");
 
@@ -150,8 +151,8 @@ public sealed class WorldWatchTests : IDisposable
             lines[3]);
 
         // describing the room sets a flag on it and on each thing it mentions
-        Assert.Contains("world:   Bedchamber (1): flag 10 set", lines);
-        Assert.Contains("world:   rat (352): flag 6 set", lines);
+        Assert.Contains("world:   Bedchamber (1): flag 10, visited, set", lines);
+        Assert.Contains("world:   rat (352): flag 6, seen, set", lines);
 
         // the lines from one that is there to the next action's, or to the end
         string[] After(string line)
@@ -179,10 +180,10 @@ public sealed class WorldWatchTests : IDisposable
         Assert.Equal(
             [
                 "world:     answered by the action's own routine: 1",
-                "world:   writing desk (61): flag 10 set",
-                "world:   writing desk (61): flag 12 set",
-                "world:   application (73): flag 6 set",
-                "world:   love note (74): flag 6 set",
+                "world:   writing desk (61): flag 10, touched, set",
+                "world:   writing desk (61): flag 12, open, set",
+                "world:   application (73): flag 6, seen, set",
+                "world:   love note (74): flag 6, seen, set",
                 "world: 3:50 pm, turn 3, in Bedchamber (1)",
             ],
             After("world:   action 128: open writing desk (61)"));
@@ -204,7 +205,12 @@ public sealed class WorldWatchTests : IDisposable
         Assert.Contains("world:   here: you (153) [love note (74), cloak (82)], tiny door (66)", gone);
         Assert.Contains("world:   exits: south to Bedchamber (1); down: a routine decides", gone);
         Assert.Contains("world:     ended by a routine that jumped back to the main loop: done", gone);
-        Assert.Contains("world:   Potty Chamber (2): flag 10 set", gone);
+        Assert.Contains("world:   Potty Chamber (2): flag 10, visited, set", gone);
+
+        // the panel says what is open beside its name: the desk once opened, and the fireplace
+        // from the start
+        Assert.Contains("  writing desk (61), open", opened);
+        Assert.Contains("  fireplace (62), open", opened);
 
         // the panel: the world as it is now, down a column, and under it the last of what was said
         var panel = watch.Panel(46, 60);

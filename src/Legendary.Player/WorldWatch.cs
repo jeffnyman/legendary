@@ -226,7 +226,7 @@ internal sealed class WorldWatch(Machine machine, WorldMap map, TextWriter? outp
             {
                 // a thing on a list after its holder's first is held another way: worn, say
                 int list = world.State(inside).Relation;
-                lines.Add(new PanelLine(new string(' ', 2 * depth) + Name(world, inside) + (list > 0 ? $", list {list + 1}" : "")));
+                lines.Add(new PanelLine(new string(' ', 2 * depth) + Name(world, inside) + (list > 0 ? $", list {list + 1}" : "") + How(world, inside)));
                 if (depth < 4)
                 {
                     Under(inside, depth + 1);
@@ -270,7 +270,8 @@ internal sealed class WorldWatch(Machine machine, WorldMap map, TextWriter? outp
             {
                 if (was.Has(flag) != state.Has(flag))
                 {
-                    Say($"  {Name(world, number)}: flag {flag} {(state.Has(flag) ? "set" : "cleared")}");
+                    string name = map.FlagName(flag, world.Object(number).Type) is { } known ? $", {known}," : "";
+                    Say($"  {Name(world, number)}: flag {flag}{name} {(state.Has(flag) ? "set" : "cleared")}");
                 }
             }
         }
@@ -399,6 +400,13 @@ internal sealed class WorldWatch(Machine machine, WorldMap map, TextWriter? outp
     }
 
     private byte Read(int linear) => machine.Read((uint)linear);
+
+    // how a thing is for now, after its name: ", open", ", locked"
+    private string How(World world, int number)
+    {
+        var (state, type) = (world.State(number), world.Object(number).Type);
+        return string.Concat(map.StateFlags.Where(state.Has).Select(flag => map.FlagName(flag, type)).OfType<string>().Select(name => $", {name}"));
+    }
 
     private static string Name(World world, int number) => $"{world.Object(number).Name} ({number})";
 
