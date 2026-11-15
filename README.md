@@ -135,7 +135,7 @@ Exits
   down   a routine decides
 
 Timers
-  07EC:06DF (Bedchamber): 37 turns to go
+  the man with the whip: 37 turns to go
 
 Lately
 action 197: go north

@@ -191,8 +191,8 @@ public sealed class WorldWatchTests : IDisposable
                 "world:   writing desk (61): flag 12, open, set",
                 "world:   application (73): flag 6, seen, set",
                 "world:   love note (74): flag 6, seen, set",
-                "world:   timer 07EC:06D9 (Bedchamber) runs",
-                "world:   timer 07EC:06D9 (Bedchamber) started: 1 turn to go",
+                "world:   timer 07EC:06D9 (the stepfather on the stairs) runs",
+                "world:   timer 07EC:06D9 (the stepfather on the stairs) started: 1 turn to go",
                 "world: 3:50 pm, turn 3, in Bedchamber (1)",
             ],
             After("world:   action 128: open writing desk (61)"));
@@ -226,7 +226,7 @@ public sealed class WorldWatchTests : IDisposable
         Assert.All(panel, line => Assert.True(line.Text.Length <= 46));
         Assert.True(panel.Count <= 60);
         string[] shown = [.. panel.Select(line => line.Text)];
-        Assert.Equal(["4:05 pm   turn 6", "Potty Chamber (2)", "", "Here", "  you (153)", "    love note (74)", "    cloak (82), list 2", "  tiny door (66)", "", "Exits", "  south  to Bedchamber (1)", "  down   a routine decides", "", "Timers", "  07EC:06DF (Bedchamber): 35 turns to go", "", "Lately"], shown[..17]);
+        Assert.Equal(["4:05 pm   turn 6", "Potty Chamber (2)", "", "Here", "  you (153)", "    love note (74)", "    cloak (82), list 2", "  tiny door (66)", "", "Exits", "  south  to Bedchamber (1)", "  down   a routine decides", "", "Timers", "  the man with the whip: 35 turns to go", "", "Lately"], shown[..17]);
         Assert.Equal([PanelTone.Title, PanelTone.Title, PanelTone.Text, PanelTone.Dim], panel.Take(4).Select(line => line.Tone));
         Assert.Contains(new PanelLine("action 197: go north", PanelTone.Action), panel);
         Assert.Contains(new PanelLine("you (153) moved: from Bedchamber (1) to Potty", PanelTone.Text), panel);
@@ -260,11 +260,11 @@ public sealed class WorldWatchTests : IDisposable
         // stops one in these turns, and a stop of a timer that isn't going isn't said
         int place = Array.IndexOf(lines, "world: 3:35 pm, turn 0, in Bedchamber (1)"), first = Array.IndexOf(lines, "world:   words: examine [verb] rat [noun]");
         Assert.Equal(
-            ["world:   timer 07EC:06D9 (Bedchamber) started: 2 turns to go", "world:   timer 07EC:06DF (Bedchamber) started: 41 turns to go"],
+            ["world:   timer 07EC:06D9 (the stepfather on the stairs) started: 2 turns to go", "world:   timer 07EC:06DF (the man with the whip) started: 41 turns to go"],
             lines[place..first].Where(line => line.Contains("timer", StringComparison.Ordinal)));
         Assert.Equal(4, lines.Count(line => line.EndsWith(" runs", StringComparison.Ordinal)));
         Assert.DoesNotContain(lines, line => line.EndsWith(" stopped", StringComparison.Ordinal));
-        Assert.Contains("world:   timer 07EC:08AD (right window) started: 1 turn to go", lines);
+        Assert.Contains("world:   timer 07EC:08AD (a byte forgotten) started: 1 turn to go", lines);
 
         // between a command's words and its action: the form of the grammar the words fit, and
         // for each phrase the objects it could be, with where the form let them be looked for.

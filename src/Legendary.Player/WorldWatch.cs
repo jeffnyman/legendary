@@ -252,7 +252,9 @@ internal sealed class WorldWatch(Machine machine, WorldMap map, TextWriter? outp
         {
             lines.Add(new PanelLine(""));
             lines.Add(new PanelLine("Timers", PanelTone.Dim));
-            lines.AddRange(timers.Select(timer => new PanelLine($"  {TimerName(timer)["timer ".Length..]}: {TimerCount(timer)}")));
+            // by name alone, to fit the panel: the address is in what the watch says
+            lines.AddRange(timers.Select(timer => new PanelLine(
+                $"  {map.TimerNames.GetValueOrDefault(timer.Key) ?? $"{timer.Segment:X4}:{timer.Offset:X4}"}: {TimerCount(timer)}")));
         }
 
         return lines;
@@ -443,9 +445,9 @@ internal sealed class WorldWatch(Machine machine, WorldMap map, TextWriter? outp
         }
     }
 
-    // a timer by its routine's address, and by who starts it when the map says
+    // a timer by its routine's address, and by the name the map has for what it does
     private string TimerName(WorldTimer timer) =>
-        $"timer {timer.Segment:X4}:{timer.Offset:X4}" + (map.TimerStarters.TryGetValue(timer.Key, out string? starter) ? $" ({starter})" : "");
+        $"timer {timer.Segment:X4}:{timer.Offset:X4}" + (map.TimerNames.TryGetValue(timer.Key, out string? name) ? $" ({name})" : "");
 
     private static string TimerCount(WorldTimer timer) =>
         timer.EveryTurn ? "every turn" : timer.Count == 1 ? "1 turn to go" : $"{timer.Count} turns to go";

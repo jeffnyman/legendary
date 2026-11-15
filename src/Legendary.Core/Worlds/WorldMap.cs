@@ -133,9 +133,9 @@ public sealed record AnswerPoint(ushort Offset, Asked Asked);
 /// </param>
 /// <param name="TimerStopOffset">There, the routine that takes one out: called far with the routine.</param>
 /// <param name="TimerRunOffset">There, the call of a timer's routine, as its turn comes.</param>
-/// <param name="TimerStarters">
-/// For a timer's routine, by its segment and offset as one number, the object whose routine
-/// starts it, by name: something to know the timer by.
+/// <param name="TimerNames">
+/// A name for each timer, by its routine's segment and offset as one number: what its routine
+/// does, from reading it.
 /// </param>
 /// <param name="PlaceType">The type of object that is a place.</param>
 /// <param name="PersonType">The type of object that is a person.</param>
@@ -160,7 +160,7 @@ public sealed record WorldMap(
     ushort FormOffset, ushort FormIndexOffset, ushort FormActionOffset, ushort FoundOffset, ushort LotsOffset, int LotSize, ushort LotCountOffset,
     ushort TimersOffset, ushort TimerCountOffset, ushort TimerIndexOffset,
     ushort TimerSegment, ushort TimerStartOffset, ushort TimerStopOffset, ushort TimerRunOffset,
-    IReadOnlyDictionary<int, string> TimerStarters,
+    IReadOnlyDictionary<int, string> TimerNames,
     int PlaceType, int PersonType,
     IReadOnlyDictionary<int, string> FlagNames,
     IReadOnlyDictionary<int, string> PlaceFlagNames,
@@ -205,22 +205,54 @@ public sealed record WorldMap(
         FormOffset: 0x21ED, FormIndexOffset: 0x8AD6, FormActionOffset: 0x54, FoundOffset: 0x0CCB, LotsOffset: 0x3C, LotSize: 12, LotCountOffset: 0x38,
         TimersOffset: 0x4F30, TimerCountOffset: 0x7858, TimerIndexOffset: 0x785A,
         TimerSegment: 0x1272, TimerStartOffset: 0x0033, TimerStopOffset: 0x00BF, TimerRunOffset: 0x0250,
-        TimerStarters: new Dictionary<int, string>
+        TimerNames: new Dictionary<int, string>
         {
-            [0x07EC04B4] = "castle", [0x07EC06D9] = "Bedchamber", [0x07EC06DF] = "Bedchamber",
-            [0x07EC06E5] = "tiny door", [0x07EC06EB] = "flat rock", [0x07EC06F1] = "rusty key",
-            [0x07EC06F7] = "VIP Suite", [0x07EC06FD] = "VIP Suite", [0x07EC0703] = "SIP Suite",
-            [0x07EC0709] = "Restaurant", [0x07EC070F] = "waiter", [0x07EC0715] = "Meadow", [0x07EC0721] = "Condo East",
-            [0x07EC0727] = "Ocarina", [0x07EC072D] = "garbage", [0x07EC0733] = "Gateroom", [0x07EC0739] = "Gateroom",
-            [0x07EC073F] = "gold X", [0x07EC0745] = "Stunning Climax", [0x07EC074B] = "long line",
-            [0x07EC075A] = "Frogkisser House", [0x07EC0760] = "Cafeteria", [0x07EC0766] = "Sorcerer Stadium",
-            [0x07EC076C] = "Professor's Office", [0x07EC0772] = "I Phelta Thi", [0x07EC0778] = "scribbled note",
-            [0x07EC077E] = "your bed", [0x07EC0784] = "I Phelta Thi", [0x07EC078A] = "I Phelta Thi",
-            [0x07EC07D2] = "Housemaster's Suite", [0x07EC07D8] = "long line", [0x07EC07DE] = "Professor's Office",
-            [0x07EC07E4] = "Professor's Office", [0x07EC07EA] = "Meltingwolf Hall", [0x07EC089F] = "gardening tools",
-            [0x07EC08AD] = "right window", [0x07EC08BA] = "trap door", [0x07EC09F3] = "long line", [0x07EC128A] = "you",
-            [0x07EC12A3] = "Base of Keep", [0x07EC12A9] = "Far Side of Moat", [0x09BB0D1E] = "red button",
-            [0x09BB0D26] = "red button", [0x36700899] = "long line",
+            [0x07EC04B4] = "the simulation ends",
+            [0x07EC06D9] = "the stepfather on the stairs",
+            [0x07EC06DF] = "the man with the whip",
+            [0x07EC06E5] = "the potty door closes",
+            [0x07EC06EB] = "the voice at the gate",
+            [0x07EC06F1] = "Miss Beancounter's spectacles",
+            [0x07EC06F7] = "the amazon leader",
+            [0x07EC06FD] = "the amazons' visits",
+            [0x07EC0703] = "the chambermaid",
+            [0x07EC0709] = "the waiter comes",
+            [0x07EC070F] = "the waiter brings it",
+            [0x07EC0715] = "the islanders gather",
+            [0x07EC071B] = "the islanders' thanks",
+            [0x07EC0721] = "Ocarina at home",
+            [0x07EC0727] = "Glockenspiel comes back",
+            [0x07EC072D] = "the gods quarrel",
+            [0x07EC0733] = "the gold gate shuts",
+            [0x07EC0739] = "the silver gate shuts",
+            [0x07EC073F] = "the bronze gate shuts",
+            [0x07EC0745] = "the ending",
+            [0x07EC074B] = "to Batguano Court",
+            [0x07EC075A] = "the role-players' game",
+            [0x07EC0760] = "meals at the Cafeteria",
+            [0x07EC0766] = "the Stadium's day",
+            [0x07EC076C] = "the professor tires",
+            [0x07EC0772] = "the party starts",
+            [0x07EC0778] = "the party's chatter",
+            [0x07EC077E] = "Gretchen with you",
+            [0x07EC0784] = "Gretchen arrives",
+            [0x07EC078A] = "the fratman",
+            [0x07EC07D2] = "dinner with Hillary",
+            [0x07EC07D8] = "the class bell",
+            [0x07EC07DE] = "the dinner invitation",
+            [0x07EC07E4] = "Tickingclock comes in",
+            [0x07EC07EA] = "the lecture",
+            [0x07EC07F0] = "the day's first look",
+            [0x07EC089F] = "a word forgotten",
+            [0x07EC08AD] = "a byte forgotten",
+            [0x07EC08BA] = "FRIMP wears off",
+            [0x07EC09F3] = "sleepiness",
+            [0x07EC128A] = "ZEM wears off",
+            [0x07EC12A3] = "the dragon's breath",
+            [0x07EC12A9] = "the pendulum",
+            [0x09BB0D1E] = "the red button resets",
+            [0x09BB0D26] = "the surfboard's trip",
+            [0x36700899] = "the registration line",
         },
         PlaceType: 1, PersonType: 7,
         FlagNames: new Dictionary<int, string>

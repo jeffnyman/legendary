@@ -45,7 +45,7 @@ public sealed record WorldTimer(int Segment, int Offset, int Count)
     /// <summary>Whether it runs every turn.</summary>
     public bool EveryTurn => Count == -1;
 
-    /// <summary>The segment and offset as one number, as the map's names for timers have them.</summary>
+    /// <summary>The segment and offset as one number, as the map's names for the timers have them.</summary>
     public int Key => (Segment << 16) | Offset;
 }
 
