@@ -55,6 +55,32 @@ public sealed class WorldWatchTests : IDisposable
     public void A_time_is_said_as_the_game_says_it(int minutes, string said) => Assert.Equal(said, WorldWatch.Time(minutes));
 
     [Fact]
+    public void A_line_too_long_for_the_panel_is_folded_under_itself()
+    {
+        var folded = WorldWatch.Fold(new PanelLine("  answered by rat (352), asked as the object: 1", PanelTone.Action), 20).ToList();
+        Assert.Equal(["  answered by rat", "    (352), asked as", "    the object: 1"], folded.Select(line => line.Text));
+        Assert.All(folded, line => Assert.Equal(PanelTone.Action, line.Tone));
+        Assert.All(folded, line => Assert.True(line.Text.Length <= 20));
+
+        // a word longer than the line is cut where the line ends
+        Assert.Equal(["abcdefghij", "  klmnopqr", "  st"], WorldWatch.Fold(new PanelLine("abcdefghijklmnopqrst"), 10).Select(line => line.Text));
+
+        // what fits is left alone
+        Assert.Equal([new PanelLine("Here", PanelTone.Dim)], WorldWatch.Fold(new PanelLine("Here", PanelTone.Dim), 20));
+    }
+
+    [Fact]
+    public void Before_the_game_is_there_the_panel_says_so()
+    {
+        var machine = new Machine(_saves, _saves);
+        var watch = new WorldWatch(machine, WorldMap.Spellcasting101, null);
+        watch.Look();
+        Assert.Equal(
+            [new PanelLine("Legendary", PanelTone.Title), new PanelLine("The game isn't in memory yet.", PanelTone.Dim)],
+            watch.Panel(40, 30));
+    }
+
+    [Fact]
     public void Why_a_routine_is_asked_is_said_in_words()
     {
         Assert.Equal("where it happens", WorldWatch.Why(1));
@@ -179,6 +205,22 @@ public sealed class WorldWatchTests : IDisposable
         Assert.Contains("world:   exits: south to Bedchamber (1); down: a routine decides", gone);
         Assert.Contains("world:     ended by a routine that jumped back to the main loop: done", gone);
         Assert.Contains("world:   Potty Chamber (2): flag 10 set", gone);
+
+        // the panel: the world as it is now, down a column, and under it the last of what was said
+        var panel = watch.Panel(46, 60);
+        Assert.All(panel, line => Assert.True(line.Text.Length <= 46));
+        Assert.True(panel.Count <= 60);
+        string[] shown = [.. panel.Select(line => line.Text)];
+        Assert.Equal(["3:55 pm   turn 4", "Potty Chamber (2)", "", "Here", "  you (153)", "    love note (74)", "    cloak (82), list 2", "  tiny door (66)", "", "Exits", "  south  to Bedchamber (1)", "  down   a routine decides", "", "Lately"], shown[..14]);
+        Assert.Equal([PanelTone.Title, PanelTone.Title, PanelTone.Text, PanelTone.Dim], panel.Take(4).Select(line => line.Tone));
+        Assert.Contains(new PanelLine("action 197: go north", PanelTone.Action), panel);
+        Assert.Contains(new PanelLine("you (153) moved: from Bedchamber (1) to Potty", PanelTone.Text), panel);
+        Assert.DoesNotContain(shown, line => line.StartsWith("here:", StringComparison.Ordinal) || line.StartsWith("exits:", StringComparison.Ordinal));
+
+        // a short panel keeps the top of the world and the end of what was said
+        var small = watch.Panel(46, 12);
+        Assert.Equal(12, small.Count);
+        Assert.Equal("3:55 pm   turn 4", small[0].Text);
 
         // five commands, six actions; the exits are said once for each room
         Assert.Equal(6, lines.Count(line => line.StartsWith("world:   action ", StringComparison.Ordinal)));

@@ -42,6 +42,12 @@ internal sealed class PlayerOptions
 
     /// <summary>Something to do after each frame of the machine's time; null for nothing.</summary>
     public Action? EachFrame { get; init; }
+
+    /// <summary>
+    /// What a panel down the window's right side shows, for a panel of so many columns and
+    /// rows; null for no panel.
+    /// </summary>
+    public Func<int, int, IReadOnlyList<PanelLine>>? Panel { get; init; }
 }
 
 /// <summary>
@@ -102,6 +108,9 @@ internal sealed unsafe class SdlPlayer : IDisposable
     // the disk last said to be in drive A:, to say when the machine answers a game's prompt for another
     private int _floppyShown;
 
+    // the panel's width, in characters
+    private const int PanelColumns = 46;
+
     public SdlPlayer(Machine machine, PlayerOptions options)
     {
         _machine = machine;
@@ -113,7 +122,10 @@ internal sealed unsafe class SdlPlayer : IDisposable
         SdlException.ThrowIfFalse(
             SDL_Init(SDL_InitFlags.SDL_INIT_VIDEO | SDL_InitFlags.SDL_INIT_EVENTS | SDL_InitFlags.SDL_INIT_GAMEPAD),
             "SDL_Init");
-        _window = new SdlWindow(options.Title, options.Scale, options.Fullscreen, options.SquarePixels);
+        _window = new SdlWindow(options.Title, options.Scale, options.Fullscreen, options.SquarePixels, options.Panel is null ? 0 : PanelColumns)
+        {
+            Panel = options.Panel,
+        };
         _window.SetIcon(options.Icon);
         if (options.Sound)
         {

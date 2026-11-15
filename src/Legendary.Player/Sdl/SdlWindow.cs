@@ -30,9 +30,13 @@ internal sealed unsafe class SdlWindow : IDisposable
     private SDL_Texture* _frame;
     private int _width, _height;
 
-    public SdlWindow(string title, int scale, bool fullscreen, bool squarePixels)
+    // a panel of text down the window's right side, so many characters wide; 0 for none
+    private readonly int _panelColumns;
+
+    public SdlWindow(string title, int scale, bool fullscreen, bool squarePixels, int panelColumns = 0)
     {
         _title = title;
+        _panelColumns = Math.Max(0, panelColumns);
         SquarePixels = squarePixels;
         var flags = SDL_WindowFlags.SDL_WINDOW_RESIZABLE;
         if (fullscreen)
@@ -43,13 +47,19 @@ internal sealed unsafe class SdlWindow : IDisposable
         // sized for mode 13h, the games' own
         scale = Math.Max(1, scale);
         int height = squarePixels ? 200 * scale : (int)(320 * scale / MonitorAspect);
-        _window = SdlException.ThrowIfNull(SDL_CreateWindow(title, 320 * scale, height, flags), "SDL_CreateWindow");
-        SdlException.ThrowIfFalse(SDL_SetWindowMinimumSize(_window, 320, 200), "SDL_SetWindowMinimumSize");
+        _window = SdlException.ThrowIfNull(SDL_CreateWindow(title, (320 * scale) + (int)PanelWidth(height, 1), height, flags), "SDL_CreateWindow");
+        SdlException.ThrowIfFalse(SDL_SetWindowMinimumSize(_window, 320 + (int)PanelWidth(200, 1), 200), "SDL_SetWindowMinimumSize");
 
         // the best the system has; SDL falls back on its own software renderer
         _renderer = SdlException.ThrowIfNull(SDL_CreateRenderer(_window, (string?)null), "SDL_CreateRenderer");
         Resize(320, 200);
     }
+
+    /// <summary>
+    /// What the panel shows, asked each time the window is painted: the lines for a panel of
+    /// so many columns and rows. Null, or a window made with no panel, and there is none.
+    /// </summary>
+    public Func<int, int, IReadOnlyList<PanelLine>>? Panel { get; set; }
 
     public bool IsFullscreen => (SDL_GetWindowFlags(_window) & SDL_WindowFlags.SDL_WINDOW_FULLSCREEN) != 0;
 
@@ -70,7 +80,7 @@ internal sealed unsafe class SdlWindow : IDisposable
                 return (320, 200);
             }
 
-            var picture = Fit(windowWidth, windowHeight);
+            var picture = Fit(windowWidth, windowHeight, 1);
             return (picture.w, picture.h);
         }
     }
@@ -129,11 +139,61 @@ internal sealed unsafe class SdlWindow : IDisposable
             return;
         }
 
-        var target = Fit(windowWidth, windowHeight);
+        // the renderer's size is in pixels, of which a high-resolution screen has more than
+        // the window has units
+        float density = Math.Max(SDL_GetWindowPixelDensity(_window), 1f);
+        var target = Fit(windowWidth, windowHeight, density);
         SDL_SetRenderDrawColor(_renderer, 0, 0, 0, 255);
         SDL_RenderClear(_renderer);
         SdlException.ThrowIfFalse(SDL_RenderTexture(_renderer, _frame, null, &target), "SDL_RenderTexture");
+        DrawPanel(windowWidth, windowHeight, density);
         SDL_RenderPresent(_renderer);
+    }
+
+    // the panel's text is SDL's own small font, 8 pixels square, drawn bigger on a big window
+    private const int Glyph = 8, LineHeight = 10, Margin = 8;
+
+    /// <summary>How many times its size the panel's text is drawn, in pixels, for a window of a height.</summary>
+    private static float TextScale(int windowHeight, float density) => Math.Max(1, (int)(windowHeight / density) / 480) * density;
+
+    /// <summary>The panel's width, in the units the height is in: none with no panel.</summary>
+    private float PanelWidth(int windowHeight, float density) =>
+        _panelColumns == 0 ? 0 : ((_panelColumns * Glyph) + (2 * Margin)) * TextScale(windowHeight, density);
+
+    private void DrawPanel(int windowWidth, int windowHeight, float density)
+    {
+        if (_panelColumns == 0)
+        {
+            return;
+        }
+
+        float scale = TextScale(windowHeight, density), width = PanelWidth(windowHeight, density);
+        var back = new SDL_FRect { x = windowWidth - width, y = 0, w = width, h = windowHeight };
+        SDL_SetRenderDrawColor(_renderer, 0x10, 0x14, 0x28, 0xFF);
+        SDL_RenderFillRect(_renderer, &back);
+        if (Panel is null)
+        {
+            return;
+        }
+
+        int rows = Math.Max(1, (int)((windowHeight / scale) - (2 * Margin)) / LineHeight);
+        var lines = Panel(_panelColumns, rows);
+        SDL_SetRenderScale(_renderer, scale, scale);
+        for (int row = 0; row < lines.Count && row < rows; row++)
+        {
+            var (r, g, b) = lines[row].Tone switch
+            {
+                PanelTone.Title => (0xF0, 0xC0, 0x40),
+                PanelTone.Dim => (0x80, 0x88, 0xA0),
+                PanelTone.Action => (0x90, 0xE0, 0x90),
+                _ => (0xD8, 0xDC, 0xE8),
+            };
+            SDL_SetRenderDrawColor(_renderer, (byte)r, (byte)g, (byte)b, 0xFF);
+            string text = lines[row].Text;
+            SDL_RenderDebugText(_renderer, (back.x / scale) + Margin, Margin + (row * LineHeight), text.Length > _panelColumns ? text[.._panelColumns] : text);
+        }
+
+        SDL_SetRenderScale(_renderer, 1, 1);
     }
 
     /// <summary>
@@ -242,14 +302,24 @@ internal sealed unsafe class SdlWindow : IDisposable
         _height = height;
     }
 
-    /// <summary>The largest rectangle of the picture's shape that fits the window, centered.</summary>
-    private SDL_FRect Fit(int windowWidth, int windowHeight)
+    /// <summary>
+    /// The largest rectangle of the picture's shape that fits the window, centered in what
+    /// the panel, if there is one, leaves of it.
+    /// </summary>
+    private SDL_FRect Fit(int windowWidth, int windowHeight, float density)
     {
+        // a window too narrow for the panel and any picture gives the picture all of it
+        int room = windowWidth - (int)PanelWidth(windowHeight, density);
+        if (room < 160)
+        {
+            room = windowWidth;
+        }
+
         float aspect = SquarePixels ? (float)_width / _height : MonitorAspect;
-        float scale = Math.Min(windowWidth / aspect, windowHeight);
+        float scale = Math.Min(room / aspect, windowHeight);
         int w = Math.Max(1, (int)(aspect * scale));
         int h = Math.Max(1, (int)scale);
-        return new SDL_FRect { x = (windowWidth - w) / 2, y = (windowHeight - h) / 2, w = w, h = h };
+        return new SDL_FRect { x = (room - w) / 2, y = (windowHeight - h) / 2, w = w, h = h };
     }
 }
 

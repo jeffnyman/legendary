@@ -14,7 +14,7 @@ namespace Legendary.Player;
 /// </summary>
 /// <param name="machine">The PC the game is running on.</param>
 /// <param name="map">Where the game keeps its world.</param>
-/// <param name="output">Where to say it.</param>
+/// <param name="output">Where to say it, a line at a time; null to say it nowhere, for the panel alone.</param>
 /// <param name="words">
 /// The game's vocabulary, to name actions by the commands that make them; without it, or when
 /// it isn't this game's, they are said by number alone.
@@ -24,9 +24,16 @@ namespace Legendary.Player;
 /// each time the game reaches its routine that performs one, so every action is said, the ones
 /// a routine performs inside another's, set in under it, and the ones the game makes of a
 /// command as well as the command.
+/// <para>
+/// It also keeps what a panel beside the game would show, for <see cref="Panel"/>: the world as
+/// it is now, set out down a column, and under it the last of what was said.
+/// </para>
 /// </remarks>
-internal sealed class WorldWatch(Machine machine, WorldMap map, TextWriter output, IReadOnlyList<VocabularyWord>? words = null)
+internal sealed class WorldWatch(Machine machine, WorldMap map, TextWriter? output, IReadOnlyList<VocabularyWord>? words = null)
 {
+    // how many lines of what was said are kept for the panel
+    private const int Kept = 400;
+
     // how many looks to let pass between searches for a game that isn't there yet
     private const int SearchEvery = 30;
 
@@ -37,6 +44,10 @@ internal sealed class WorldWatch(Machine machine, WorldMap map, TextWriter outpu
     private string _here = "";
     private string _exits = "";
     private ObjectState[] _states = [];
+
+    // for the panel: the world as it is, and what was said lately, the newest last
+    private List<PanelLine> _now = [];
+    private readonly List<PanelLine> _lately = [];
 
     /// <summary>Looks at the game, and says what has changed since the last look.</summary>
     public void Look()
@@ -56,7 +67,7 @@ internal sealed class WorldWatch(Machine machine, WorldMap map, TextWriter outpu
                 return;
             }
 
-            output.WriteLine($"world: the game is in memory, loaded at {_world.LoadSegment:X4}h, with {map.ObjectCount} objects");
+            Say($"the game is in memory, loaded at {_world.LoadSegment:X4}h, with {map.ObjectCount} objects", PanelTone.Dim);
             machine.Cpu.Watch((uint)_world.PerformAddress, Performing);
             machine.Cpu.Watch((uint)_world.JumpBackAddress, JumpedBack);
             foreach (var point in map.Answers)
@@ -83,26 +94,153 @@ internal sealed class WorldWatch(Machine machine, WorldMap map, TextWriter outpu
         }
 
         SayChanges(world);
-        string place = $"world: {Time(world.Minutes)}, turn {world.Moves}, in {Name(world, room)}";
-        string here = $"world:   here: {Inside(world, room, depth: 0)}";
-        string exits = $"world:   exits: {Exits(world, room)}";
+        string place = $"{Time(world.Minutes)}, turn {world.Moves}, in {Name(world, room)}";
+        string here = $"  here: {Inside(world, room, depth: 0)}";
+        string exits = $"  exits: {Exits(world, room)}";
+        if (place == _place && here == _here && exits == _exits)
+        {
+            return;
+        }
 
         // each when it changes: the first every turn, the others when something comes or goes
-        // and when the room is another
+        // and when the room is another. The panel has them set out, so only the first is kept
+        // for its list of what was said
         if (place != _place)
         {
-            output.WriteLine(_place = place);
+            Say(_place = place, PanelTone.Dim);
         }
 
         if (here != _here)
         {
-            output.WriteLine(_here = here);
+            Say(_here = here, kept: false);
         }
 
         if (exits != _exits)
         {
-            output.WriteLine(_exits = exits);
+            Say(_exits = exits, kept: false);
         }
+
+        _now = Now(world, room);
+    }
+
+    /// <summary>
+    /// What a panel of so many columns and rows shows: the time, the turn and the room; what
+    /// is in the room, each thing under what holds it; the exits; and in the rows left, the
+    /// last of what was said, the newest at the bottom. Lines too long for it are folded.
+    /// </summary>
+    public IReadOnlyList<PanelLine> Panel(int columns, int rows)
+    {
+        if (_world is null || _now.Count == 0)
+        {
+            return [new PanelLine("Legendary", PanelTone.Title), new PanelLine("The game isn't in memory yet.", PanelTone.Dim)];
+        }
+
+        // the world gets what it needs, short of a few rows kept for what was said
+        var lines = _now.SelectMany(line => Fold(line, columns)).ToList();
+        int most = Math.Max(rows - 6, 1);
+        if (lines.Count > most)
+        {
+            lines.RemoveRange(most - 1, lines.Count - (most - 1));
+            lines.Add(new PanelLine("  ...", PanelTone.Dim));
+        }
+
+        int left = rows - lines.Count - 2;
+        if (left > 0)
+        {
+            lines.Add(new PanelLine(""));
+            lines.Add(new PanelLine("Lately", PanelTone.Dim));
+            var lately = new List<PanelLine>();
+            for (int at = _lately.Count - 1; at >= 0 && lately.Count < left; at--)
+            {
+                lately.InsertRange(0, Fold(_lately[at], columns));
+            }
+
+            lines.AddRange(lately.Skip(Math.Max(lately.Count - left, 0)));
+        }
+
+        return lines;
+    }
+
+    /// <summary>
+    /// A line folded to a width, at its spaces where it has them: what doesn't fit goes on
+    /// under it, set in a little more.
+    /// </summary>
+    internal static IEnumerable<PanelLine> Fold(PanelLine line, int columns)
+    {
+        string text = line.Text;
+        if (text.Length <= columns || columns < 8)
+        {
+            yield return line;
+            yield break;
+        }
+
+        string indent = text[..(text.Length - text.TrimStart().Length)];
+        string under = new(' ', Math.Min(indent.Length + 2, columns / 2));
+        string rest = text.TrimStart();
+        for (string lead = indent; rest.Length > 0; lead = under)
+        {
+            int room = columns - lead.Length;
+            int take = rest.Length;
+            if (take > room)
+            {
+                // back to the last space that leaves the line no wider; a word longer than
+                // the line is cut where the line ends
+                int space = rest.LastIndexOf(' ', room);
+                take = space > 0 ? space : room;
+            }
+
+            yield return line with { Text = lead + rest[..take] };
+            rest = rest[take..].TrimStart();
+        }
+    }
+
+    // says a line: to the output, and for the panel's list of what was said unless it's told not to
+    private void Say(string line, PanelTone tone = PanelTone.Text, bool kept = true)
+    {
+        output?.WriteLine($"world: {line}");
+        if (kept)
+        {
+            if (_lately.Count == Kept)
+            {
+                _lately.RemoveAt(0);
+            }
+
+            _lately.Add(new PanelLine(line.StartsWith("  ", StringComparison.Ordinal) ? line[2..] : line, tone));
+        }
+    }
+
+    // the world as it is, down a column
+    private List<PanelLine> Now(World world, int room)
+    {
+        var lines = new List<PanelLine>
+        {
+            new($"{Time(world.Minutes)}   turn {world.Moves}", PanelTone.Title),
+            new(Name(world, room), PanelTone.Title),
+            new(""),
+            new("Here", PanelTone.Dim),
+        };
+
+        void Under(int holder, int depth)
+        {
+            foreach (int inside in world.Contents(holder))
+            {
+                // a thing on a list after its holder's first is held another way: worn, say
+                int list = world.State(inside).Relation;
+                lines.Add(new PanelLine(new string(' ', 2 * depth) + Name(world, inside) + (list > 0 ? $", list {list + 1}" : "")));
+                if (depth < 4)
+                {
+                    Under(inside, depth + 1);
+                }
+            }
+        }
+
+        Under(room, 1);
+        lines.Add(new PanelLine(""));
+        lines.Add(new PanelLine("Exits", PanelTone.Dim));
+        var exits = world.Exits(room);
+        int width = exits.Count == 0 ? 0 : exits.Max(exit => DirectionName(exit.Direction).Length);
+        lines.AddRange(exits.Select(exit => new PanelLine($"  {DirectionName(exit.Direction).PadRight(width)}  {Leads(world, exit).TrimStart(' ', ':')}")));
+        return lines;
     }
 
     // every object as it is now against how it was at the last look: what moved, and which
@@ -125,14 +263,14 @@ internal sealed class WorldWatch(Machine machine, WorldMap map, TextWriter outpu
 
             if ((was.Place, was.SecondPlace, was.Relation) != (state.Place, state.SecondPlace, state.Relation))
             {
-                output.WriteLine($"world:   {Name(world, number)} moved: from {Where(world, was)} to {Where(world, state)}");
+                Say($"  {Name(world, number)} moved: from {Where(world, was)} to {Where(world, state)}");
             }
 
             for (int flag = 1; flag <= 64; flag++)
             {
                 if (was.Has(flag) != state.Has(flag))
                 {
-                    output.WriteLine($"world:   {Name(world, number)}: flag {flag} {(state.Has(flag) ? "set" : "cleared")}");
+                    Say($"  {Name(world, number)}: flag {flag} {(state.Has(flag) ? "set" : "cleared")}");
                 }
             }
         }
@@ -153,16 +291,21 @@ internal sealed class WorldWatch(Machine machine, WorldMap map, TextWriter outpu
     private string Exits(World world, int room)
     {
         var exits = world.Exits(room);
-        return exits.Count == 0 ? "none" : string.Join("; ", exits.Select(exit => DirectionName(exit.Direction) + exit.Kind switch
+        return exits.Count == 0 ? "none" : string.Join("; ", exits.Select(exit => DirectionName(exit.Direction) + Leads(world, exit)));
+    }
+
+    // where an exit leads, to follow its direction: " to Potty Chamber (2)", or ": a routine decides"
+    private string Leads(World world, WorldExit exit)
+    {
+        string Room(int number) => number >= 1 && number <= map.ObjectCount ? Name(world, number) : $"object {number}";
+        return exit.Kind switch
         {
             1 => $" to {Room(exit.Room)}",
             2 => $" to {Room(exit.Room)} by {Room(exit.Door)}",
             3 => $": \"{exit.Message}\"",
             4 => ": a routine decides",
             _ => string.Create(CultureInfo.InvariantCulture, $": an exit of kind {exit.Kind}"),
-        }));
-
-        string Room(int number) => number >= 1 && number <= map.ObjectCount ? Name(world, number) : $"object {number}";
+        };
     }
 
     private string DirectionName(int direction) =>
@@ -180,7 +323,7 @@ internal sealed class WorldWatch(Machine machine, WorldMap map, TextWriter outpu
         var cpu = machine.Cpu;
         var (action, first, second) = world.PerformArguments((cpu.Ss * 16) + (ushort)cpu.Esp);
         string inside = new(' ', 2 * Math.Clamp(world.PerformDepth, 0, 8));
-        output.WriteLine($"world:   {inside}action {action}: {Said(world, action, first, second)}");
+        Say($"  {inside}action {action}: {Said(world, action, first, second)}", PanelTone.Action);
     }
 
     // the main loop's setjmp has returned: by a routine's longjmp, when AX isn't 0. Such an
@@ -197,10 +340,10 @@ internal sealed class WorldWatch(Machine machine, WorldMap map, TextWriter outpu
             case 0:
                 break;
             case 1:
-                output.WriteLine("world:     given up by a routine, which starts over with another action");
+                Say("    given up by a routine, which starts over with another action");
                 break;
             default:
-                output.WriteLine("world:     ended by a routine that jumped back to the main loop: done");
+                Say("    ended by a routine that jumped back to the main loop: done");
                 break;
         }
     }
@@ -233,7 +376,7 @@ internal sealed class WorldWatch(Machine machine, WorldMap map, TextWriter outpu
         }
 
         string inside = new(' ', 2 * Math.Clamp(world.PerformDepth, 0, 8));
-        output.WriteLine($"world:   {inside}answered by {who}: {answer}");
+        Say($"  {inside}answered by {who}: {answer}");
     }
 
     /// <summary>Why an object's routine is asked about an action, from the number it's asked with.</summary>

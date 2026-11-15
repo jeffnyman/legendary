@@ -57,6 +57,7 @@ internal static class Program
         double? seconds = null;
         bool headless = false;
         bool watch = false;
+        bool panel = false;
         bool list = false;
         bool remember = false;
         bool forget = false;
@@ -168,6 +169,9 @@ internal static class Program
                     break;
                 case "--watch":
                     watch = true;
+                    break;
+                case "--panel":
+                    panel = true;
                     break;
                 case "--documents":
                     // a number, or all, may follow; anything else is the game's name or an option
@@ -395,14 +399,20 @@ internal static class Program
             }
         }
 
-        // the game's world, said on the terminal as it changes
+        // the game's world, said on the terminal as it changes, shown in a panel beside the
+        // game, or both
+        if (panel && headless)
+        {
+            throw new UsageException("--panel needs a window to put its panel in, which --headless hasn't");
+        }
+
         WorldWatch? watching = null;
-        if (watch)
+        if (watch || panel)
         {
             // with the game's words, when its folder has them, to name its actions
             watching = game.Known?.World is { } map
-                ? new WorldWatch(machine, map, Console.Out, Games.FileIn(game.Folder, map.VocabularyFile) is { } vocabulary ? Vocabulary.Read(File.ReadAllBytes(vocabulary)) : null)
-                : throw new UsageException($"--watch needs a game whose world is known, which {game.Title}'s isn't yet");
+                ? new WorldWatch(machine, map, watch ? Console.Out : null, Games.FileIn(game.Folder, map.VocabularyFile) is { } vocabulary ? Vocabulary.Read(File.ReadAllBytes(vocabulary)) : null)
+                : throw new UsageException($"--watch and --panel need a game whose world is known, which {game.Title}'s isn't yet");
         }
 
         bool running;
@@ -439,6 +449,7 @@ internal static class Program
                     StatePath = statePath,
                     Icon = GameIcons.For(game),
                     EachFrame = watching is null ? null : watching.Look,
+                    Panel = panel ? watching!.Panel : null,
                 };
 
                 using var player = new SdlPlayer(machine, options);
@@ -592,6 +603,8 @@ internal static class Program
               --watch            say the game's world on the terminal as it changes: the time,
                                  the turn, the room and what is in it, and each action (for a
                                  game whose world is known: Spellcasting 101)
+              --panel            the same in a panel down the window's right side: the world as
+                                 it is now, and under it the last of what happened
               --documents [n]    list the documents a game keeps, rather than play it, or show the
                                  one numbered n, or all of them (no game here keeps any yet)
 
