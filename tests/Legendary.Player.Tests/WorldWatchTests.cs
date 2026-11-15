@@ -108,40 +108,80 @@ public sealed class WorldWatchTests : IDisposable
         Type("n");
         Type("examine rat\n");
         Type("climb chimney\n");
+        Type("open desk\n");
+        Type("take note\n");
         Type("n\n");
 
         string[] lines = said.ToString().Split('\n', StringSplitOptions.RemoveEmptyEntries);
         Assert.StartsWith("world: the game is in memory, loaded at ", lines[0], StringComparison.Ordinal);
         Assert.EndsWith(", with 427 objects", lines[0], StringComparison.Ordinal);
         Assert.Equal("world: 3:35 pm, turn 0, in Bedchamber (1)", lines[1]);
-        Assert.StartsWith("world:   here: rat (352), you (153) [", lines[2], StringComparison.Ordinal);
+        Assert.StartsWith("world:   here: rat (352), you (153) [cloak (82)], ", lines[2], StringComparison.Ordinal);
+        Assert.Equal(
+            "world:   exits: north to Potty Chamber (2); east: \"If you want to enter the fireplace, then say so.\"; "
+            + "west to Alley (4) by door (60); south: \"If you want to jump out the window, then say so.\"; "
+            + "down: \"If you want to jump out the window, then say so.\"; up: a routine decides",
+            lines[3]);
+
+        // describing the room sets a flag on it and on each thing it mentions
+        Assert.Contains("world:   Bedchamber (1): flag 10 set", lines);
+        Assert.Contains("world:   rat (352): flag 6 set", lines);
+
+        // the lines from one that is there to the next action's, or to the end
+        string[] After(string line)
+        {
+            int at = Array.IndexOf(lines, line);
+            Assert.True(at >= 0, $"Not said: {line}");
+            return [.. lines.Skip(at + 1).TakeWhile(next => !next.StartsWith("world:   action ", StringComparison.Ordinal))];
+        }
+
         // the rat's own routine has something to say about being examined, so the asking ends there
-        Assert.Equal("world:   action 60: examine rat (352)", lines[3]);
-        Assert.Equal("world:     answered by rat (352), asked as the object: 1", lines[4]);
-        Assert.Equal("world: 3:40 pm, turn 1, in Bedchamber (1)", lines[5]);
+        Assert.Equal(
+            ["world:     answered by rat (352), asked as the object: 1", "world: 3:40 pm, turn 1, in Bedchamber (1)"],
+            After("world:   action 60: examine rat (352)"));
 
         // CLIMB CHIMNEY, which the chimney's routine starts over as entering the fireplace: both
         // are performed, and both are said, in their order. The first is never answered: the
         // routine that started over jumped back to the main loop
-        int climb = Array.IndexOf(lines, "world:   action 25: climb chimney (185)");
-        Assert.True(climb > 5);
-        Assert.Equal("world:     given up by a routine, which starts over with another action", lines[climb + 1]);
-        Assert.Equal("world:   action 27: climb in fireplace (62)", lines[climb + 2]);
-        Assert.Equal("world:     answered by fireplace (62), asked as the object: 1", lines[climb + 3]);
-        Assert.Equal("world: 3:45 pm, turn 2, in Bedchamber (1)", lines[climb + 4]);
+        Assert.Equal(["world:     given up by a routine, which starts over with another action"], After("world:   action 25: climb chimney (185)"));
+        Assert.Equal(
+            ["world:     answered by fireplace (62), asked as the object: 1", "world: 3:45 pm, turn 2, in Bedchamber (1)"],
+            After("world:   action 27: climb in fireplace (62)"));
 
-        // going north: the action, then the room as the game moves you, then the turn counted
-        // and going isn't answered either: the routine that moves you, once it has and the new
-        // room is drawn, jumps back too, done
-        int go = Array.IndexOf(lines, "world:   action 197: go");
-        Assert.True(go > climb);
-        Assert.Equal("world: 3:45 pm, turn 2, in Potty Chamber (2)", lines[go + 1]);
-        Assert.Equal("world:   here: you (153) [cloak (82)], tiny door (66)", lines[go + 2]);
-        Assert.Equal("world:     ended by a routine that jumped back to the main loop: done", lines[go + 3]);
-        Assert.Equal("world: 3:50 pm, turn 3, in Potty Chamber (2)", lines[^2]);
+        // opening the desk is left to the stock routine, which sets two of the desk's flags, and
+        // what was in the desk is seen
+        Assert.Equal(
+            [
+                "world:     answered by the action's own routine: 1",
+                "world:   writing desk (61): flag 10 set",
+                "world:   writing desk (61): flag 12 set",
+                "world:   application (73): flag 6 set",
+                "world:   love note (74): flag 6 set",
+                "world: 3:50 pm, turn 3, in Bedchamber (1)",
+            ],
+            After("world:   action 128: open writing desk (61)"));
 
-        // three commands, four actions, and nothing said twice
-        Assert.Equal(4, lines.Count(line => line.StartsWith("world:   action ", StringComparison.Ordinal)));
-        Assert.Equal(2, lines.Count(line => line.Contains("answered by", StringComparison.Ordinal)));
+        // taking the note moves it from the desk to you, and the room's contents are said again
+        string[] taken = After("world:   action 74: get love note (74)");
+        Assert.Equal("world:     answered by the action's own routine: 1", taken[0]);
+        Assert.Equal("world:   love note (74) moved: from writing desk (61) to you (153)", taken[1]);
+        Assert.Contains(taken, line => line.StartsWith("world:   here: rat (352), you (153) [love note (74), cloak (82)], ", StringComparison.Ordinal)
+            && line.Contains("writing desk (61) [application (73)]", StringComparison.Ordinal));
+        Assert.Equal("world: 3:55 pm, turn 4, in Bedchamber (1)", taken[^1]);
+
+        // going north: you are moved, the new room and its exits are said, and the routine that
+        // moved you jumps back to the main loop, done. The turn isn't counted yet: the game has
+        // stopped at a prompt for more, with your stepfather on the stair
+        string[] gone = After("world:   action 197: go north");
+        Assert.Contains("world:   you (153) moved: from Bedchamber (1) to Potty Chamber (2)", gone);
+        Assert.Contains("world: 3:55 pm, turn 4, in Potty Chamber (2)", gone);
+        Assert.Contains("world:   here: you (153) [love note (74), cloak (82)], tiny door (66)", gone);
+        Assert.Contains("world:   exits: south to Bedchamber (1); down: a routine decides", gone);
+        Assert.Contains("world:     ended by a routine that jumped back to the main loop: done", gone);
+        Assert.Contains("world:   Potty Chamber (2): flag 10 set", gone);
+
+        // five commands, six actions; the exits are said once for each room
+        Assert.Equal(6, lines.Count(line => line.StartsWith("world:   action ", StringComparison.Ordinal)));
+        Assert.Equal(2, lines.Count(line => line.StartsWith("world:   exits: ", StringComparison.Ordinal)));
     }
 }

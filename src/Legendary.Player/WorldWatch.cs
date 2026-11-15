@@ -7,7 +7,9 @@ namespace Legendary.Player;
 
 /// <summary>
 /// The game's world, said as it changes: the time, the turn and the room, what is in the room
-/// and what those things hold, and each action as the game performs it. It reads the game's
+/// and what those things hold, the room's exits, each action as the game performs it, and
+/// what the action changed: every object, anywhere in the game, that moved or had a flag set
+/// or cleared. It reads the game's
 /// memory and writes nothing to it, so the game is played as without it.
 /// </summary>
 /// <param name="machine">The PC the game is running on.</param>
@@ -33,6 +35,8 @@ internal sealed class WorldWatch(Machine machine, WorldMap map, TextWriter outpu
     private int _looks;
     private string _place = "";
     private string _here = "";
+    private string _exits = "";
+    private ObjectState[] _states = [];
 
     /// <summary>Looks at the game, and says what has changed since the last look.</summary>
     public void Look()
@@ -41,6 +45,7 @@ internal sealed class WorldWatch(Machine machine, WorldMap map, TextWriter outpu
         {
             // the game ended, or a saved state without it was loaded
             _world = null;
+            _states = [];
             machine.Cpu.WatchNothing();
         }
 
@@ -77,14 +82,91 @@ internal sealed class WorldWatch(Machine machine, WorldMap map, TextWriter outpu
             return;
         }
 
+        SayChanges(world);
         string place = $"world: {Time(world.Minutes)}, turn {world.Moves}, in {Name(world, room)}";
         string here = $"world:   here: {Inside(world, room, depth: 0)}";
-        if (place != _place || here != _here)
+        string exits = $"world:   exits: {Exits(world, room)}";
+
+        // each when it changes: the first every turn, the others when something comes or goes
+        // and when the room is another
+        if (place != _place)
         {
             output.WriteLine(_place = place);
+        }
+
+        if (here != _here)
+        {
             output.WriteLine(_here = here);
         }
+
+        if (exits != _exits)
+        {
+            output.WriteLine(_exits = exits);
+        }
     }
+
+    // every object as it is now against how it was at the last look: what moved, and which
+    // flags changed. The first look only remembers
+    private void SayChanges(World world)
+    {
+        var now = new ObjectState[map.ObjectCount];
+        for (int number = 1; number <= now.Length; number++)
+        {
+            now[number - 1] = world.State(number);
+        }
+
+        for (int number = 1; number <= _states.Length; number++)
+        {
+            var (was, state) = (_states[number - 1], now[number - 1]);
+            if (was == state)
+            {
+                continue;
+            }
+
+            if ((was.Place, was.SecondPlace, was.Relation) != (state.Place, state.SecondPlace, state.Relation))
+            {
+                output.WriteLine($"world:   {Name(world, number)} moved: from {Where(world, was)} to {Where(world, state)}");
+            }
+
+            for (int flag = 1; flag <= 64; flag++)
+            {
+                if (was.Has(flag) != state.Has(flag))
+                {
+                    output.WriteLine($"world:   {Name(world, number)}: flag {flag} {(state.Has(flag) ? "set" : "cleared")}");
+                }
+            }
+        }
+
+        _states = now;
+    }
+
+    // where an object is: what it's in and on which of that's lists, or the two it's between
+    private string Where(World world, ObjectState state)
+    {
+        string In(int number) => number >= 1 && number <= map.ObjectCount ? Name(world, number) : "nowhere";
+        return state.SecondPlace != 0 ? $"{In(state.Place)} and {In(state.SecondPlace)}"
+            : state.Relation > 0 ? $"{In(state.Place)}, its list {state.Relation + 1}"
+            : In(state.Place);
+    }
+
+    // a room's exits, each by its direction: where it goes, what is said, or that a routine decides
+    private string Exits(World world, int room)
+    {
+        var exits = world.Exits(room);
+        return exits.Count == 0 ? "none" : string.Join("; ", exits.Select(exit => DirectionName(exit.Direction) + exit.Kind switch
+        {
+            1 => $" to {Room(exit.Room)}",
+            2 => $" to {Room(exit.Room)} by {Room(exit.Door)}",
+            3 => $": \"{exit.Message}\"",
+            4 => ": a routine decides",
+            _ => string.Create(CultureInfo.InvariantCulture, $": an exit of kind {exit.Kind}"),
+        }));
+
+        string Room(int number) => number >= 1 && number <= map.ObjectCount ? Name(world, number) : $"object {number}";
+    }
+
+    private string DirectionName(int direction) =>
+        direction >= 1 && direction < map.Directions.Count ? map.Directions[direction] : string.Create(CultureInfo.InvariantCulture, $"direction {direction}");
 
     // the game is at its routine that performs an action, about to: which, and how deep
     private void Performing()
@@ -181,6 +263,12 @@ internal sealed class WorldWatch(Machine machine, WorldMap map, TextWriter outpu
     // "examine rat (352)". Without a grammar, or for an action no command makes, its objects alone
     private string Said(World world, int action, int first, int second)
     {
+        if (action == map.GoAction && world.Direction != 0)
+        {
+            // going has no object: where to is a direction, which the game keeps beside the action
+            return $"go {DirectionName(world.Direction)}";
+        }
+
         int[] objects = [.. new[] { first, second }.TakeWhile(number => number >= 1 && number <= map.ObjectCount)];
         if (_grammar?.Shape(action, objects.Length) is not { } shape)
         {
