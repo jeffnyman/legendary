@@ -3,8 +3,8 @@
 Legend Entertainment, 1991. The second *Spellcasting*, by Steve Meretzky, on the system
 [*Spellcasting 101*](spellcasting-101.md) was built on, a year on.
 
-This is what the first look found, and so far it is how the program is built and its
-vocabulary. What is
+This is what the first look found, and so far it is how the program is built, its
+vocabulary and its objects. What is
 known for certain is said plainly; what is inferred says so. Addresses are `segment:offset` in
 hex, with segments relative to where the program loads. Every one of them can be looked at
 with the [tools](../tools/README.md).
@@ -226,17 +226,117 @@ alphabetical order, and the synonyms are synonyms.
 the same first words come out, but the text stops short of the size given: something in the
 form is different again.
 
+## The objects
+
+The world is 482 objects, in the same eight types, found the same way: a table of six bytes
+for each object, its type and a far pointer to its record, and a table of three bytes for each
+type. The table of objects is at `2918:00B8`, the types' at `2918:0000`, and the count at
+`4974:3E70`.
+
+| Type | Objects | Bytes | Places | Lists | *Spellcasting 101*'s bytes and lists |
+|---|---|---|---|---|---|
+| 1 | 78 | 24 | 0 | 1 | 28, 1 |
+| 2 | 161 | 34 | 1 | 3 | 36, 2 |
+| 3 | 5 | 10 | 0 | 0 | 14, 0 |
+| 4 | 12 | 18 | 0 | 2 | 22, 2 |
+| 5 | 44 | 18 | 0 | 2 | 22, 2 |
+| 6 | 6 | 22 | 2 | 2 | 26, 2 |
+| 7 | 31 | 28 | 1 | 3 | 32, 3 |
+| 8 | 145 | 18 | 1 | 0 | 22, 0 |
+
+Every record is four bytes shorter, and a thing, type 2, has a third list. Three things
+changed, each read from the routines that take a field from a record, which are together in
+the root from `023C:1583` as *Spellcasting 101*'s were.
+
+### The names are in a file
+
+A record began with two far pointers to its names, eight bytes. It begins now with two words,
+four bytes, and every field after is four bytes sooner. `OBJECT.DAT` is the names: the size of
+its text in a word, and then 591 names, each ending in a zero. A record's word is where its
+name starts in that text, counted from 1, so that zero can be no name: `0001` for object 1,
+the `Main Entrance`. So the names are out of the program's memory, and read from the disk
+when one is wanted.
+
+### A flag is looked up
+
+In *Spellcasting 101* flag 12 was bit 11 of the record's flags, for every type, and so the
+same bit meant one thing for a thing and another for a place. Now there is a table, from
+`2918:0018`, of four bytes for each flag: the bit it is, a zero, and a word with a bit for
+each type that has it. The routine that finds a flag, `023C:1583`, looks the flag up, answers
+that an object of a type without it doesn't have it, and otherwise gives the byte and the
+bit. The table has room for 40 flags before the table of objects starts, and all 40 are used.
+
+| Flags | Bits | Types that have them |
+|---|---|---|
+| 1 to 4 | 0 to 3 | All |
+| 5 to 14 | 4 to 13 | Some, each its own |
+| 15, 18 to 32, 34 to 36 | 14 to 32 | Things, type 2, alone |
+| 16, 17, 33 | 6, 7, 9 | Rooms |
+| 37, 38, 39 | 6, 8, 9 | People |
+| 40 | 5 | Type 8 |
+
+So bits 6 to 9 are each two or three flags. That is what *Spellcasting 101* did without
+saying so, where flag 7 was "not listed" for a thing and "outdoors" for a place: here the
+room's bit 6 has a number of its own, 16. For a thing, a flag's bit is, by this table, the
+bit it had before, with the numbers after 15 moved up to make room. Whether each still means
+what it meant hasn't been checked, and there is a reason to doubt it: a door lets you through
+when it has flag 13, which is the bit that was "locked". The tools don't name them.
+
+### The exits are rows of one table
+
+A room had a count of its exits and a far pointer to them, six bytes each. Now it has the
+count and the number of its first row in one table for every room, at `2918:29CC`, of four
+bytes each: 266 rows.
+
+| Bytes | What |
+|---|---|
+| 1 | The direction, numbered as before |
+| 1 | The kind |
+| 2 | A word, which the kind says how to read |
+
+| Kind | Rows | The word |
+|---|---|---|
+| 1 | 172 | The room it goes to |
+| 2 | 16 | A door's row in a table at `2918:2DF4`, of the room it goes to and the door's own object: the way is taken when the door has flag 13 |
+| 4 | 78 | A number for a routine at `0777:0000`, which is asked with it and the action |
+
+The kind that only said something, 3, is gone, and so is every pointer: a room's record now
+holds none.
+
+A room's record in full, with offsets in hex:
+
+| Offset | What |
+|---|---|
+| 0 | Its name, and at 2 a second |
+| 4 | Its flags, two bytes |
+| 6 | Where its nouns start, and at 8 its adjectives |
+| 0A | The first object on its list |
+| 0C | A word a routine reads and sets, zero in most rooms; not yet understood |
+| 0E | A word not yet understood |
+| 10 | Where its row starts in the list of what is also there, at `2918:22E8` |
+| 12 | And in the list of the places seen into from it, at `4974:3E72` |
+| 14 | The count of its exits |
+| 16 | Its first row in the table of exits |
+
+The other types keep the order they had: where it is, which list it's on, the next on that
+list, and the first on each of its own lists.
+
+The lists of nouns and adjectives are as before, at `2918:0C04` and `2918:195A`, but the code
+that reads them, the parser's, is in overlay 3 and no longer in the root.
+
+Read this way the world comes out whole: `Your Room` holds a refrigerator, a duct, a trophy,
+a bedsheet, your desk and your bed, with an envelope on the bed and a letter in the envelope,
+and goes down and out to `Hu Delta Phart`.
+
 ## Still to do
 
-Everything past the program and the vocabulary. With the words read, the tools get as far as
-looking for the code that searches the grammar and the code that reads the table of objects,
-and find neither: the program's own tables are next. The text and the music are each in a
-form *Spellcasting 101*'s readers don't read:
+Everything past the program, the vocabulary and the objects. The tools stop next at the code
+that calls an object's routine and the code that searches the grammar, which they don't find.
+The text and the music are each in a form *Spellcasting 101*'s readers don't read:
 
 - `S201STR.DAT` starts as before, with its table of blocks, 87 of them. The tree after it is
   nearly twice the size, with more at its leaves than single characters.
 - A song in a `.MUS` file has two more bytes in its entry.
-- `OBJECT.DAT` is new, and starts with the rooms' names, which were in the program before.
 
 The pictures, their regions and the sounds are read by the tools as they are. Their output
 hasn't been checked by eye.
