@@ -4,7 +4,7 @@ Legend Entertainment, 1991. The second *Spellcasting*, by Steve Meretzky, on the
 [*Spellcasting 101*](spellcasting-101.md) was built on, a year on.
 
 This is what the first look found, and so far it is how the program is built, its
-vocabulary, its objects, its grammar, which routine is whose and its timers. What is
+vocabulary, its objects, its grammar, which routine is whose, its timers and its text. What is
 known for certain is said plainly; what is inferred says so. Addresses are `segment:offset` in
 hex, with segments relative to where the program loads. Every one of them can be looked at
 with the [tools](../tools/README.md).
@@ -485,16 +485,58 @@ their numbers out.
 
 What each of the 49 does hasn't been read.
 
+## The text
+
+Most of the game's text isn't packed at all any more. *Spellcasting 101* kept nearly every
+string in `S101STR.DAT`, because its overlays were code and its data was always in memory.
+Here an overlay has its own data with its code, and a routine in overlay 10 prints `The
+statue is two or three times larger than lifesize.` from `3BA7:083D`, in that same overlay:
+the text comes and goes with the code that says it.
+
+`S201STR.DAT` is what is left: 1,815 strings in 87 blocks, 292,504 bytes packed into
+154,898. By the look of them they are the longer passages: scenes, newspaper stories, and
+in block 0 seven sets of jokes. It is built as [the first
+game's was](spellcasting-101.md#the-text), a table of the blocks, a tree of Huffman's codes,
+128 words, and the blocks, with two differences:
+
+- The tree is in the form [the vocabulary's](#the-vocabulary) is in: a count of words, 422,
+  and the words in pairs, a link being a place in the tree, a character kept as its
+  complement, and the last pair the root.
+- A string starts at the bit after the one before it ends, and no longer on a new byte.
+
+The reading was checked by its sizes: the table gives each block's size packed and unpacked,
+and all 87 come out to both.
+
+The 128 words are this game's commonest: `Hiddenmolar`, `Moldybreadcrust `, `Professor `,
+`Sorcerer `, and at the end `you`, `you `, `you're `, `you've ` and `your `.
+
+### How the program names a string
+
+*Spellcasting 101* loaded a block into an array of far pointers and named a string by its
+place in the array. Here a string is one word, the block in its high byte and the string's
+number in the block in its low: `0C2E` is string 46 of block 12, `"I don't have to take orders
+from Phart trash like you!"`. Two routines take one:
+
+| Routine | What it does |
+|---|---|
+| `0520:07DA` | Gives the string's far pointer, loading its block first if it isn't in memory |
+| `0520:0853` | Prints it, by calling that one |
+
+A third, `0520:0882`, takes a block's number and lets the block go. The blocks in memory are
+kept in a table of eight bytes each, a block's number, its count of strings and a far pointer
+to its array of pointers, which is the first game's array made the program's own business.
+
+The program calls the two 766 times, and in 741 of the calls the word is a constant. No
+call names a string in blocks 0, 44 to 71, 73, 74 or 82 to 86 that way: those are reached by
+numbers worked out, the jokes of block 0 among them.
+
 ## Still to do
 
-Everything past the program, the vocabulary, the objects, the grammar, the routines and the
-timers' workings. Flags 35, 39 and 40 have no meaning yet, and six more are named from who
-has them. What each timer does hasn't been read. The rules of the parser's own grammar aren't found
-either. The text and the music are each in a form *Spellcasting 101*'s readers don't read:
-
-- `S201STR.DAT` starts as before, with its table of blocks, 87 of them. The tree after it is
-  nearly twice the size, with more at its leaves than single characters.
-- A song in a `.MUS` file has two more bytes in its entry.
+Everything past the program, the vocabulary, the objects, the grammar, the routines, the
+timers' workings and the text. Flags 35, 39 and 40 have no meaning yet, and six more are
+named from who has them. What each timer does hasn't been read. The rules of the parser's
+own grammar aren't found either. The music is in a form *Spellcasting 101*'s reader doesn't
+read: a song in a `.MUS` file has two more bytes in its entry.
 
 The pictures, their regions and the sounds are read by the tools as they are. Their output
 hasn't been checked by eye.
