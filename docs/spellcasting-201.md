@@ -422,6 +422,25 @@ After the second table, at `2C03:1432`, is a third the same code searches, of te
 with three rows: `ask`, `order` and `tell`. It isn't read yet; by the verbs, it is for
 commands given to someone else.
 
+## The parser's own grammar
+
+Under the table of forms is the grammar the parser matches a command's words against, [kept
+as data](spellcasting-101.md#tokens-into-a-sentence): symbols, the ways each rule can go,
+and a list of the ways. It is here too, at `4974:7FB6`, and it is the same grammar. Put each
+symbol as its place among the symbols and the two games' 46 ways of 25 rules come out alike,
+symbol for symbol, down to the tokens' codes.
+
+What is gone is the names. *Spellcasting 101* kept `<noun_phrase>` and `<obj_list>` and the
+rest in the program, a name for every symbol and every way, though nothing in the game ever
+printed one: they were there for the writers. *Spellcasting 201* was built without them. A
+symbol is six bytes where it was ten, and a way starts with its rule where it started with
+its name.
+
+So the tools find this grammar by the list of its ways, which is 46 records of a 3 and a far
+pointer, one after another; name each word and token by what it is; and, because the shape
+is the first game's exactly, give the rules the names they had there. *Timequest*, between
+the two, still has the names, and the same grammar.
+
 ## Which routine is whose
 
 As before, no table says which routine is an object's or an action's. The source had a C
@@ -635,8 +654,8 @@ it.
 
 Everything past the program, the vocabulary, the objects, the grammar, the routines, the
 timers, the text and the music. Flags 35, 39 and 40 have no meaning yet, and six more are
-named from who has them. Three timers are named only from what they touch. The rules of the
-parser's own grammar aren't found either, nor what a saved game holds.
+named from who has them. Three timers are named only from what they touch. What a saved
+game holds isn't found.
 
 The pictures, their regions and the sounds are read by the tools as they are. Their output
 hasn't been checked by eye.
