@@ -176,6 +176,12 @@ public sealed record AnswerPoint(ushort Offset, Asked Asked);
 /// timer's number in a byte and, at 2, the count.
 /// </param>
 /// <param name="ClockStep">How many minutes one step of the clock is.</param>
+/// <param name="TokenizerSegment">
+/// The segment of the routine that takes a word off the line, for a game whose routine that
+/// gathers the tokens is in an overlay: the places in it are that routine's only while its
+/// overlay is the one in memory, which the call to this routine just before each shows.
+/// </param>
+/// <param name="TokenizerOffset">That routine's offset; 0 for a game whose gathering routine is always in memory.</param>
 public sealed record WorldMap(
     ushort DataSegment, ushort TableSegment, int ObjectCount, ushort CountOffset, ushort TypesOffset,
     ushort RoomOffset, ushort ActorOffset, ushort MovesOffset, ushort ClockOffset,
@@ -199,7 +205,8 @@ public sealed record WorldMap(
     ushort TableOffset = 0, ushort? TypesSegment = null, string? NamesFile = null,
     ushort FlagsSegment = 0, ushort FlagsOffset = 0, int FlagCount = 0,
     ushort ExitsSegment = 0, ushort ExitsOffset = 0, ushort DoorsSegment = 0, ushort DoorsOffset = 0,
-    bool WideGrammar = false, int TimerSize = 6, int ClockStep = 5)
+    bool WideGrammar = false, int TimerSize = 6, int ClockStep = 5,
+    ushort TokenizerSegment = 0, ushort TokenizerOffset = 0)
 {
     /// <summary>
     /// Whether the places in the program where a command is parsed are known. A map can have
@@ -344,9 +351,7 @@ public sealed record WorldMap(
         });
 
     /// <summary>
-    /// <i>Spellcasting 201: The Sorcerer's Appliance</i> (1991). Its world, and where its
-    /// actions are performed and its timers kept, without yet the places where a command is
-    /// parsed.
+    /// <i>Spellcasting 201: The Sorcerer's Appliance</i> (1991).
     /// </summary>
     public static WorldMap Spellcasting201 { get; } = new(
         DataSegment: 0x4974, TableSegment: 0x2918, ObjectCount: 482, CountOffset: 0x3E70, TypesOffset: 0xFFFD,
@@ -367,9 +372,10 @@ public sealed record WorldMap(
         Directions: Spellcasting101.Directions,
         GrammarSegment: 0x2C03, FormsOffset: 0x00E2, SecondsOffset: 0x10B4, VocabularyFile: "VOCAB.DAT",
         ActionNames: new Dictionary<int, string> { [211] = "go" },
-        TokenSegment: 0, TokenOffset: 0, AfterStopOffset: 0, AfterAndOffset: 0, TokenWordOffset: 0,
+        // the routine that gathers the tokens is the first game's, offset for offset, in overlay 4
+        TokenSegment: 0x32B1, TokenOffset: 0x00ED, AfterStopOffset: 0x017E, AfterAndOffset: 0x01FC, TokenWordOffset: 0x4029,
         WordTokens: Spellcasting101.WordTokens, MarkTokens: Spellcasting101.MarkTokens, EndTokens: Spellcasting101.EndTokens,
-        FormOffset: 0, FormIndexOffset: 0, FormActionOffset: 0, FoundOffset: 0, LotsOffset: 0, LotSize: 12, LotCountOffset: 0,
+        FormOffset: 0x239C, FormIndexOffset: 0x0139, FormActionOffset: 0x0135, FoundOffset: 0x090E, LotsOffset: 0x011D, LotSize: 12, LotCountOffset: 0x0117,
         TimersOffset: 0x5D2A, TimerCountOffset: 0x7EF0, TimerIndexOffset: 0x7EF2,
         TimerSegment: 0x13A2, TimerStartOffset: 0x0027, TimerStopOffset: 0x009E, TimerRunOffset: 0x0213,
         TimerNames: new Dictionary<int, string>
@@ -482,5 +488,6 @@ public sealed record WorldMap(
         TableOffset: 0x00B8, TypesSegment: 0x2918, NamesFile: "OBJECT.DAT",
         FlagsSegment: 0x2918, FlagsOffset: 0x0014, FlagCount: 40,
         ExitsSegment: 0x2918, ExitsOffset: 0x29CC, DoorsSegment: 0x2918, DoorsOffset: 0x2DF4,
-        WideGrammar: true, TimerSize: 4);
+        WideGrammar: true, TimerSize: 4,
+        TokenizerSegment: 0x12F1, TokenizerOffset: 0x027C);
 }

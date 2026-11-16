@@ -411,6 +411,17 @@ public sealed class World
     /// <summary>The same, of the place where the token after <c>and</c> has been looked ahead to.</summary>
     public int AfterAndAddress => Linear(Map.TokenSegment, Map.AfterAndOffset);
 
+    /// <summary>
+    /// Whether a place where a token has been taken is the gathering routine's now: always,
+    /// for a game that keeps the routine in memory, and otherwise when the call just before
+    /// the place is to the routine that takes a word off the line, as it is while the
+    /// gathering routine's overlay is the one loaded there.
+    /// </summary>
+    /// <param name="address">The place, a linear address: one of the three the map names.</param>
+    public bool IsGathering(int address) =>
+        Map.TokenizerOffset == 0
+        || (_read(address - 5) == 0x9A && Word(address - 4) == Map.TokenizerOffset && Word(address - 2) == LoadSegment + Map.TokenizerSegment);
+
     /// <summary>The number of the word the token just taken is, or 0 when it isn't a word.</summary>
     public int TokenWord => Word(Linear(Map.ActionSegment, Map.TokenWordOffset));
 
