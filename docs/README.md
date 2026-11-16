@@ -21,6 +21,10 @@ hold.
   an LZW of pixels and by Huffman's codes, with the rectangles of each that the mouse can
   point at; music kept as MIDI files and as AdLib's own, and sounds in RealSound for the
   PC's speaker.
+- [Timequest](timequest.md): 1991, between the two. Built as the first game is, and read
+  by what reads it: its text, vocabulary, grammar and routines. Its 518 objects have twice the
+  flags, and its rooms' exits are already in one table, as the next game's are, with a kind
+  of exit of its own that a variable opens.
 - [Spellcasting 201: The Sorcerer's Appliance](spellcasting-201.md): 1991. The same system,
   linked by .RTLink/Plus in place of PLINK86: a program DOS can't load by itself, kept as
   records of its segments with their fixups, which the linker's own startup code puts in

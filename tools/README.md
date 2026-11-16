@@ -94,8 +94,8 @@ python -m legendary_tools dis ../../legend/sc101/game 3670:054e
   are kept is in [docs/spellcasting-101.md](../docs/spellcasting-101.md#the-objects). It reads
   *Spellcasting 101* and, with its names from `OBJECT.DAT` and its other differences,
   [*Spellcasting 201*](../docs/spellcasting-201.md#the-objects); the flags' names are the first's
-  alone. For *Timequest* it finds the table and lists each object's number, type and names,
-  and no more: its records are laid out another way.
+  alone. It reads [*Timequest*](../docs/timequest.md#the-objects) too, whose records are
+  between the two, with a [kind of exit](../docs/timequest.md#the-exits) of its own.
 
 - **`grammar`** lists the forms a command can take, from the program's tables: for each verb
   and the preposition after it, the action made with no object, with one, and with a second
