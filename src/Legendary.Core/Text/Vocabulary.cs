@@ -19,10 +19,13 @@ public sealed record VocabularyWord(int Number, string Text, int Parts, int Syno
 }
 
 /// <summary>
-/// A game's vocabulary, <c>VOCAB.DAT</c>: the size of the words' text, the text, each word
-/// ending in a zero, then a count and eight bytes for each word: where its text starts, its
-/// parts of speech, the number of a word it is a synonym of, and the parts of speech it is that
-/// word's synonym as.
+/// A game's vocabulary, <c>VOCAB.DAT</c>, in whichever of its two forms. <i>Spellcasting
+/// 101</i>'s is plain: the size of the words' text, the text, each word ending in a zero, then
+/// a count and eight bytes for each word: where its text starts, its parts of speech, the
+/// number of a word it is a synonym of, and the parts of speech it is that word's synonym as.
+/// <i>Spellcasting 201</i>'s is packed: a tree of Huffman's codes, the text packed by it, a
+/// count and four bytes for each word, where its text starts and its parts of speech, and
+/// the synonyms apart, in groups.
 /// </summary>
 public static class Vocabulary
 {
@@ -36,17 +39,14 @@ public static class Vocabulary
         }
 
         int size = BinaryPrimitives.ReadUInt16LittleEndian(file);
-        if (2 + size + 2 > file.Length)
+        if (2 + size + 2 > file.Length || 2 + size + 2 + (8 * BinaryPrimitives.ReadUInt16LittleEndian(file[(2 + size)..])) != file.Length)
         {
-            throw new InvalidDataException("The vocabulary's text is longer than its file.");
+            // not the plain form: the packed one, or nothing
+            return ReadPacked(file);
         }
 
         int count = BinaryPrimitives.ReadUInt16LittleEndian(file[(2 + size)..]);
         int table = 2 + size + 2;
-        if (table + (8 * count) != file.Length)
-        {
-            throw new InvalidDataException("The vocabulary's words don't end where its file does.");
-        }
 
         var words = new List<VocabularyWord>(count);
         for (int number = 1; number <= count; number++)
@@ -69,5 +69,77 @@ public static class Vocabulary
         }
 
         return words;
+    }
+
+    // The packed form. The tree is a count of words and then the words, in pairs, one for a
+    // 0 bit and one for a 1: a word from zero up is where in the tree the next pair is, and
+    // one below zero is a character, as its complement, and ends the code. The last pair is
+    // the root. The text is its size unpacked and then the codes, read from each byte's low
+    // bit up. The table is in alphabetical order, and a word's number is its place in it. A
+    // group of synonyms is a word's number, a count, and that many pairs: a word that stands
+    // for it, and the parts of speech it stands for it as.
+    private static List<VocabularyWord> ReadPacked(ReadOnlySpan<byte> file)
+    {
+        try
+        {
+            int links = BinaryPrimitives.ReadUInt16LittleEndian(file);
+            var tree = file.Slice(2, 2 * links);
+            int at = 2 + (2 * links);
+            byte[] text = new byte[BinaryPrimitives.ReadUInt16LittleEndian(file[at..])];
+            int bit = (at + 2) * 8;
+            for (int made = 0, node = links - 2; made < text.Length; bit++)
+            {
+                int link = BinaryPrimitives.ReadInt16LittleEndian(tree[(2 * (node + (file[bit >> 3] >> (bit & 7) & 1)))..]);
+                if (link >= 0)
+                {
+                    node = link;
+                }
+                else
+                {
+                    text[made++] = (byte)~link;
+                    node = links - 2;
+                }
+            }
+
+            at = (bit + 7) >> 3;
+            int count = BinaryPrimitives.ReadUInt16LittleEndian(file[at..]);
+            int table = at + 2;
+            at = table + (4 * count);
+            var synonyms = new Dictionary<int, (int Word, int Parts)>();
+            int groups = BinaryPrimitives.ReadUInt16LittleEndian(file[at..]);
+            for (at += 2; groups > 0; groups--)
+            {
+                int head = BinaryPrimitives.ReadUInt16LittleEndian(file[at..]), members = BinaryPrimitives.ReadUInt16LittleEndian(file[(at + 2)..]);
+                for (at += 4; members > 0; members--, at += 4)
+                {
+                    synonyms[BinaryPrimitives.ReadUInt16LittleEndian(file[at..])] = (head, BinaryPrimitives.ReadUInt16LittleEndian(file[(at + 2)..]));
+                }
+            }
+
+            if (at != file.Length)
+            {
+                throw new InvalidDataException("The vocabulary's words don't end where its file does.");
+            }
+
+            var words = new List<VocabularyWord>(count);
+            for (int number = 1; number <= count; number++)
+            {
+                int start = BinaryPrimitives.ReadUInt16LittleEndian(file[(table + (4 * (number - 1)))..]);
+                int end = Array.IndexOf(text, (byte)0, start);
+                var (synonym, parts) = synonyms.GetValueOrDefault(number);
+                words.Add(new VocabularyWord(
+                    number,
+                    Encoding.ASCII.GetString(text, start, (end < 0 ? text.Length : end) - start),
+                    BinaryPrimitives.ReadUInt16LittleEndian(file[(table + (4 * (number - 1)) + 2)..]),
+                    synonym,
+                    parts));
+            }
+
+            return words;
+        }
+        catch (Exception ex) when (ex is ArgumentOutOfRangeException or IndexOutOfRangeException or ArgumentException)
+        {
+            throw new InvalidDataException("The vocabulary's words don't end where its file does.", ex);
+        }
     }
 }

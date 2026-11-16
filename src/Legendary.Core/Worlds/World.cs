@@ -37,8 +37,11 @@ public readonly record struct ObjectState(ulong Flags, int Place, int SecondPlac
 public sealed record FoundPhrase(bool All, IReadOnlyList<int> Adjectives, int Noun, IReadOnlyList<int> Objects);
 
 /// <summary>A routine the game has put by to run on a later turn, or on every turn.</summary>
-/// <param name="Segment">The routine's segment, as the program has it when loaded at segment zero.</param>
-/// <param name="Offset">The routine's offset.</param>
+/// <param name="Segment">
+/// The routine's segment, as the program has it when loaded at segment zero; 0 in a game
+/// whose timers are numbers.
+/// </param>
+/// <param name="Offset">The routine's offset, or in a game whose timers are numbers, the timer's number.</param>
 /// <param name="Count">The turns to go before it runs, or -1 for a routine that runs every turn.</param>
 public sealed record WorldTimer(int Segment, int Offset, int Count)
 {
@@ -55,10 +58,11 @@ public sealed record WorldTimer(int Segment, int Offset, int Count)
 /// What kind of exit: 1 to a room, 2 to a room by a door, 3 a message said in place of going,
 /// 4 a routine that decides.
 /// </param>
+/// <param name="Routine">For kind 4 in a game that numbers such routines, the number; otherwise -1.</param>
 /// <param name="Room">For kinds 1 and 2, the room it goes to; otherwise 0.</param>
 /// <param name="Door">For kind 2, the door it goes by; otherwise 0.</param>
 /// <param name="Message">For kind 3, what is said; otherwise null.</param>
-public sealed record WorldExit(int Direction, int Kind, int Room, int Door, string? Message);
+public sealed record WorldExit(int Direction, int Kind, int Room, int Door, string? Message, int Routine = -1);
 
 /// <summary>
 /// A game's world, read from its memory as it is at the moment of asking: where the player is,
@@ -75,15 +79,28 @@ public sealed class World
     private static readonly byte[] Notice = Encoding.ASCII.GetBytes("MS Run-Time Library");
 
     private readonly Func<int, byte> _read;
+    private readonly byte[] _names;
+    private (int Bit, int Types)[]? _flags;
 
     /// <summary>A world in a memory, with its program loaded at a segment.</summary>
-    public World(Func<int, byte> read, WorldMap map, ushort loadSegment)
+    /// <param name="read">The memory, by linear address.</param>
+    /// <param name="map">The game's map.</param>
+    /// <param name="loadSegment">The segment the program is loaded at.</param>
+    /// <param name="names">
+    /// The file of the objects' names, whole, for a game that keeps them out of its program;
+    /// without it such a game's objects have no names.
+    /// </param>
+    public World(Func<int, byte> read, WorldMap map, ushort loadSegment, ReadOnlyMemory<byte> names = default)
     {
         ArgumentNullException.ThrowIfNull(read);
         ArgumentNullException.ThrowIfNull(map);
         _read = read;
         Map = map;
         LoadSegment = loadSegment;
+
+        // the file is the size of its text, in a word, and then each name and a zero
+        var file = names.Span;
+        _names = file.Length < 2 ? [] : file.Slice(2, Math.Min(file[0] | (file[1] << 8), file.Length - 2)).ToArray();
     }
 
     /// <summary>Where the game keeps what.</summary>
@@ -96,7 +113,7 @@ public sealed class World
     /// Whether the game is there: its count of objects is where the map says, and is the
     /// map's. It isn't before the game has loaded, or once something else has the memory.
     /// </summary>
-    public bool IsThere => DataWord(Map.CountOffset) == Map.ObjectCount && Word(Linear(Map.TableSegment, 2)) != 0;
+    public bool IsThere => DataWord(Map.CountOffset) == Map.ObjectCount && (Word(Entry(1) + 2) | Word(Entry(1) + 4)) != 0;
 
     /// <summary>The room the player is in, an object's number.</summary>
     public int Room => DataWord(Map.RoomOffset);
@@ -107,8 +124,8 @@ public sealed class World
     /// <summary>The turns taken.</summary>
     public int Moves => DataWord(Map.MovesOffset);
 
-    /// <summary>The time of day, in minutes from midnight; the game counts five at a time.</summary>
-    public int Minutes => DataWord(Map.ClockOffset) * 5;
+    /// <summary>The time of day, in minutes from midnight; the game counts some at a time.</summary>
+    public int Minutes => DataWord(Map.ClockOffset) * Map.ClockStep;
 
     /// <summary>The number of the action last performed, or being performed.</summary>
     public int Action => _read(Linear(Map.ActionSegment, Map.ActionOffset));
@@ -166,7 +183,8 @@ public sealed class World
     /// <param name="read">The memory, by linear address.</param>
     /// <param name="size">How much of it to look through, in bytes.</param>
     /// <param name="map">The game's map.</param>
-    public static World? Find(Func<int, byte> read, int size, WorldMap map)
+    /// <param name="names">The file of the objects' names, for a game that keeps them in one.</param>
+    public static World? Find(Func<int, byte> read, int size, WorldMap map, ReadOnlyMemory<byte> names = default)
     {
         ArgumentNullException.ThrowIfNull(read);
         ArgumentNullException.ThrowIfNull(map);
@@ -187,7 +205,7 @@ public sealed class World
 
             if (found)
             {
-                var world = new World(read, map, (ushort)((at >> 4) - map.DataSegment));
+                var world = new World(read, map, (ushort)((at >> 4) - map.DataSegment), names);
                 if (world.IsThere)
                 {
                     return world;
@@ -206,21 +224,21 @@ public sealed class World
         ArgumentOutOfRangeException.ThrowIfGreaterThan(number, Map.ObjectCount);
 
         // the table's entry: its type, a byte that's zero, and a far pointer to its record
-        int entry = Linear(Map.TableSegment, 6 * (number - 1));
+        int entry = Entry(number);
         int type = _read(entry);
         int record = (Word(entry + 4) * 16) + Word(entry + 2);
 
         // the game's own table says how many places and lists a type has, and its record's size
-        int about = Linear(Map.DataSegment, Map.TypesOffset + (3 * type));
+        int about = TypeEntry(type);
         int places = _read(about), lists = _read(about + 1), size = _read(about + 2);
-
-        string name = Text(Word(record + 2), Word(record)) ?? "";
-        string? second = Text(Word(record + 6), Word(record + 4));
         if (!Map.Layouts.TryGetValue(type, out var layout) || layout.Size != size)
         {
-            return new WorldObject(number, type, name, second, [], -1, 0, []);
+            // a record of a size that isn't known still starts with its names, as pointers
+            return new WorldObject(number, type, Text(Word(record + 2), Word(record)) ?? "", Text(Word(record + 6), Word(record + 4)), [], -1, 0, []);
         }
 
+        string name = (layout.Names == 4 ? Named(Word(record)) : Text(Word(record + 2), Word(record))) ?? "";
+        string? second = layout.Names == 4 ? Named(Word(record + 2)) : Text(Word(record + 6), Word(record + 4));
         return new WorldObject(
             number, type, name, second,
             layout.Places < 0 ? [] : Words(record + layout.Places, places),
@@ -237,7 +255,7 @@ public sealed class World
     {
         ArgumentOutOfRangeException.ThrowIfLessThan(number, 1);
         ArgumentOutOfRangeException.ThrowIfGreaterThan(number, Map.ObjectCount);
-        int entry = Linear(Map.TableSegment, 6 * (number - 1));
+        int entry = Entry(number);
         int type = _read(entry);
         int record = (Word(entry + 4) * 16) + Word(entry + 2);
         if (!Map.Layouts.TryGetValue(type, out var layout))
@@ -245,14 +263,30 @@ public sealed class World
             return new ObjectState(0, 0, 0, -1);
         }
 
-        ulong flags = 0;
+        ulong bits = 0;
         for (int index = 0; index < layout.FlagBytes; index++)
         {
-            flags |= (ulong)_read(record + 8 + index) << (8 * index);
+            bits |= (ulong)_read(record + layout.Names + index) << (8 * index);
+        }
+
+        // where the game has a table of flags, a flag is the bit the table gives it, for the
+        // types the table gives it to
+        ulong flags = bits;
+        if (Map.FlagCount > 0)
+        {
+            flags = 0;
+            var table = FlagTable();
+            for (int flag = 1; flag < table.Length; flag++)
+            {
+                if ((table[flag].Types >> (type - 1) & 1) != 0 && (bits >> table[flag].Bit & 1) != 0)
+                {
+                    flags |= 1UL << (flag - 1);
+                }
+            }
         }
 
         // how many places a type has is the game's to say
-        int places = layout.Places < 0 ? 0 : _read(Linear(Map.DataSegment, Map.TypesOffset + (3 * type)));
+        int places = layout.Places < 0 ? 0 : _read(TypeEntry(type));
         return new ObjectState(
             flags,
             places > 0 ? Word(record + layout.Places) : 0,
@@ -265,11 +299,16 @@ public sealed class World
     {
         ArgumentOutOfRangeException.ThrowIfLessThan(room, 1);
         ArgumentOutOfRangeException.ThrowIfGreaterThan(room, Map.ObjectCount);
-        int entry = Linear(Map.TableSegment, 6 * (room - 1));
+        int entry = Entry(room);
         int record = (Word(entry + 4) * 16) + Word(entry + 2);
-        if (!Map.Layouts.TryGetValue(_read(entry), out var layout) || layout.Exits < 0)
+        if (!Map.Layouts.TryGetValue(_read(entry), out var layout) || (layout.Exits < 0 && layout.ExitStart < 0))
         {
             return [];
+        }
+
+        if (layout.ExitStart >= 0)
+        {
+            return TableExits(Word(record + layout.ExitStart), _read(record + layout.ExitCount));
         }
 
         // six bytes each: a direction, a kind, and a far pointer to what the kind needs
@@ -284,6 +323,27 @@ public sealed class World
                 kind is 1 or 2 ? Word(at) : 0,
                 kind == 2 ? Word(at + 2) : 0,
                 kind == 3 ? Text(segment, offset, 200) : null));
+        }
+
+        return exits;
+    }
+
+    // a room's rows of the one table of exits, four bytes each: a direction, a kind, and a
+    // word that is a room, a door's row in the table of doors, or a routine's number
+    private List<WorldExit> TableExits(int first, int count)
+    {
+        var exits = new List<WorldExit>();
+        for (int row = 0; first > 0 && row < count; row++)
+        {
+            int at = Linear(Map.ExitsSegment, Map.ExitsOffset + (4 * (first - 1 + row)));
+            int kind = _read(at + 1), value = Word(at + 2);
+            int door = kind == 2 ? Linear(Map.DoorsSegment, Map.DoorsOffset + (4 * value)) : 0;
+            exits.Add(new WorldExit(
+                _read(at), kind,
+                kind == 1 ? value : kind == 2 ? Word(door) : 0,
+                kind == 2 ? Word(door + 2) : 0,
+                null,
+                kind == 4 ? value : -1));
         }
 
         return exits;
@@ -330,11 +390,13 @@ public sealed class World
                 throw new InvalidDataException($"The grammar's form {forms.Count + 1} doesn't start with a verb.");
             }
 
-            int start = _read(at + 7), count = _read(at + 8);
+            // where the flags are a word, what follows them is a byte further on
+            int wide = Map.WideGrammar ? 1 : 0;
+            int start = _read(at + 7 + wide), count = _read(at + 8 + wide);
             forms.Add(new CommandForm(
-                verb, Word(at + 2), _read(at + 4), _read(at + 5), _read(at + 6),
+                verb, Word(at + 2), _read(at + 4), _read(at + 5 + wide), _read(at + 6 + wide),
                 [.. Enumerable.Range(start, count).Select(index => seconds + (6 * index))
-                    .Select(second => new SecondObjectForm(Word(second), _read(second + 2), _read(second + 4)))]));
+                    .Select(second => new SecondObjectForm(Word(second), _read(second + 2), _read(second + 4 + wide)))]));
         }
 
         return new Grammar(forms, words, Map.ActionNames);
@@ -397,12 +459,12 @@ public sealed class World
 
     /// <summary>The timers the game has going, in the order it runs them.</summary>
     public IReadOnlyList<WorldTimer> Timers =>
-        [.. Enumerable.Range(0, Math.Clamp(DataWord(Map.TimerCountOffset), 0, 16)).Select(index => TimerAt(Linear(Map.ActionSegment, Map.TimersOffset) + (6 * index)))];
+        [.. Enumerable.Range(0, Math.Clamp(DataWord(Map.TimerCountOffset), 0, 16)).Select(index => TimerAt(Linear(Map.ActionSegment, Map.TimersOffset) + (Map.TimerSize * index)))];
 
     /// <summary>The timer whose routine is being run, or null between them.</summary>
     public WorldTimer? TimerRunning =>
         DataWord(Map.TimerIndexOffset) is var index && index < Math.Clamp(DataWord(Map.TimerCountOffset), 0, 16)
-            ? TimerAt(Linear(Map.ActionSegment, Map.TimersOffset) + (6 * index))
+            ? TimerAt(Linear(Map.ActionSegment, Map.TimersOffset) + (Map.TimerSize * index))
             : null;
 
     /// <summary>The linear address of the routine that starts a timer.</summary>
@@ -422,8 +484,46 @@ public sealed class World
     /// <param name="stack">The linear address of the top of the stack, SS:SP.</param>
     public WorldTimer TimerArgument(int stack) => TimerAt(stack + 4);
 
-    // a far pointer and a count, as the table and the stack both have them
-    private WorldTimer TimerAt(int at) => new((Word(at + 2) - LoadSegment) & 0xFFFF, Word(at), (short)Word(at + 4));
+    // a far pointer and a count, as the table and the stack both have them, or where timers
+    // are numbers, the number in a byte and the count
+    private WorldTimer TimerAt(int at) =>
+        Map.TimerSize == 4
+            ? new(0, _read(at), (short)Word(at + 2))
+            : new((Word(at + 2) - LoadSegment) & 0xFFFF, Word(at), (short)Word(at + 4));
+
+    // an object's entry in the table of objects
+    private int Entry(int number) => Linear(Map.TableSegment, Map.TableOffset + (6 * (number - 1)));
+
+    // a type's entry in the table of types, which can be reckoned from before its segment's start
+    private int TypeEntry(int type) => Linear(Map.TypesSegment ?? Map.DataSegment, (ushort)(Map.TypesOffset + (3 * type)));
+
+    // the game's table of flags, read once: it is the program's own and doesn't change
+    private (int Bit, int Types)[] FlagTable()
+    {
+        if (_flags is null)
+        {
+            _flags = new (int, int)[Map.FlagCount + 1];
+            for (int flag = 1; flag <= Map.FlagCount; flag++)
+            {
+                int at = Linear(Map.FlagsSegment, Map.FlagsOffset + (4 * flag));
+                _flags[flag] = (_read(at) & 63, Word(at + 2));
+            }
+        }
+
+        return _flags;
+    }
+
+    // a name from the file of names, by where it starts there, counted from 1
+    private string? Named(int start)
+    {
+        if (start < 1 || start > _names.Length)
+        {
+            return null;
+        }
+
+        int end = Array.IndexOf(_names, (byte)0, start - 1);
+        return Encoding.Latin1.GetString(_names, start - 1, (end < 0 ? _names.Length : end) - (start - 1));
+    }
 
     private int Linear(ushort segment, int offset) => ((LoadSegment + segment) * 16) + offset;
 

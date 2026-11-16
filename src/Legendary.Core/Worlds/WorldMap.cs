@@ -9,11 +9,20 @@ namespace Legendary.Core.Worlds;
 /// <param name="Relation">A byte: which of its parent's lists it's on.</param>
 /// <param name="Next">The next object on that list.</param>
 /// <param name="Lists">The first object on each of its own lists, a word each.</param>
-/// <param name="FlagBytes">How many bytes of flags it has, from offset 8.</param>
+/// <param name="FlagBytes">How many bytes of flags it has, after its names.</param>
 /// <param name="ExitCount">A room's: a byte, how many exits it has.</param>
 /// <param name="Exits">A room's: a far pointer to its exits, six bytes each.</param>
+/// <param name="Names">
+/// The size of the two names every record starts with: 8 for two far pointers into the
+/// program, or 4 for two words, each where a name starts in the file of names, from 1.
+/// </param>
+/// <param name="ExitStart">
+/// A room's, in a game that keeps every room's exits in one table: the number of its first
+/// row there, from 1.
+/// </param>
 public sealed record RecordLayout(
-    int Size, int Places = -1, int Relation = -1, int Next = -1, int Lists = -1, int FlagBytes = 2, int ExitCount = -1, int Exits = -1);
+    int Size, int Places = -1, int Relation = -1, int Next = -1, int Lists = -1, int FlagBytes = 2, int ExitCount = -1, int Exits = -1,
+    int Names = 8, int ExitStart = -1);
 
 /// <summary>Whose routine the game has asked about an action it is performing.</summary>
 public enum Asked
@@ -147,6 +156,31 @@ public sealed record AnswerPoint(ushort Offset, Asked Asked);
 /// <param name="PersonFlagNames">The flags that are something else for a person.</param>
 /// <param name="StateFlags">The flags that say how a thing is for now, worth saying beside its name.</param>
 /// <param name="Layouts">The records' layouts, by type.</param>
+/// <param name="Watched">
+/// Whether the places in the program the map names, where an action is performed and a
+/// command parsed and a timer started, are known: without them a game's world can be read
+/// as it is, and what the program does to it can't be said as it does it.
+/// </param>
+/// <param name="TableOffset">Where the table of objects starts in its segment.</param>
+/// <param name="TypesSegment">The segment the table of types is in, when it isn't the data's.</param>
+/// <param name="NamesFile">The file the objects' names are in, for a game that keeps them out of the program.</param>
+/// <param name="FlagsSegment">
+/// The segment of a table of flags, for a game in which a flag's number doesn't say which
+/// bit it is: four bytes for each flag, the bit and, at 2, a word with a bit for each type
+/// that has the flag.
+/// </param>
+/// <param name="FlagsOffset">Where in that segment the table would have flag 0.</param>
+/// <param name="FlagCount">How many flags the table has; 0 for a game without one.</param>
+/// <param name="ExitsSegment">The segment of the one table of every room's exits, four bytes each.</param>
+/// <param name="ExitsOffset">Where in it the first row is.</param>
+/// <param name="DoorsSegment">The segment of the table of doors an exit can go by: a room and the door, a word each.</param>
+/// <param name="DoorsOffset">Where in it the first is.</param>
+/// <param name="WideGrammar">Whether the grammar's flags are a word and not a byte, which moves what follows them.</param>
+/// <param name="TimerSize">
+/// A timer's size in the table: 6 for a far pointer to its routine and a count, or 4 for the
+/// timer's number in a byte and, at 2, the count.
+/// </param>
+/// <param name="ClockStep">How many minutes one step of the clock is.</param>
 public sealed record WorldMap(
     ushort DataSegment, ushort TableSegment, int ObjectCount, ushort CountOffset, ushort TypesOffset,
     ushort RoomOffset, ushort ActorOffset, ushort MovesOffset, ushort ClockOffset,
@@ -166,7 +200,12 @@ public sealed record WorldMap(
     IReadOnlyDictionary<int, string> PlaceFlagNames,
     IReadOnlyDictionary<int, string> PersonFlagNames,
     IReadOnlyList<int> StateFlags,
-    IReadOnlyDictionary<int, RecordLayout> Layouts)
+    IReadOnlyDictionary<int, RecordLayout> Layouts,
+    bool Watched = true,
+    ushort TableOffset = 0, ushort? TypesSegment = null, string? NamesFile = null,
+    ushort FlagsSegment = 0, ushort FlagsOffset = 0, int FlagCount = 0,
+    ushort ExitsSegment = 0, ushort ExitsOffset = 0, ushort DoorsSegment = 0, ushort DoorsOffset = 0,
+    bool WideGrammar = false, int TimerSize = 6, int ClockStep = 5)
 {
     /// <summary>What a flag is for an object of a type, or null when it isn't known.</summary>
     public string? FlagName(int flag, int type) =>
@@ -303,4 +342,135 @@ public sealed record WorldMap(
             [7] = new(32, Places: 0x0E, Relation: 0x10, Next: 0x12, Lists: 0x14),
             [8] = new(22, Places: 0x0E, Relation: 0x10, Next: 0x12),
         });
+
+    /// <summary>
+    /// <i>Spellcasting 201: The Sorcerer's Appliance</i> (1991). Its world as it is, without
+    /// yet the places in its program where the world is changed.
+    /// </summary>
+    public static WorldMap Spellcasting201 { get; } = new(
+        DataSegment: 0x4974, TableSegment: 0x2918, ObjectCount: 482, CountOffset: 0x3E70, TypesOffset: 0xFFFD,
+        RoomOffset: 0x2A06, ActorOffset: 0x2A08, MovesOffset: 0x2A0A, ClockOffset: 0x2A0C,
+        ActionSegment: 0x3FA7, ActionOffset: 0, ObjectOffset: 0, SecondObjectOffset: 0,
+        PerformSegment: 0, PerformOffset: 0, DepthOffset: 0, Answers: [],
+        JumpBackOffset: 0, GoAction: 0, DirectionOffset: 0,
+        Directions: Spellcasting101.Directions,
+        GrammarSegment: 0x2C03, FormsOffset: 0x00E2, SecondsOffset: 0x10B4, VocabularyFile: "VOCAB.DAT",
+        ActionNames: new Dictionary<int, string>(),
+        TokenSegment: 0, TokenOffset: 0, AfterStopOffset: 0, AfterAndOffset: 0, TokenWordOffset: 0,
+        WordTokens: Spellcasting101.WordTokens, MarkTokens: Spellcasting101.MarkTokens, EndTokens: Spellcasting101.EndTokens,
+        FormOffset: 0, FormIndexOffset: 0, FormActionOffset: 0, FoundOffset: 0, LotsOffset: 0, LotSize: 12, LotCountOffset: 0,
+        TimersOffset: 0x5D2A, TimerCountOffset: 0x7EF0, TimerIndexOffset: 0x7EF2,
+        TimerSegment: 0x13A2, TimerStartOffset: 0x0027, TimerStopOffset: 0x009E, TimerRunOffset: 0,
+        TimerNames: new Dictionary<int, string>
+        {
+            [1] = "the day's initiation",
+            [2] = "the upperclassmen find you",
+            [3] = "the serpent heads speak",
+            [4] = "the simulation ends",
+            [5] = "sleepiness",
+            [6] = "the class bell",
+            [7] = "the tower clock chimes",
+            [8] = "nothing",
+            [9] = "a word forgotten",
+            [10] = "a byte forgotten",
+            [11] = "what was raised sinks back",
+            [12] = "the simpleberries wear off",
+            [13] = "the speed potion wears off",
+            [14] = "the mascot swells back",
+            [15] = "the party starts",
+            [16] = "you open your eyes",
+            [17] = "the Brus make ready",
+            [18] = "the Poolside Party",
+            [19] = "Hiddenmolar and Cowpatty whisper",
+            [20] = "word of Tickingclock's death",
+            [21] = "Tickingclock's errand",
+            [22] = "Tickingclock goes",
+            [23] = "the sewer gurgles",
+            [24] = "the last newspaper goes",
+            [25] = "a second byte forgotten",
+            [26] = "the Appliance runs",
+            [27] = "the Sorcerer returns",
+            [28] = "the banana fetches water",
+            [29] = "the army of bananas",
+            [30] = "a knock from the yard",
+            [31] = "twelve bytes forgotten",
+            [32] = "everyone out of the pool",
+            [33] = "the Welcome Back Party fills",
+            [34] = "the Royal Parade",
+            [35] = "the hellhounds come",
+            [36] = "the bier is brought in",
+            [37] = "you are yourself again",
+            [38] = "Hiddenmolar tells all",
+            [39] = "the messenger",
+            [40] = "the cloak is finished",
+            [41] = "the cloak is brought",
+            [42] = "the iron turns to copper",
+            [43] = "the copper dissolves",
+            [44] = "the hanging",
+            [45] = "the cook and the hors d'oevres",
+            [46] = "the tree is a sapling again",
+            [47] = "the Social Hall, turn by turn",
+            [48] = "a count down by sixes",
+            [49] = "seen in the Ancient Lab",
+        },
+        PlaceType: 1, PersonType: 7,
+        FlagNames: new Dictionary<int, string>
+        {
+            [1] = "its name takes no article",
+            [2] = "its name takes an",
+            [3] = "plural",
+            [4] = "takes some",
+            [5] = "seen",
+            [6] = "touched",
+            [7] = "special to take",
+            [8] = "not listed",
+            [9] = "gives light",
+            [10] = "a door",
+            [11] = "can't be opened or closed",
+            [12] = "can be read",
+            [13] = "open",
+            [14] = "locked",
+            [15] = "can be taken",
+            [16] = "in the sewer",
+            [17] = "at the university",
+            [18] = "left out of all",
+            [19] = "lit",
+            [20] = "can be seen through",
+            [21] = "things can be on it",
+            [22] = "can be got in or on",
+            [23] = "burns",
+            [24] = "a container",
+            [25] = "can be worn",
+            [26] = "a key",
+            [27] = "cuts",
+            [28] = "cuts",
+            [29] = "can be eaten",
+            [30] = "what's dropped in it lands outside",
+            [31] = "magic",
+            [32] = "can be lit",
+            [33] = "outdoors",
+            [34] = "a part of the Appliance",
+            [36] = "a bed",
+            [37] = "someone other than you",
+            [38] = "female",
+        },
+        PlaceFlagNames: new Dictionary<int, string> { [6] = "visited" },
+        PersonFlagNames: new Dictionary<int, string>(),
+        StateFlags: [13, 14, 19],
+        Layouts: new Dictionary<int, RecordLayout>
+        {
+            [1] = new(24, Lists: 0x0A, ExitCount: 0x14, ExitStart: 0x16, Names: 4),
+            [2] = new(34, Places: 0x0E, Relation: 0x10, Next: 0x12, Lists: 0x14, FlagBytes: 6, Names: 4),
+            [3] = new(10, Names: 4),
+            [4] = new(18, Lists: 0x0A, Names: 4),
+            [5] = new(18, Lists: 0x0A, Names: 4),
+            [6] = new(22, Places: 0x0A, Lists: 0x0E, Names: 4),
+            [7] = new(28, Places: 0x0A, Relation: 0x0C, Next: 0x0E, Lists: 0x10, Names: 4),
+            [8] = new(18, Places: 0x0A, Relation: 0x0C, Next: 0x0E, Names: 4),
+        },
+        Watched: false,
+        TableOffset: 0x00B8, TypesSegment: 0x2918, NamesFile: "OBJECT.DAT",
+        FlagsSegment: 0x2918, FlagsOffset: 0x0014, FlagCount: 40,
+        ExitsSegment: 0x2918, ExitsOffset: 0x29CC, DoorsSegment: 0x2918, DoorsOffset: 0x2DF4,
+        WideGrammar: true, TimerSize: 4);
 }
