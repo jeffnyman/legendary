@@ -24,9 +24,8 @@ relative to where the program loads, as the files have them. How the programs ar
 ## The program
 
 These read a program linked by PLINK86, *Spellcasting 101* and *Timequest*, or by
-.RTLink/Plus 4.10, *Spellcasting 201*. The commands from `loads` down read only the first
-two so far, but for `loads`, `objects`, `grammar`, `actions`, `flags` and `timers`, which
-read *Spellcasting 201* too.
+.RTLink/Plus 4.10, *Spellcasting 201*. All of them read *Spellcasting 201* but `objects
+--saved`; what each makes of *Timequest* is said with it.
 
 ```
 python -m legendary_tools exe <the game's folder>
@@ -137,8 +136,9 @@ python -m legendary_tools dis ../../legend/sc101/game 3670:054e
   the names the program has for the rules: `<noun_phrase> ::= <pe_article>
   <pe_adjective_phrase> <noun>`. `grammar` is which verbs go with which prepositions; this is
   what a command is at all. It is in
-  [docs/spellcasting-101.md](../docs/spellcasting-101.md#the-parser), and reads *Spellcasting
-  101* only.
+  [docs/spellcasting-101.md](../docs/spellcasting-101.md#the-parser). It reads all three
+  games; *Spellcasting 201* keeps [the same grammar without the
+  names](../docs/spellcasting-201.md#the-parsers-own-grammar), which are given back to it.
 
 ## The data files
 
