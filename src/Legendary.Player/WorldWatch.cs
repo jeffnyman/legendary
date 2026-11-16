@@ -113,7 +113,7 @@ internal sealed class WorldWatch(
         }
 
         SayChanges(world);
-        string place = $"{Time(world.Minutes)}, turn {world.Moves}, in {Name(world, room)}";
+        string place = $"{(world.Visit is { } visit ? visit + ", " : "")}{Time(world.Minutes)}, turn {world.Moves}, in {Name(world, room)}";
         string here = $"  here: {Inside(world, room, depth: 0)}";
         string exits = $"  exits: {Exits(world, room)}";
         if (place == _place && here == _here && exits == _exits)
@@ -234,7 +234,7 @@ internal sealed class WorldWatch(
         var lines = new List<PanelLine>
         {
             new($"{Time(world.Minutes)}   turn {world.Moves}", PanelTone.Title),
-            new(Name(world, room), PanelTone.Title),
+            new(Name(world, room) + (world.Visit is { } visit ? $", {visit}" : ""), PanelTone.Title),
             new(""),
             new("Here", PanelTone.Dim),
         };
@@ -332,6 +332,7 @@ internal sealed class WorldWatch(
             1 => $" to {Room(exit.Room)}",
             2 => $" to {Room(exit.Room)} by {Room(exit.Door)}",
             3 => $": \"{exit.Message}\"",
+            5 => exit.Open ? $" to {Room(exit.Room)}, open for now" : $" to {Room(exit.Room)}, shut for now",
             4 => exit.Routine < 0 ? ": a routine decides" : string.Create(CultureInfo.InvariantCulture, $": routine {exit.Routine} decides"),
             _ => string.Create(CultureInfo.InvariantCulture, $": an exit of kind {exit.Kind}"),
         };
