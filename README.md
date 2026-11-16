@@ -162,8 +162,8 @@ sizes are the sharpest.
   Excavate's core. *Spellcasting 101* plays on it, from its title through commands typed
   at it.
 - **`src/Legendary.Core`** reads the games' files, in C#. So far: a DOS program's MZ header, and
-  a program linked by PLINK86, with its overlays loaded into the memory it would have, the
-  packed text of a string file, the pictures of a picture file and their regions, the songs of a music file, and a
+  a program linked by PLINK86 or by .RTLink/Plus, with its overlays loaded into the memory it
+  would have, the packed text of a string file, the pictures of a picture file and their regions, the songs of a music file, and a
   RealSound recording, and the words of a vocabulary. It also reads a game's world from its
   memory as it runs: the room, the clock, the action, the tree of objects, and the grammar.
 - **`tools`** has the same in Python, as commands to explore a game with: the overlays, the

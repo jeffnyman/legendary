@@ -192,10 +192,11 @@ python -m legendary_tools vocab <the game's folder>
 - **`program.py`**: what the two linkers' programs share: an overlay, a thunk, and the
   program's memory with overlays loaded.
 - **`plink86.py`**: PLINK86's table of overlays and its thunks.
-  `src/Legendary.Core/Programs` is the same in C#.
 - **`rtlink.py`**: a .RTLink/Plus program: its records and their fixups, its run-time
   library linked in, and the overlay manager's table and thunks. How it works is in
   [docs/spellcasting-201.md](../docs/spellcasting-201.md#how-the-program-is-built).
+  `src/Legendary.Core/Programs` has these three in C#, and builds the same memory byte for
+  byte.
 - **`handlers.py`**: the routine of each object and each action, read from the switches in the
   code that call them.
 - **`sentence.py`**: the rules of the parser's grammar and the ways each can go, found by the
