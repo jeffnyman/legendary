@@ -4,7 +4,7 @@ Legend Entertainment, 1991. The second *Spellcasting*, by Steve Meretzky, on the
 [*Spellcasting 101*](spellcasting-101.md) was built on, a year on.
 
 This is what the first look found, and so far it is how the program is built, its
-vocabulary, its objects, its grammar, which routine is whose, its timers, its text and its music. What is
+vocabulary, its objects, its grammar, which routine is whose, its timers, its text, its music and its saved games. What is
 known for certain is said plainly; what is inferred says so. Addresses are `segment:offset` in
 hex, with segments relative to where the program loads. Every one of them can be looked at
 with the [tools](../tools/README.md).
@@ -650,12 +650,37 @@ and the three games after *Spellcasting 201* keep theirs as it does. The tools l
 write out all six games' songs. None of the `.MDI` files written has been played to check
 it.
 
+## A saved game
+
+`RESTART.DAT` is the world as the game starts, written by the routine that saves a game, at
+`05B5:0375`, and it has the parts [the first game's](spellcasting-101.md#the-world-as-the-game-starts)
+had, in the same order:
+
+| Bytes | What |
+|---|---|
+| 34 | What starts it, from `26D1:0019`; all zeros in `RESTART.DAT`. It was four bytes |
+| 12,014 | The record of each of the 482 objects, in the table's order |
+| 553 | 152 saved variables, each a place in the program's memory and a size, from a table at `25BE:0610` |
+| 2 | How many timers are going: none |
+| 4 each | The timers, a number and a count each. They were six bytes |
+
+That comes to the file's 12,603 bytes. The first of the variables is 320 bytes at
+`25BE:01EA`; the rest are a word or a byte each, the room at `4974:2A06` among them.
+
+The routine is one for saving and for restoring, told which by a number, and writes what
+starts the file only for two of the numbers it knows. What the 34 bytes are when they
+aren't zeros hasn't been looked at: a saved game from play would show it.
+
+With no far pointer left in an object's record, the names being a file's and the exits a
+table's, an object's record is saved and restored as it is. The first game's records had
+pointers in them, and how it put those right on restoring was never found.
+
 ## Still to do
 
 Everything past the program, the vocabulary, the objects, the grammar, the routines, the
-timers, the text and the music. Flags 35, 39 and 40 have no meaning yet, and six more are
-named from who has them. Three timers are named only from what they touch. What a saved
-game holds isn't found.
+timers, the text, the music and a saved game's parts. Flags 35, 39 and 40 have no meaning
+yet, and six more are named from who has them. Three timers are named only from what they
+touch.
 
 The pictures, their regions and the sounds are read by the tools as they are. Their output
 hasn't been checked by eye.
