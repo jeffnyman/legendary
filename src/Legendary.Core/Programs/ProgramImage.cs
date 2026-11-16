@@ -11,7 +11,7 @@ public sealed class ProgramImage
     private readonly byte[] _memory;
     private readonly HashSet<int> _relocations;
 
-    internal ProgramImage(Plink86Program program, byte[] memory, HashSet<int> relocations, IReadOnlyList<Plink86Overlay> loaded)
+    internal ProgramImage(OverlaidProgram program, byte[] memory, HashSet<int> relocations, IReadOnlyList<ProgramOverlay> loaded)
     {
         Program = program;
         _memory = memory;
@@ -20,13 +20,13 @@ public sealed class ProgramImage
     }
 
     /// <summary>The program this is the memory of.</summary>
-    public Plink86Program Program { get; }
+    public OverlaidProgram Program { get; }
 
     /// <summary>The memory, from the program's first byte.</summary>
     public ReadOnlyMemory<byte> Memory => _memory;
 
     /// <summary>The overlays that are loaded.</summary>
-    public IReadOnlyList<Plink86Overlay> Loaded { get; }
+    public IReadOnlyList<ProgramOverlay> Loaded { get; }
 
     /// <summary>The bytes from an address on.</summary>
     public ReadOnlySpan<byte> At(ushort segment, ushort offset) => _memory.AsSpan(segment * 16 + offset);
@@ -38,6 +38,6 @@ public sealed class ProgramImage
     public bool IsRelocation(int linear) => _relocations.Contains(linear);
 
     /// <summary>The overlay a segment is in, or null for the root and for what isn't loaded.</summary>
-    public Plink86Overlay? OverlayAt(ushort segment) =>
+    public ProgramOverlay? OverlayAt(ushort segment) =>
         Loaded.FirstOrDefault(overlay => overlay.LoadSegment <= segment && segment < overlay.EndSegment);
 }

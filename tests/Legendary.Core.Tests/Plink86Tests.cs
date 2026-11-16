@@ -38,7 +38,7 @@ public sealed class Plink86Tests
         Assert.Equal(program.MemoryEndSegment, data.EndSegment);
         Assert.All(program.Overlays.Take(13), overlay => Assert.False(overlay.Preloaded || overlay.InExe));
 
-        Assert.Equal(new Plink86Thunk(0x2F1C, 0x0192, 3, 0x3670, 0x054E), program.ThunkAt(0x2F1C, 0x0192));
+        Assert.Equal(new ProgramThunk(0x2F1C, 0x0192, 3, 0x3670, 0x054E), program.ThunkAt(0x2F1C, 0x0192));
     }
 
     /// <summary>
