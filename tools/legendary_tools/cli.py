@@ -354,6 +354,13 @@ def _exit_target(program: Program, table: ObjectTable, row: Exit) -> str:
         door = table.door(row.value) if row.kind == 2 else None
         if door:
             return f"to {_named(table, door[0])} by {_named(table, door[1])}"
+        if row.kind == 3 and (text := table.exit_text(row.value)) is not None:
+            return "says: " + _shown(text, 60)
+        opened = table.exit_variable(row.value) if row.kind == 5 else None
+        if opened:
+            room, variable, text = opened
+            shut = _shown(text, 60) if text else "that you can't go that way"
+            return f"to {_named(table, room)} when the byte at {variable:04x} isn't 0, or says: {shut}"
         return f"a routine, numbered {row.value}" if row.kind == 4 else str(row.value)
     target = f"{row.segment:04x}:{row.offset:04x}"
     thunk = program.thunk_at(row.segment, row.offset)

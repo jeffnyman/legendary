@@ -43,7 +43,7 @@ _COUNT = re.compile(rb"\x8e\x06(..)\x26\xa1(..)\x39\x46\x06", re.DOTALL)
 _TYPES = re.compile(rb"\x8e\x06(..)\x26\x8a\x87(..)\x2a\xe4\x3b\x46", re.DOTALL)
 
 # mov es,[segment variable] / mov si,es:[bx+list] / or si,si: a word from an object's list
-_WORD_LIST = re.compile(rb"\x8e\x06(..)\x26\x8b\xb7(..)\x0b\xf6", re.DOTALL)
+_WORD_LIST = re.compile(rb"\xd1\xe3\x8e\x06(..)\x26\x8b\xb7(..)\x0b\xf6", re.DOTALL)
 
 # shl si,cl / mov es,[segment variable] / mov ax,es:[si+list]: an entry of one of a room's rows
 _ROOM_ROW = re.compile(rb"\xd3\xe6\x8e\x06(..)\x26\x8b\x84(..)", re.DOTALL)
@@ -59,9 +59,19 @@ _FLAG_TABLE = re.compile(rb"\xd3\xe6\x8e\x06(..)\x26\x8b\x84(..)\x89\x46.\xb8\x0
 # this row of the exits the direction asked for?
 _EXIT_ROWS = re.compile(rb"\xb1\x02\xd3\xe6\x8a\x46\x06\x8e\x06(..)\x26\x38\x84(..)", re.DOTALL)
 
-# shl bx,1 / shl bx,1 / mov es,[segment variable] / mov ax,es:[bx+doors]: a door's own object,
-# which the room it leads to is two before
-_DOORS = re.compile(rb"\xd1\xe3\xd1\xe3\x8e\x06(..)\x26\x8b\x87(..)", re.DOTALL)
+# shl bx,1 / shl bx,1 / mov es,[segment variable] / mov ax,es:[bx+doors] / mov [bp-n],ax /
+# mov ax,flag / push ax: a door's own object, to be asked if it's open, which the room it
+# leads to is two before
+_DOORS = re.compile(rb"\xd1\xe3\xd1\xe3\x8e\x06(..)\x26\x8b\x87(..)\x89\x46.\xb8..\x50", re.DOTALL)
+
+# the same, with mov dx,es:[bx+texts+2] and both kept, and a jump: the text an exit says
+_EXIT_TEXTS = re.compile(
+    rb"\xd1\xe3\xd1\xe3\x8e\x06(..)\x26\x8b\x87(..)\x26\x8b\x97..\x89\x46.\x89\x56.\xeb", re.DOTALL
+)
+
+# mov cl,3 / shl si,cl / mov es,[segment variable] / mov bx,es:[si+rows+2] / cmp byte [bx],0:
+# the variable that says if an exit is open, which the room it leads to is two before
+_EXIT_VARIABLES = re.compile(rb"\xb1\x03\xd3\xe6\x8e\x06(..)\x26\x8b\x9c(..)\x80\x3f\x00", re.DOTALL)
 
 # Microsoft C's notice is 8 bytes into the segment DS has
 _NOTICE = b"MS Run-Time Library"
@@ -109,6 +119,21 @@ LAYOUTS_201 = {
     6: Layout(22, names=4, places=0x0A, lists=0x0E),
     7: Layout(28, names=4, places=0x0A, relation=0x0C, next=0x0E, lists=0x10),
     8: Layout(18, names=4, places=0x0A, relation=0x0C, next=0x0E),
+}
+
+
+# Timequest's, from the same routines there, between the two: the names still far pointers,
+# the flags four bytes for all but a thing and the types that are only words, and a room's
+# exits already a row's number
+LAYOUTS_TIMEQUEST = {
+    1: Layout(28, flag_bytes=4, lists=0x10, also_here=0x14, seen_from=0x16, exit_count=0x18, exit_start=0x1A),
+    2: Layout(36, flag_bytes=6, places=0x12, relation=0x14, next=0x16, lists=0x18),
+    3: Layout(14),
+    4: Layout(22, lists=0x0E),
+    5: Layout(24, flag_bytes=4, lists=0x10),
+    6: Layout(28, flag_bytes=4, places=0x10, lists=0x14),
+    7: Layout(34, flag_bytes=4, places=0x10, relation=0x12, next=0x14, lists=0x16),
+    8: Layout(24, flag_bytes=4, places=0x10, relation=0x12, next=0x14),
 }
 
 
@@ -247,6 +272,12 @@ class ObjectTable:
             self._exit_rows = self._data_word(exits[0][0]) * 16 + exits[0][1]
         if doors := self._pairs(_DOORS, root):
             self._doors = self._data_word(doors[0][0]) * 16 + doors[0][1] - 2
+        self._exit_texts = self._exit_variables = None
+        if self._exit_rows is not None:
+            if texts := self._pairs(_EXIT_TEXTS, root):
+                self._exit_texts = self._data_word(texts[0][0]) * 16 + texts[0][1]
+            if variables := self._pairs(_EXIT_VARIABLES, root):
+                self._exit_variables = self._data_word(variables[0][0]) * 16 + variables[0][1] - 2
 
         self.types: dict[int, TypeEntry] = {}
         entries = [table + 6 * (number - 1) for number in range(1, self.count + 1)]
@@ -258,7 +289,7 @@ class ObjectTable:
         self._layouts: dict[int, Layout] = next(
             (
                 layouts
-                for layouts in (LAYOUTS, LAYOUTS_201)
+                for layouts in (LAYOUTS, LAYOUTS_TIMEQUEST, LAYOUTS_201)
                 if all(
                     kind in layouts and layouts[kind].size == entry.size for kind, entry in self.types.items()
                 )
@@ -269,6 +300,8 @@ class ObjectTable:
         self.game = (
             "Spellcasting 101"
             if self._layouts is LAYOUTS
+            else "Timequest"
+            if self._layouts is LAYOUTS_TIMEQUEST
             else "Spellcasting 201"
             if self._layouts is LAYOUTS_201
             else None
@@ -308,6 +341,22 @@ class ObjectTable:
         if self._doors is None:
             return None
         return self.image.word(self._doors + 4 * row), self.image.word(self._doors + 4 * row + 2)
+
+    def exit_text(self, row: int) -> str | None:
+        """What an exit that only says something says."""
+        if self._exit_texts is None:
+            return None
+        offset, segment = struct.unpack_from("<HH", self.image.memory, self._exit_texts + 4 * row)
+        return self._text(segment, offset)
+
+    def exit_variable(self, row: int) -> tuple[int, int, str | None] | None:
+        """An exit a variable opens: the room it leads to, the variable, and what it says shut."""
+        if self._exit_variables is None:
+            return None
+        room, variable, offset, segment = struct.unpack_from(
+            "<HHHH", self.image.memory, self._exit_variables + 8 * row
+        )
+        return room, variable, self._text(segment, offset)
 
     @staticmethod
     def _signed(word: int) -> int:
