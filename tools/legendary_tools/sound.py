@@ -10,6 +10,12 @@ entries of ten bytes, and a byte:
     6  1 for the MIDI file, 0 for the .ROL
     8  a word the two of a pair share, not yet understood
 
+Timequest has 120 entries, and from Spellcasting 201 they are twelve bytes: the same, with a
+second word at 10, and both words zero for the AdLib's song. From Timequest the AdLib's song
+is no longer a .ROL. It is a MIDI file too, of the kind Ad Lib called .MDI: one track, with
+the instruments in it, as events of the sequencer's own that start 00 00 3F. So there is no
+.BNK file. A byte follows each song.
+
 A .RS file is a sound for the PC's speaker, recorded: RealSound, which Access Software made and
 Legend licensed. It has 32 bytes and then the sound:
 
@@ -36,13 +42,17 @@ class Song:
     """A song of a .MUS file, in one of its two formats."""
 
     number: int  # its entry, from 0
-    midi: bool  # a Standard MIDI File; otherwise an AdLib .ROL
+    midi: bool  # a Standard MIDI File for the MT-32; otherwise the AdLib's song
     shared: int
     data: bytes
+    second: int = 0  # the later files' second word
 
     @property
     def extension(self) -> str:
-        return "mid" if self.midi else "rol"
+        """What a file of it is called: an AdLib song that is a MIDI file is Ad Lib's .MDI."""
+        if self.midi:
+            return "mid"
+        return "mdi" if self.data.startswith(b"MThd") else "rol"
 
     def names(self) -> list[str]:
         """A MIDI file's track names, which say what plays; none for a .ROL."""
@@ -61,14 +71,21 @@ class Song:
 
 def read_songs(data: bytes) -> list[Song]:
     """The songs of a .MUS file, in its order."""
+    # the first song starts where the table ends, which says which table it is
+    (first,) = struct.unpack_from("<I", data, 0)
+    tables = {30 * 10 + 1: (30, 10), 120 * 10 + 1: (120, 10), 120 * 12 + 1: (120, 12)}
+    if first not in tables:
+        raise ValueError("the songs' table isn't one of the three that are known")
+    count, size = tables[first]
     songs = []
-    for number in range(30):
-        offset, length, kind, shared = struct.unpack_from("<IHHH", data, 10 * number)
+    for number in range(count):
+        offset, length, kind, shared = struct.unpack_from("<IHHH", data, size * number)
         if not offset:
             continue
         if offset + length > len(data):
             raise ValueError(f"song {number} goes past the end of the file")
-        songs.append(Song(number, kind == 1, shared, data[offset : offset + length]))
+        second = struct.unpack_from("<H", data, size * number + 10)[0] if size == 12 else 0
+        songs.append(Song(number, kind == 1, shared, data[offset : offset + length], second))
     return songs
 
 

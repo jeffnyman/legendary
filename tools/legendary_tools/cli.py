@@ -714,13 +714,13 @@ def _write(folder: str, name: str, contents: bytes) -> None:
 
 
 def music(args: argparse.Namespace) -> None:
-    """The songs in the game's .MUS files: listed, or written to a folder as .mid and .rol files."""
+    """The songs in the game's .MUS files: listed, or written to a folder as .mid, .rol and .mdi files."""
     folder = GameFolder(args.folder)
     for path in folder.ending(".mus"):
         name = os.path.splitext(os.path.basename(path))[0].lower()
         print(os.path.basename(path))
         for song in read_songs(folder.read(path)):
-            kind = "MIDI, for the MT-32" if song.midi else ".ROL, for the AdLib"
+            kind = "MIDI, for the MT-32" if song.midi else f".{song.extension.upper()}, for the AdLib"
             names = ", ".join(dict.fromkeys(song.names()))
             print(f"  {song.number:2}  {len(song.data):5} bytes  {kind}" + (f": {names}" if names else ""))
             if args.out:

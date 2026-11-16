@@ -154,7 +154,9 @@ python -m legendary_tools vocab <the game's folder>
 
 - **`music`** lists the songs in each `.MUS` file: each one's size and which of its two
   formats it's in, with a MIDI file's track names. With `--out`, it writes each to the folder
-  as it is, a `.mid` or a `.rol` file, which other programs play.
+  as it is, a `.mid` file for the MT-32 and, for the AdLib, a `.rol` file in *Spellcasting
+  101* and Ad Lib's kind of MIDI file, `.mdi`, [in the games
+  after](../docs/spellcasting-201.md#the-music). It reads every game's.
 - **`pictures`** lists the pictures in each `.PIC` file: each one's number, size, the way it's
   packed, whether it has a palette, and how many places it's drawn at. With `--out`, it
   writes every picture to the folder as a PNG file, named for its file and number, as
