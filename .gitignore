@@ -21,3 +21,7 @@ __pycache__/
 *.rgn
 *.mus
 *.rs
+
+# what the tools' `extract` writes: the games' own pictures, sounds and music, which are
+# no more the repository's to hold than the games are
+media/

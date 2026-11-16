@@ -4,8 +4,11 @@ from __future__ import annotations
 
 import argparse
 import collections
+import contextlib
+import io
 import os
 import re
+import struct
 import sys
 
 from . import data
@@ -672,6 +675,7 @@ _PACKINGS = {RAW_PLANE: "as it is", RAW_PLANES: "as it is, in planes", HUFFMAN: 
 def pictures(args: argparse.Namespace) -> None:
     """The pictures in the game's .PIC files: listed, or written to a folder as PNG files."""
     folder = GameFolder(args.folder)
+    skipped = 0
     for path in folder.ending(".pic"):
         name = os.path.splitext(os.path.basename(path))[0].lower()
         # the letter before the file's number says which display it's for
@@ -680,7 +684,12 @@ def pictures(args: argparse.Namespace) -> None:
         print(f"{os.path.basename(path)}: {len(found)} pictures, for the {'EGA' if file.ega else 'CGA'}")
         for entry in found:
             if args.out:
-                picture = file.read(entry)
+                try:
+                    picture = file.read(entry)
+                except ValueError:
+                    # packed a way that isn't read yet: the rest are still written
+                    skipped += 1
+                    continue
                 os.makedirs(args.out, exist_ok=True)
                 with open(os.path.join(args.out, f"{name}_{entry.number:03}.png"), "wb") as png:
                     png.write(picture.png())
@@ -692,6 +701,8 @@ def pictures(args: argparse.Namespace) -> None:
                 print(f"  {entry.number:3}  {entry.width:3} x {entry.height:3}  {packing}{notes}")
     if args.out:
         print(f"written to {args.out}")
+    if skipped:
+        print(f"{skipped} pictures weren't written: they are packed a way that isn't known")
 
 
 def regions(args: argparse.Namespace) -> None:
@@ -754,6 +765,60 @@ def sounds(args: argparse.Namespace) -> None:
             _write(args.out, os.path.splitext(os.path.basename(path))[0].lower() + ".wav", sound.wav())
     if args.out:
         print(f"written to {args.out}")
+
+
+def _games_in(path: str) -> list[tuple[str, str]]:
+    """
+    The games a folder is or holds, each with a name for it: the folder itself when it has
+    pictures, songs or sounds, named for itself or, when it's called `game`, for the folder
+    it's in; otherwise each folder in it that is one, or has one called `game`.
+    """
+
+    def has_media(folder: str) -> bool:
+        return os.path.isdir(folder) and any(
+            name.lower().endswith((".pic", ".mus", ".rs")) for name in os.listdir(folder)
+        )
+
+    path = os.path.abspath(path)
+    if has_media(path):
+        named = os.path.basename(path)
+        return [(os.path.basename(os.path.dirname(path)) if named.lower() == "game" else named, path)]
+    found = []
+    for name in sorted(os.listdir(path)) if os.path.isdir(path) else []:
+        for folder in (os.path.join(path, name), os.path.join(path, name, "game")):
+            if has_media(folder):
+                found.append((name, folder))
+                break
+    return found
+
+
+def extract(args: argparse.Namespace) -> None:
+    """A game's pictures, sounds and music, or those of every game in a folder, as PNG, WAV and MIDI files."""
+    games = _games_in(args.folder)
+    if not games:
+        raise ValueError(f"{args.folder}: no game's pictures, songs or sounds are there")
+    # beside the tools, where the repository ignores it: what's written is the games' own
+    out = args.out or os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "media")
+    for name, folder in games:
+        counts = []
+        for kind, write in (("pictures", pictures), ("sounds", sounds), ("music", music)):
+            into = os.path.join(out, name, kind)
+            said = io.StringIO()
+            try:
+                # each lists what it writes, which is its own command's to say
+                with contextlib.redirect_stdout(said):
+                    write(argparse.Namespace(folder=folder, out=into))
+            except (ValueError, IndexError, struct.error) as error:
+                counts.append(f"{kind} not read ({error})")
+                continue
+            written = len(os.listdir(into)) if os.path.isdir(into) else 0
+            what = {"pictures": "picture", "sounds": "sound", "music": "song"}[kind]
+            missed = re.search(r"^(\d+) pictures weren't written", said.getvalue(), re.MULTILINE)
+            counts.append(
+                f"{written} {what}{'' if written == 1 else 's'}"
+                + (f" and {missed[1]} more not read" if missed else "")
+            )
+        print(f"{name}: {', '.join(counts)}, in {os.path.join(out, name)}")
 
 
 def strings(args: argparse.Namespace) -> None:
@@ -848,6 +913,11 @@ def main() -> None:
     )
     command(sounds).add_argument("--out", metavar="FOLDER", help="write each sound there as a WAV file")
     command(pictures).add_argument("--out", metavar="FOLDER", help="write each picture there as a PNG file")
+    command(extract).add_argument(
+        "--out",
+        metavar="FOLDER",
+        help="write them there, a folder to a game (media, beside the tools)",
+    )
     command(regions)
     command(sentence)
     sub = command(objects)
