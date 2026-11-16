@@ -145,6 +145,7 @@ python -m legendary_tools dis ../../legend/sc101/game 3670:054e
 ## The data files
 
 ```
+python -m legendary_tools extract <the game's folder, or a folder of games> [--out <folder>]
 python -m legendary_tools music <the game's folder> [--out <folder>]
 python -m legendary_tools pictures <the game's folder> [--out <folder>]
 python -m legendary_tools regions <the game's folder>
@@ -154,6 +155,14 @@ python -m legendary_tools text <the game's folder> [<block>]
 python -m legendary_tools vocab <the game's folder>
 ```
 
+- **`extract`** writes a game's pictures, sounds and music out to be looked at and listened
+  to, in a folder for each: `media/sc101/pictures`, `sounds` and `music`. It is `pictures`,
+  `sounds` and `music` with `--out`, all at once. Given a folder of games, as `../legend`, it
+  does each game in it, and says for each how much it wrote. The `media` folder is beside
+  `tools`, and the repository ignores it: what's in it is the games' own, and no more the
+  repository's to hold than the games are. `--out` puts it somewhere else. It says how many
+  pictures it couldn't read, which is most of them after *Spellcasting 101*: the later
+  games pack theirs in ways that aren't worked out yet.
 - **`music`** lists the songs in each `.MUS` file: each one's size and which of its two
   formats it's in, with a MIDI file's track names. With `--out`, it writes each to the folder
   as it is, a `.mid` file for the MT-32 and, for the AdLib, a `.rol` file in *Spellcasting
@@ -163,7 +172,9 @@ python -m legendary_tools vocab <the game's folder>
   packed, whether it has a palette, and how many places it's drawn at. With `--out`, it
   writes every picture to the folder as a PNG file, named for its file and number, as
   `s101_e1_038.png`: the EGA's in their own colors, the CGA's in black and white. How they're
-  packed is in [docs/spellcasting-101.md](../docs/spellcasting-101.md#the-pictures).
+  packed is in [docs/spellcasting-101.md](../docs/spellcasting-101.md#the-pictures). It
+  lists every game's, and writes *Spellcasting 101*'s: a picture packed a way that isn't
+  known is left out, and counted.
 - **`regions`** lists the regions in each `.RGN` file: for each picture that has them, the
   object the rest of the picture is, and each rectangle, in the EGA's pixels, with the object
   that's there. The objects are named when the program's table of them can be read, which is
