@@ -59,10 +59,11 @@ public sealed record WorldTimer(int Segment, int Offset, int Count)
 /// 4 a routine that decides.
 /// </param>
 /// <param name="Routine">For kind 4 in a game that numbers such routines, the number; otherwise -1.</param>
-/// <param name="Room">For kinds 1 and 2, the room it goes to; otherwise 0.</param>
+/// <param name="Room">For kinds 1, 2 and 5, the room it goes to; otherwise 0.</param>
 /// <param name="Door">For kind 2, the door it goes by; otherwise 0.</param>
-/// <param name="Message">For kind 3, what is said; otherwise null.</param>
-public sealed record WorldExit(int Direction, int Kind, int Room, int Door, string? Message, int Routine = -1);
+/// <param name="Message">For kind 3, what is said, and for kind 5 what is said while it's shut, if anything; otherwise null.</param>
+/// <param name="Open">For kind 5, an exit a byte of the game's data opens, whether it is open now.</param>
+public sealed record WorldExit(int Direction, int Kind, int Room, int Door, string? Message, int Routine = -1, bool Open = false);
 
 /// <summary>
 /// A game's world, read from its memory as it is at the moment of asking: where the player is,
@@ -125,7 +126,49 @@ public sealed class World
     public int Moves => DataWord(Map.MovesOffset);
 
     /// <summary>The time of day, in minutes from midnight; the game counts some at a time.</summary>
-    public int Minutes => DataWord(Map.ClockOffset) * Map.ClockStep;
+    public int Minutes => Map.ClocksSegment == 0 ? DataWord(Map.ClockOffset) * Map.ClockStep : (_read(Clock + 2) * 60) + _read(Clock + 3);
+
+    /// <summary>
+    /// Where and when the player is, in a game of places visited in several times: the place's
+    /// name and the year, as <c>Rome, 44 BC</c>, or <c>home</c>. Null in a game with one place
+    /// and time, and when the game's bytes for them say neither.
+    /// </summary>
+    public string? Visit
+    {
+        get
+        {
+            if (Map.PlaceNames is not { } places)
+            {
+                return null;
+            }
+
+            int place = _read(Linear(Map.DataSegment, Map.PlaceOffset)), time = _read(Linear(Map.DataSegment, Map.TimeOffset));
+            if (place == places.Count)
+            {
+                return "home";
+            }
+
+            if (place > places.Count || time >= Map.Times)
+            {
+                return null;
+            }
+
+            int year = (short)DataWord((ushort)(Map.YearsOffset + (2 * time)));
+            return string.Create(System.Globalization.CultureInfo.InvariantCulture, $"{places[place]}, {Math.Abs(year)}{(year < 0 ? " BC" : "")}");
+        }
+    }
+
+    // the clock that is running: home's, or the one for the place and time the player is in
+    private int Clock
+    {
+        get
+        {
+            int place = _read(Linear(Map.DataSegment, Map.PlaceOffset)), time = _read(Linear(Map.DataSegment, Map.TimeOffset));
+            return Map.PlaceNames is not { } places || place >= places.Count || time >= Map.Times
+                ? Linear(Map.DataSegment, Map.HomeClockOffset)
+                : Linear(Map.ClocksSegment, Map.ClocksOffset + (4 * ((Map.Times * place) + time)));
+        }
+    }
 
     /// <summary>The number of the action last performed, or being performed.</summary>
     public int Action => _read(Linear(Map.ActionSegment, Map.ActionOffset));
@@ -338,12 +381,19 @@ public sealed class World
             int at = Linear(Map.ExitsSegment, Map.ExitsOffset + (4 * (first - 1 + row)));
             int kind = _read(at + 1), value = Word(at + 2);
             int door = kind == 2 ? Linear(Map.DoorsSegment, Map.DoorsOffset + (4 * value)) : 0;
+
+            // an exit that only says something, and one a byte of the data opens, which has
+            // what it says while it's shut: a game has these two tables or neither
+            bool texts = Map.ExitTextsSegment != 0;
+            int text = kind == 3 && texts ? Linear(Map.ExitTextsSegment, Map.ExitTextsOffset + (4 * value)) : 0;
+            int opened = kind == 5 && texts ? Linear(Map.ExitVariablesSegment, Map.ExitVariablesOffset + (8 * value)) : 0;
             exits.Add(new WorldExit(
                 _read(at), kind,
-                kind == 1 ? value : kind == 2 ? Word(door) : 0,
+                kind == 1 ? value : kind == 2 ? Word(door) : opened != 0 ? Word(opened) : 0,
                 kind == 2 ? Word(door + 2) : 0,
-                null,
-                kind == 4 ? value : -1));
+                text != 0 ? Text(Word(text + 2), Word(text), 200) : opened != 0 ? Text(Word(opened + 6), Word(opened + 4), 200) : null,
+                kind == 4 ? value : -1,
+                opened != 0 && _read(Linear(Map.DataSegment, Word(opened + 2))) != 0));
         }
 
         return exits;

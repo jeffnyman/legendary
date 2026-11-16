@@ -182,6 +182,31 @@ public sealed record AnswerPoint(ushort Offset, Asked Asked);
 /// overlay is the one in memory, which the call to this routine just before each shows.
 /// </param>
 /// <param name="TokenizerOffset">That routine's offset; 0 for a game whose gathering routine is always in memory.</param>
+/// <param name="ExitTextsSegment">
+/// The segment of the table of what an exit that leads nowhere says, for a game that keeps
+/// its exits in one table: a far pointer to the text for each.
+/// </param>
+/// <param name="ExitTextsOffset">Where in it the first is.</param>
+/// <param name="ExitVariablesSegment">
+/// The segment of the table of exits a variable opens, eight bytes each: the room it leads
+/// to, where in the data the byte is that opens it when it isn't zero, and a far pointer to
+/// what it says while it's shut.
+/// </param>
+/// <param name="ExitVariablesOffset">Where in it the first is.</param>
+/// <param name="PlaceOffset">
+/// In the data, for a game of places visited in several times, a byte: which place the player
+/// is in. One more than the last place is home.
+/// </param>
+/// <param name="TimeOffset">In the data, a byte: which of the times.</param>
+/// <param name="YearsOffset">In the data, the year of each time, a word each, less than zero for a year BC.</param>
+/// <param name="ClocksSegment">
+/// The segment of the table of clocks, one for each place in each time, four bytes each: a
+/// day in a word, an hour and a minute. 0 for a game with one clock.
+/// </param>
+/// <param name="ClocksOffset">Where in it the first place's first is.</param>
+/// <param name="HomeClockOffset">In the data, the clock for home.</param>
+/// <param name="PlaceNames">The places' names, by number: as many as there are places, and each has a clock for every time.</param>
+/// <param name="Times">How many times a place can be visited in.</param>
 public sealed record WorldMap(
     ushort DataSegment, ushort TableSegment, int ObjectCount, ushort CountOffset, ushort TypesOffset,
     ushort RoomOffset, ushort ActorOffset, ushort MovesOffset, ushort ClockOffset,
@@ -206,7 +231,11 @@ public sealed record WorldMap(
     ushort FlagsSegment = 0, ushort FlagsOffset = 0, int FlagCount = 0,
     ushort ExitsSegment = 0, ushort ExitsOffset = 0, ushort DoorsSegment = 0, ushort DoorsOffset = 0,
     bool WideGrammar = false, int TimerSize = 6, int ClockStep = 5,
-    ushort TokenizerSegment = 0, ushort TokenizerOffset = 0)
+    ushort TokenizerSegment = 0, ushort TokenizerOffset = 0,
+    ushort ExitTextsSegment = 0, ushort ExitTextsOffset = 0, ushort ExitVariablesSegment = 0, ushort ExitVariablesOffset = 0,
+    ushort PlaceOffset = 0, ushort TimeOffset = 0, ushort YearsOffset = 0,
+    ushort ClocksSegment = 0, ushort ClocksOffset = 0, ushort HomeClockOffset = 0,
+    IReadOnlyList<string>? PlaceNames = null, int Times = 0)
 {
     /// <summary>
     /// Whether the places in the program where a command is parsed are known. A map can have
@@ -490,4 +519,216 @@ public sealed record WorldMap(
         ExitsSegment: 0x2918, ExitsOffset: 0x29CC, DoorsSegment: 0x2918, DoorsOffset: 0x2DF4,
         WideGrammar: true, TimerSize: 4,
         TokenizerSegment: 0x12F1, TokenizerOffset: 0x027C);
+
+    /// <summary>
+    /// <i>Timequest</i> (1991): between the other two, with the first game's records and flags
+    /// by their bits, the second's one table of exits and numbered timers, and a clock for
+    /// each place in each time.
+    /// </summary>
+    public static WorldMap Timequest { get; } = new(
+        DataSegment: 0x4333, TableSegment: 0x29E5, ObjectCount: 518, CountOffset: 0x05DA, TypesOffset: 0xFFFD,
+        RoomOffset: 0x8A, ActorOffset: 0x8C, MovesOffset: 0x92, ClockOffset: 0,
+        ActionSegment: 0x3C2B, ActionOffset: 0x54, ObjectOffset: 0x3312, SecondObjectOffset: 0x00,
+        PerformSegment: 0x1134, PerformOffset: 0x0D40, DepthOffset: 0x529E,
+        Answers:
+        [
+            // the first game's ten, in its order
+            new(0x0F00, Asked.Object), new(0x0F32, Asked.Object), new(0x0F6D, Asked.Object), new(0x0F8C, Asked.Object),
+            new(0x0FA9, Asked.Before),
+            new(0x0FE5, Asked.Object), new(0x1004, Asked.Object), new(0x103D, Asked.Object), new(0x1059, Asked.Object),
+            new(0x1073, Asked.Action),
+        ],
+        JumpBackOffset: 0x2466, GoAction: 144, DirectionOffset: 0x55,
+        Directions: Spellcasting101.Directions,
+        GrammarSegment: 0x2C82, FormsOffset: 0x00A5, SecondsOffset: 0x0E79, VocabularyFile: "VOCAB.DAT",
+        ActionNames: new Dictionary<int, string> { [144] = "go" },
+        TokenSegment: 0x1408, TokenOffset: 0x00F7, AfterStopOffset: 0x0188, AfterAndOffset: 0x0206, TokenWordOffset: 0x3314,
+        WordTokens: Spellcasting101.WordTokens, MarkTokens: Spellcasting101.MarkTokens, EndTokens: Spellcasting101.EndTokens,
+        FormOffset: 0x1EDD, FormIndexOffset: 0x6458, FormActionOffset: 0x52, FoundOffset: 0x0759, LotsOffset: 0x3A, LotSize: 12, LotCountOffset: 0x36,
+        TimersOffset: 0x388A, TimerCountOffset: 0x527E, TimerIndexOffset: 0x5280,
+        TimerSegment: 0x1101, TimerStartOffset: 0x002B, TimerStopOffset: 0x00A2, TimerRunOffset: 0x01DA,
+        TimerNames: new Dictionary<int, string>
+        {
+            [1] = "the sultan presents you to Yahya",
+            [2] = "the sultan gives up on you",
+            [3] = "the wives leave off",
+            [4] = "the wives go to bathe",
+            [5] = "the stolen veil is missed",
+            [6] = "a rustling behind the wall",
+            [7] = "the sultan is heard outside",
+            [8] = "the sultan finds you under the bed",
+            [9] = "the sultan spares you",
+            [10] = "a soldier grabs you in the bazaar",
+            [11] = "the mule lowers his ears",
+            [12] = "the soldiers search the House",
+            [13] = "Vettenmyer bursts in",
+            [14] = "Vettenmyer tells the key's secret",
+            [15] = "footsteps on the stairs",
+            [16] = "another you comes in",
+            [17] = "Vettenmyer grabs the laser",
+            [18] = "Vettenmyer fires at you",
+            [19] = "Vettenmyer fires at the other you",
+            [20] = "Vettenmyer laughs last",
+            [21] = "Vettenmyer waits for the other you",
+            [22] = "the other you materializes",
+            [23] = "the other you stops the Doomsday Device",
+            [24] = "Vettenmyer is met in Rome",
+            [25] = "the riddle's word was never said",
+            [26] = "Drake goes up to the queen",
+            [27] = "the strumpet is thrown out",
+            [28] = "Churchill's broadcast",
+            [29] = "what's seen at the Tavern",
+            [30] = "the courier calls for a horse",
+            [31] = "the courier gallops past",
+            [32] = "the courier is ambushed",
+            [33] = "the courier rides by",
+            [34] = "the outlaws melt into the forest",
+            [35] = "the courier stirs",
+            [36] = "the courier comes to",
+            [37] = "the cleric examines the letter",
+            [38] = "the courier reaches Runnymede",
+            [39] = "the cleric reads the letter to King John",
+            [40] = "an arrow from the trees",
+            [41] = "the Shed, turn by turn",
+            [42] = "a hue and cry past the shed",
+            [43] = "the sky brightens",
+            [44] = "the sun comes up",
+            [45] = "the pope's book, every ten turns",
+            [46] = "nothing",
+            [47] = "a man on a bench speaks",
+            [48] = "the focaccia man comes by",
+            [49] = "the focaccia man wanders off",
+            [50] = "the parade of lions begins",
+            [51] = "the lion breaks away",
+            [52] = "the lion charges",
+            [53] = "the lion kills",
+            [54] = "the chariot race",
+            [55] = "the Circus empties",
+            [56] = "Napoleon's aide argues",
+            [57] = "Napoleon is overheard",
+            [58] = "Napoleon dismisses the aide",
+            [59] = "Napoleon decides",
+            [60] = "the hanky dries",
+            [61] = "the priest misses the crown",
+            [62] = "the pope comes for the crown",
+            [63] = "the shout for Charlemagne",
+            [64] = "the pope sets out",
+            [65] = "the pope asks for Attila",
+            [66] = "a barbarian strides into the tent",
+            [67] = "Attila comes out of the tent",
+            [68] = "war cries outside the tent",
+            [69] = "Attila's patience ends",
+            [70] = "Pope Leo comes out of the Vatican",
+            [71] = "Pope Leo comes down the road",
+            [72] = "the pope is shoved into the tent",
+            [73] = "Hitler and Mussolini at the radio, turn by turn",
+            [74] = "Hitler gets the radio going",
+            [75] = "Hitler says to hop to it",
+            [76] = "Hitler throws you out",
+            [77] = "Mussolini asks the word",
+            [78] = "Vettenmyer sneers",
+            [79] = "the old man stares",
+            [80] = "Vettenmyer grows agitated",
+            [81] = "Vettenmyer's look of hatred",
+            [82] = "Vettenmyer dies",
+            [83] = "the old man's last breath",
+            [84] = "the ether evaporates",
+            [85] = "the surroundings melt away",
+            [86] = "the bracelet glows and goes",
+            [87] = "Vettenmyer steps out of the wall",
+            [88] = "the general's orders",
+            [89] = "the general says to stop wasting time",
+            [90] = "the Olmec sneaks a look",
+            [91] = "the Olmec knocks you out",
+            [92] = "the Olmec's knife is sharp",
+            [93] = "the Olmec raises his knife",
+            [94] = "the eclipse",
+            [95] = "the eclipse ends",
+            [96] = "the Olmec throws his spear",
+            [97] = "the spear hits",
+            [98] = "a messenger to Montezuma",
+            [99] = "Montezuma and the mural",
+            [100] = "Montezuma's messenger returns",
+            [101] = "the priest's sacrifice",
+            [102] = "the priest sees an imposter",
+            [103] = "the priest's knife",
+            [104] = "the sacrificial priest comes in",
+            [105] = "the mourners file into the cave",
+            [106] = "the mourners tire of waiting",
+            [107] = "the mourners drink the poison",
+            [108] = "the Mongol leader leaves the tent",
+            [109] = "Genghis storms back",
+            [110] = "the women come back",
+            [111] = "the funeral procession, every ten turns",
+            [112] = "the barbarian army",
+            [113] = "the fortune cookie",
+            [114] = "nothing",
+            [115] = "the girl",
+            [116] = "Cleopatra's sedan chair, every hour",
+            [117] = "nothing",
+            [118] = "a word cleared",
+            [119] = "Caesar congratulates you",
+            [120] = "a rock from the window",
+            [121] = "from the Royal Palace to the Royal compound",
+            [122] = "Vettenmyer's welcome",
+            [123] = "the vizier overthrows the sultan",
+            [124] = "Napoleon has you taken away",
+        },
+        PlaceType: 1, PersonType: 7,
+        FlagNames: new Dictionary<int, string>
+        {
+            [1] = "takes some",
+            [2] = "touched",
+            [3] = "seen",
+            [4] = "left out of all",
+            [5] = "its name takes no article",
+            [6] = "its name takes an",
+            [7] = "plural",
+            [8] = "not listed",
+            [11] = "open",
+            [12] = "can be taken, and hasn't been",
+            [14] = "can be opened and closed",
+            [15] = "a container",
+            [16] = "burns",
+            [17] = "a door",
+            [18] = "what's dropped in it lands outside",
+            [19] = "can be eaten",
+            [21] = "a liquid",
+            [22] = "cuts",
+            [23] = "lit",
+            [24] = "things can be on it",
+            [25] = "cuts",
+            [26] = "can be read",
+            [28] = "a key",
+            [29] = "can be turned on and off",
+            [30] = "can be taken",
+            [32] = "can be seen into",
+            [33] = "an animal",
+            [34] = "turned on",
+            [35] = "can be got in or on",
+            [36] = "locked",
+            [37] = "can be worn",
+            [38] = "worn",
+        },
+        PlaceFlagNames: new Dictionary<int, string> { [2] = "visited", [8] = "outdoors", [23] = "has light" },
+        PersonFlagNames: new Dictionary<int, string> { [10] = "female", [11] = "someone other than you", [12] = "can't answer" },
+        StateFlags: [11, 23, 34, 36],
+        Layouts: new Dictionary<int, RecordLayout>
+        {
+            [1] = new(28, Lists: 0x10, FlagBytes: 4, ExitCount: 0x18, ExitStart: 0x1A),
+            [2] = new(36, Places: 0x12, Relation: 0x14, Next: 0x16, Lists: 0x18, FlagBytes: 6),
+            [3] = new(14),
+            [4] = new(22, Lists: 0x0E),
+            [5] = new(24, Lists: 0x10, FlagBytes: 4),
+            [6] = new(28, Places: 0x10, Lists: 0x14, FlagBytes: 4),
+            [7] = new(34, Places: 0x10, Relation: 0x12, Next: 0x14, Lists: 0x16, FlagBytes: 4),
+            [8] = new(24, Places: 0x10, Relation: 0x12, Next: 0x14, FlagBytes: 4),
+        },
+        TableOffset: 0x0018, TypesSegment: 0x29E5,
+        ExitsSegment: 0x29E5, ExitsOffset: 0x2352, DoorsSegment: 0x4333, DoorsOffset: 0x05EC,
+        TimerSize: 4, ClockStep: 1,
+        ExitTextsSegment: 0x29E5, ExitTextsOffset: 0x28AF, ExitVariablesSegment: 0x29E5, ExitVariablesOffset: 0x28EF,
+        PlaceOffset: 0x6C, TimeOffset: 0x6D, YearsOffset: 0x6E,
+        ClocksSegment: 0x27B0, ClocksOffset: 0x010C, HomeClockOffset: 0x82,
+        PlaceNames: ["Baghdad", "Peking", "Cairo", "Dover", "Mexico", "Rome"], Times: 9);
 }
