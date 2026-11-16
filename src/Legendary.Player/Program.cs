@@ -424,7 +424,10 @@ internal static class Program
         {
             // with the game's words, when its folder has them, to name its actions
             watching = game.Known?.World is { } map
-                ? new WorldWatch(machine, map, watch ? Console.Out : null, Games.FileIn(game.Folder, map.VocabularyFile) is { } vocabulary ? Vocabulary.Read(File.ReadAllBytes(vocabulary)) : null)
+                ? new WorldWatch(
+                    machine, map, watch ? Console.Out : null,
+                    Games.FileIn(game.Folder, map.VocabularyFile) is { } vocabulary ? Vocabulary.Read(File.ReadAllBytes(vocabulary)) : null,
+                    map.NamesFile is { } names && Games.FileIn(game.Folder, names) is { } file ? File.ReadAllBytes(file) : default)
                 : throw new UsageException($"--watch and --panel need a game whose world is known, which {game.Title}'s isn't yet");
         }
 
@@ -626,7 +629,8 @@ internal static class Program
               --headless         no window: run --seconds seconds and stop
               --watch            say the game's world on the terminal as it changes: the time,
                                  the turn, the room and what is in it, and each action (for a
-                                 game whose world is known: Spellcasting 101)
+                                 game whose world is known: Spellcasting 101, and
+                                 Spellcasting 201 without its actions yet)
               --panel            the same in a panel down the window's right side: the world as
                                  it is now, and under it the last of what happened
               --panel-text <n>   the panel, with its text n times its size, from 1 to 4, as in

@@ -19,6 +19,7 @@ namespace Legendary.Player;
 /// The game's vocabulary, to name actions by the commands that make them; without it, or when
 /// it isn't this game's, they are said by number alone.
 /// </param>
+/// <param name="names">The game's file of its objects' names, whole, when it keeps them in one.</param>
 /// <remarks>
 /// The room and what is in it are looked at once a frame. The actions aren't: the machine says
 /// each time the game reaches its routine that performs one, so every action is said, the ones
@@ -29,7 +30,8 @@ namespace Legendary.Player;
 /// it is now, set out down a column, and under it the last of what was said.
 /// </para>
 /// </remarks>
-internal sealed class WorldWatch(Machine machine, WorldMap map, TextWriter? output, IReadOnlyList<VocabularyWord>? words = null)
+internal sealed class WorldWatch(
+    Machine machine, WorldMap map, TextWriter? output, IReadOnlyList<VocabularyWord>? words = null, ReadOnlyMemory<byte> names = default)
 {
     // how many lines of what was said are kept for the panel
     private const int Kept = 400;
@@ -62,12 +64,19 @@ internal sealed class WorldWatch(Machine machine, WorldMap map, TextWriter? outp
 
         if (_world is null)
         {
-            if (_looks++ % SearchEvery != 0 || (_world = World.Find(Read, 0xA0000, map)) is null)
+            if (_looks++ % SearchEvery != 0 || (_world = World.Find(Read, 0xA0000, map, names)) is null)
             {
                 return;
             }
 
             Say($"the game is in memory, loaded at {_world.LoadSegment:X4}h, with {map.ObjectCount} objects", PanelTone.Dim);
+            if (!map.Watched)
+            {
+                // the places in the program aren't known yet: the world is said as it is found
+                Say("what the game does isn't followed yet, only what changes", PanelTone.Dim);
+                return;
+            }
+
             machine.Cpu.Watch((uint)_world.PerformAddress, Performing);
             machine.Cpu.Watch((uint)_world.JumpBackAddress, JumpedBack);
             machine.Cpu.Watch((uint)_world.TokenAddress, () => Token(Taken.Next));
@@ -254,7 +263,7 @@ internal sealed class WorldWatch(Machine machine, WorldMap map, TextWriter? outp
             lines.Add(new PanelLine("Timers", PanelTone.Dim));
             // by name alone, to fit the panel: the address is in what the watch says
             lines.AddRange(timers.Select(timer => new PanelLine(
-                $"  {map.TimerNames.GetValueOrDefault(timer.Key) ?? $"{timer.Segment:X4}:{timer.Offset:X4}"}: {TimerCount(timer)}")));
+                $"  {map.TimerNames.GetValueOrDefault(timer.Key) ?? Address(timer)}: {TimerCount(timer)}")));
         }
 
         return lines;
@@ -321,7 +330,7 @@ internal sealed class WorldWatch(Machine machine, WorldMap map, TextWriter? outp
             1 => $" to {Room(exit.Room)}",
             2 => $" to {Room(exit.Room)} by {Room(exit.Door)}",
             3 => $": \"{exit.Message}\"",
-            4 => ": a routine decides",
+            4 => exit.Routine < 0 ? ": a routine decides" : string.Create(CultureInfo.InvariantCulture, $": routine {exit.Routine} decides"),
             _ => string.Create(CultureInfo.InvariantCulture, $": an exit of kind {exit.Kind}"),
         };
     }
@@ -447,7 +456,11 @@ internal sealed class WorldWatch(Machine machine, WorldMap map, TextWriter? outp
 
     // a timer by its routine's address, and by the name the map has for what it does
     private string TimerName(WorldTimer timer) =>
-        $"timer {timer.Segment:X4}:{timer.Offset:X4}" + (map.TimerNames.TryGetValue(timer.Key, out string? name) ? $" ({name})" : "");
+        $"timer {Address(timer)}" + (map.TimerNames.TryGetValue(timer.Key, out string? name) ? $" ({name})" : "");
+
+    // a timer's routine, or in a game whose timers are numbers, its number
+    private string Address(WorldTimer timer) =>
+        map.TimerSize == 4 ? timer.Offset.ToString(CultureInfo.InvariantCulture) : $"{timer.Segment:X4}:{timer.Offset:X4}";
 
     private static string TimerCount(WorldTimer timer) =>
         timer.EveryTurn ? "every turn" : timer.Count == 1 ? "1 turn to go" : $"{timer.Count} turns to go";
