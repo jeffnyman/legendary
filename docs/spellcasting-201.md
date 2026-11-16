@@ -462,6 +462,44 @@ calls too, before they take it to switch on.
 *Timequest*'s action switch starts the same way, and reading it this way found its actions'
 routines too.
 
+## Performing an action
+
+The routine that performs an action is at `0D68:0EDF`, and is [the first
+game's](spellcasting-101.md#from-an-action-to-what-happens) in its shape: called with the
+action and its two objects, it asks a row of routines in turn, and stops at the first that
+answers with something other than zero.
+
+| Asked | Why |
+|---|---|
+| The room's routine | 1 |
+| The routine of the object at `4974:2A0E`, when that isn't the actor | 1 |
+| The routine of what the actor is in, when that isn't the room | 1 |
+| The actor's routine | 2 |
+| The routine that comes before the action's own, from the switch at `08F8:06C2` | |
+| The routines of what the second object is in, and of the second object | |
+| The routines of what the first object is in, and of the first object | |
+| The action's own routine, from the switch at `08F8:08CB` | |
+
+The second row is new. What the object at `4974:2A0E` is hasn't been read; by its place, next
+to the room at `2A06` and the actor at `2A08`, and by its being asked only when someone else
+is acting, it is taken to be the player.
+
+| What | Where |
+|---|---|
+| The action being performed, a byte | `3FA7:00B2` |
+| Its object, and its second | `3FA7:00AE`, `3FA7:00B0` |
+| The direction, for the action of going, 211 | `3FA7:00B3` |
+| How many actions are being performed, one inside another | `4974:7D9E` |
+
+The routine guards itself: an action performed inside itself, with the same objects, a fifth
+time is stopped with `[Warning: infinite perform recursion terminated.]`.
+
+Played under the player's `--watch`, `take bucket` is action 83, answered by the action's own
+routine; `up` is action 211, going, and `wait` is 206. Going comes back from the routine as
+any action does. In *Spellcasting 101* it [jumped back to the main
+loop](spellcasting-101.md#from-an-action-to-what-happens) by `longjmp`; here the main loop's
+`setjmp`, at `0D68:2A20`, is still there, and nothing was seen to jump to it.
+
 ## The timers
 
 The timers work as [they did](spellcasting-101.md#the-timers): a table of sixteen, each with a
@@ -682,10 +720,9 @@ timers, the text, the music and a saved game's parts. Flags 35, 39 and 40 have n
 yet, and five more are named from who has them. Three timers are named only from what they
 touch.
 
-The player's `--watch` and `--panel` show this game's world as it is and as it changes, and
-not yet what the game does: for that the routine that performs an action, the places where
-it asks each object's routine, the parser's steps and the main loop's jump back have to be
-found in this program as they were in the first.
+The player's `--watch` and `--panel` show this game's world, its actions and its timers, and
+not yet how it parses a command: the parser's steps have to be found in this program as they
+were in the first.
 
 The pictures, their regions and the sounds are read by the tools as they are. Their output
 hasn't been checked by eye.
