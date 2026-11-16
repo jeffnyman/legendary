@@ -115,7 +115,7 @@ gives the text to a routine.
 
 ## A place and a time
 
-The game is six places, each visited in up to nine times. Two bytes of the game's state say
+The game is six places, each visited in up to nine times. Two bytes of the game's data say
 where you are: the place at `006C`, from 0 to 5, or 6 for home, and the time at `006D`, from
 0 to 8.
 
@@ -182,8 +182,10 @@ only one of Rome's blocks has those six strings as a scene.
 So these names are less sure than the other games'. Those with a turn count are from the
 count the timer gives itself again. Timers 24, 55, 113, 115 and 121 print nothing that was
 found and are named from the objects they move. No call
-starts timers 1, 12, 24, 25, 30, 55, 59, 62, 70, 98, 105, 112, 113 and 123 by number. Two calls start a timer whose number is worked out, so some
-of these are started that way, and the rest may be left over.
+starts timers 1, 12, 24, 25, 30, 55, 59, 62, 70, 98, 105, 112, 113 and 123 by number.
+[Watching the game start](#the-game-as-it-runs) shows why for most of them: they are what
+each visit opens with, and the game starts them itself, by a number it works out, before the
+first turn.
 
 | Timer | What it is | Timer | What it is |
 |---|---|---|---|
@@ -256,9 +258,9 @@ at `0AAD:0C09`, which says `You have failed in your mission.`
 
 ### The clock
 
-After the timers, the same routine counts the move, at `0092` in the game's state, and adds a
+After the timers, the same routine counts the move, at `4333:0092`, and adds a
 minute to a clock of four bytes: a day in a word, an hour, and a minute, which carry at 60
-and at 24. Which clock depends on two bytes of the state, at `006C` and `006D`. When the
+and at 24. Which clock depends on the two bytes at `4333:006C` and `006D`. When the
 first is 6 it is the one at `4333:0082`. Otherwise it is in a table at `27B0:010C`, where the
 first byte picks a row of 36 bytes and the second a clock of the nine in it. It is a clock for each
 place in each of its times, with the one apart for home: the byte at `006C` is
@@ -332,12 +334,77 @@ with flag 30 or one of type 8 with flag 12, `Open` or `Close` for a container or
 can be, `Read`, `Eat`, `Greet` for a person, `Go to` for a place, and `Look at` for the rest.
 It is what the mouse does with a click on a picture, by the look of it.
 
+## Where a command is parsed and performed
+
+The main loop, the parser's steps and the routine that performs an action are the first
+game's, with everything in the root. These are the places the player watches:
+
+| What | Where |
+|---|---|
+| The routine that performs an action, given the action and its two objects | `1134:0D40` |
+| How many are being performed, one inside another | `4333:529E` |
+| The action, a byte, and the direction after it | `3C2B:0054`, `0055` |
+| Its object and its second object | `3C2B:3312`, `3C2B:0000` |
+| The room, the actor, and the player | `4333:008A`, `008C`, `0094` |
+| Where the main loop's `setjmp` returns | `1134:2466` |
+| The grammar's forms, and the ways on to a second object | `2C82:00A5`, `2C82:0E79` |
+| A token taken: the next, after a full stop, after `and` | `1408:00F7`, `0188`, `0206` |
+| The word a token is | `3C2B:3314` |
+| The form found, which one, and the action it makes | `1134:1EDD`, `3C2B:6458`, `3C2B:0052` |
+| The objects found for a lot of phrases | `1134:0759` |
+| The two lots, twelve bytes each, and how many | `3C2B:003A`, `3C2B:0036` |
+
+The routine that performs an action asks the same ten routines in the same order as the
+first game's: the room's, what the actor is in and the actor's, the one before the action's,
+the second object's and the first's with what each is in, and the action's own. The ten
+places where one has answered are at `1134:0F00`, `0F32`, `0F6D`, `0F8C`, `0FA9`, `0FE5`,
+`1004`, `103D`, `1059` and `1073`. Going somewhere is action 144.
+
+They were found by the shape of the code around each, which is the first game's nearly
+instruction for instruction, and checked by playing.
+
+## The game as it runs
+
+The game starts and plays on [the PC](the-pc.md), and the player's `--watch` and `--panel`
+follow it as they do the other two: the place and time, the clock, each command's words,
+form and objects, each action and who answered it, the timers, and what changed.
+
+```
+world: home, 12:04 pm, turn 4, in Vettenmyer's quarters (482)
+world:   words: open [verb] drawer [noun]
+world:   form 183: open OBJECT, which is action 94
+world:   object "drawer", looked for anywhere near: drawer (491)
+world:   action 94: open drawer (491)
+world:   drawer (491): flag 2, touched, set
+world:   drawer (491): flag 3, seen, set
+world:   drawer (491): flag 11, open, set
+world:   card (498): flag 3, seen, set
+world:     answered by the action's own routine: 1
+```
+
+Watching it showed two things reading it hadn't.
+
+Before the first turn, the game goes through every place and time and sets each up. About a
+hundred objects are moved in and out as it does, since a thing or a person can be in a place
+in one time and not another: the table and the fire come to the Tavern and go again. It is
+taken to be what flag 13 marks, an object that is put in its place when its time is set up,
+which the routine at `0A12:000A` does for each that has it.
+
+As it does that, it starts the timers each visit opens with, 24 of them: Churchill's
+broadcast in 13 turns, the chariot race in 60, the vizier's overthrow of the sultan in 630.
+That is more than the table of sixteen holds, so each place and time must keep its own, put
+away and brought back with the visit. Where they are kept isn't found yet.
+
+The names of the flags held up: `open` set flag 11, taking and opening set flag 2, going
+somewhere set it for the place, and what was looked at had flag 3 set.
+
 ## Still to do
 
-- Flags 9, 13 and 20, and what flag 10 is for a thing. The Tavern alone has 9 and nothing
-  asks about it. 217 objects have 13, and a routine at `0A12:000A` moves each one that has it.
-  Nothing starts with 20, and the routine that matches a noun to an object asks it.
+- Flags 9 and 20, what flag 10 is for a thing, and flag 13 for certain. The Tavern alone has
+  9 and nothing asks about it. Nothing starts with 20, and the routine that matches a noun to
+  an object asks it.
+- Where each place and time keeps its timers while the player is somewhere else.
+- A visit to another place and time hasn't been watched: the watch's place, year and clock
+  there are checked only against the program's tables.
 - A thing's word at `1C`, a person's at `1C`, and type 8's at `16`.
-- The saved game's layout: there is no `RESTART.DAT` to check it against until the game
-  is run.
-- The player doesn't watch it: `--watch` and `--panel` need the map of where its world is.
+- The saved game's layout.

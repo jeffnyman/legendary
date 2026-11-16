@@ -16,7 +16,7 @@ question of what a player is stays open until more of the games is understood.
 | Game | Year | Short name | Where it stands |
 |---|---|---|---|
 | *Spellcasting 101: Sorcerers Get All the Girls* | 1990 | `sc101` | Plays, with AdLib music and the speaker's sounds. Its program and overlays are read, its text unpacked, its objects, vocabulary, grammar and routines listed, and its pictures, music and sounds unpacked; [notes](docs/spellcasting-101.md) |
-| *Timequest* | 1991 | `tquest` | Built as *Spellcasting 101* is: its overlays are read, its text unpacked, and its objects, flags, exits, vocabulary, grammar, routines, timers and music listed; [notes](docs/timequest.md) |
+| *Timequest* | 1991 | `tquest` | Starts on the PC and takes commands; not yet played. Built as *Spellcasting 101* is: its overlays are read, its text unpacked, and its objects, flags, exits, vocabulary, grammar, routines, timers and music listed, and `--watch` and `--panel` show its world; [notes](docs/timequest.md) |
 | *Spellcasting 201: The Sorcerer's Appliance* | 1991 | `sc201` | Starts on the PC and runs on into the game itself; not yet played. Linked with .RTLink, not PLINK86: its program, run-time library and overlays are read, and its vocabulary, objects, flags, grammar, routines, timers, text and music, and
 `--watch` and `--panel` show its world; [notes](docs/spellcasting-201.md) |
 | *Gateway* | 1992 | `gateway` | Not yet tried |
@@ -147,8 +147,9 @@ you (153) moved: from Bedchamber (1) to Potty
 The cloak is on your second list, which is what you wear. `--watch` and `--panel` can be given
 together, for the panel and the terminal's full record of the play.
 
-*Spellcasting 201* can be watched the same way, with all of it: the room, each command's
-words, form and objects, each action and who answered it, the timers, and what changed.
+*Spellcasting 201* and *Timequest* can be watched the same way, with all of it: the room,
+each command's words, form and objects, each action and who answered it, the timers, and
+what changed. For *Timequest* the room comes with the place and the year, as `Rome, 44 BC`.
 
 The panel's text is small: 8 pixels, doubled once the window is 960 high. `--panel-text 1.5`
 asks for the panel with its text one and a half times that size, and any size from 1 to 4 can
