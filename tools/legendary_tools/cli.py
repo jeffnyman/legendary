@@ -19,7 +19,7 @@ from .handlers import action_routines, object_routines
 from .loads import StringNames, find_loader, find_loads, find_named, find_namers
 from .mz import MzExecutable
 from .objects import DIRECTIONS, Exit, GameObject, ObjectTable, SavedState, is_pointer
-from .pictures import HUFFMAN, LZW, RAW_PLANE, RAW_PLANES, PictureFile
+from .pictures import HUFFMAN, LZW, RAW_PLANE, RAW_PLANES, PictureFile, is_known, is_later
 from .plink86 import Plink86Program
 from .program import Image, Program
 from .regions import read_regions
@@ -676,19 +676,28 @@ def pictures(args: argparse.Namespace) -> None:
     """The pictures in the game's .PIC files: listed, or written to a folder as PNG files."""
     folder = GameFolder(args.folder)
     skipped = 0
+    # which game's kind the files are, which one file of them can't always say
+    files = [folder.read(path) for path in folder.ending(".pic")]
+    later = is_later(files)
+    known = is_known(files)
     for path in folder.ending(".pic"):
         name = os.path.splitext(os.path.basename(path))[0].lower()
         # the letter before the file's number says which display it's for
-        file = PictureFile(folder.read(path), ega=name.rstrip("0123456789").endswith("e"))
+        file = PictureFile(folder.read(path), ega=name.rstrip("0123456789").endswith("e"), later=later)
         found = file.pictures()
         print(f"{os.path.basename(path)}: {len(found)} pictures, for the {'EGA' if file.ega else 'CGA'}")
         for entry in found:
             if args.out:
                 try:
+                    if not known:
+                        raise ValueError("the game's pictures are of kinds that aren't known")
                     picture = file.read(entry)
                 except ValueError:
                     # packed a way that isn't read yet: the rest are still written
                     skipped += 1
+                    continue
+                if not picture.pixels:
+                    # a palette alone, for the pictures after it
                     continue
                 os.makedirs(args.out, exist_ok=True)
                 with open(os.path.join(args.out, f"{name}_{entry.number:03}.png"), "wb") as png:

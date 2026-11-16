@@ -21,6 +21,16 @@ The LZW is close to GIF's but not it. Codes start five bits wide, read from each
 bit down. Codes 0 to 15 are pixels; 16 says the codes are a bit wider from now on, and 17
 starts the table over; the code with every bit set ends the picture.
 
+The games after *Spellcasting 101* pack their pictures the same four ways, and say which
+another way. The byte at 5 is bits there: bit 0 set for a palette, where it was set for none,
+and then 02 for LZW, 04 for Huffman's codes, 20 for a plane as it is, and 40 for four. So a 2
+or a 3 there is Huffman's codes in the first game and LZW in the others, and which a file is
+has to be told from its other pictures, or from the game's other files.
+
+There, a picture of sixteen colors without a palette is a piece of the one before it that
+has one, to be drawn over it at its places, and is in that one's colors. An entry with a
+palette and no size is a palette alone.
+
 Pictures are given here as a byte a pixel, a color's number from 0 to 15.
 """
 
@@ -31,6 +41,9 @@ import zlib
 from dataclasses import dataclass
 
 RAW_PLANE, RAW_PLANES, HUFFMAN, LZW = 4, 5, 1, 0
+# the later games' bits for the same, and the kinds only each has: a 2 or a 3 is in both
+_LATER = {0x02: LZW, 0x04: HUFFMAN, 0x20: RAW_PLANE, 0x40: RAW_PLANES}
+_FIRST_ONLY, _LATER_ONLY = {0, 1, 8, 9, 10, 11}, {4, 0x20, 0x21, 0x40, 0x41}
 
 # the EGA's 16 colors as it starts, by their numbers among its 64
 DEFAULT_PALETTE = bytes([0, 1, 2, 3, 4, 5, 20, 7, 56, 57, 58, 59, 60, 61, 62, 63])
@@ -56,14 +69,18 @@ class Entry:
     width: int
     height: int
     unknown: int
+    later: bool = False  # whether the kind is read as the games after the first have it
 
     @property
     def packing(self) -> int:
+        if self.later:
+            # one bit, and the palette's: the games after these two set others, not yet known
+            return _LATER.get(self.kind & ~1, -1)
         return self.kind >> 1
 
     @property
     def has_palette(self) -> bool:
-        return not self.kind & 1
+        return bool(self.kind & 1) if self.later else not self.kind & 1
 
 
 @dataclass(frozen=True)
@@ -213,22 +230,64 @@ def _spread(rows: bytes, row_bytes: int, width: int, height: int, planes: int) -
     return bytes(pixels)
 
 
+def _kinds(files: list[bytes]) -> set[int]:
+    """The kinds of picture in files' directories."""
+    kinds = set()
+    for data in files:
+        (first,) = struct.unpack_from("<I", data, 0)
+        if first % 12 == 0 and 12 <= first <= len(data):
+            kinds |= {
+                data[12 * number + 5]
+                for number in range(first // 12)
+                if data[12 * number : 12 * number + 4] != bytes(4)
+            }
+    return kinds
+
+
+def is_later(files: list[bytes]) -> bool | None:
+    """
+    Whether picture files are the later games' kind, from the kinds of picture in them. None
+    when they have only the two kinds that both have.
+    """
+    kinds = _kinds(files)
+    return True if kinds & _LATER_ONLY else False if kinds & _FIRST_ONLY else None
+
+
+def is_known(files: list[bytes]) -> bool:
+    """
+    Whether every picture in the files is of a kind that is read. The games after
+    Spellcasting 201 have kinds with more bits set, and what the old bits mean there isn't
+    known either, so none of theirs are read.
+    """
+    return not _kinds(files) - _FIRST_ONLY - _LATER_ONLY - {2, 3}
+
+
 class PictureFile:
     """A .PIC file. The EGA's and the CGA's differ only in that the CGA's have no palettes."""
 
-    def __init__(self, data: bytes, ega: bool):
+    def __init__(self, data: bytes, ega: bool, later: bool | None = None):
         self.data = data
         self.ega = ega
         (first,) = struct.unpack_from("<I", data, 0)
         if first % 12 or not 12 <= first <= len(data):
             raise ValueError("not a picture file: its directory doesn't end where its first picture starts")
+        if later is None:
+            later = is_later([data])
+        # a file of 2s and 3s alone: the first game has those for the CGA only, and the
+        # others for the EGA only
+        self.later = ega if later is None else later
         self.entries = [
-            Entry(number, *struct.unpack_from("<IBBHHH", data, 12 * number)) for number in range(first // 12)
+            Entry(number, *struct.unpack_from("<IBBHHH", data, 12 * number), self.later)
+            for number in range(first // 12)
         ]
 
     def pictures(self) -> list[Entry]:
         """The entries that have a picture."""
         return [entry for entry in self.entries if entry.offset]
+
+    def _palette_at(self, entry: Entry) -> bytes:
+        at = entry.offset + 4 * entry.places
+        return self.data[at : at + 16]
 
     def read(self, entry: Entry) -> Picture:
         at = entry.offset
@@ -236,13 +295,20 @@ class PictureFile:
         at += 4 * entry.places
         # the CGA's pictures are all of two colors, and its files have no palettes
         palette = None
-        if self.ega and entry.has_palette:
+        if entry.has_palette and (self.ega or self.later):
             palette = self.data[at : at + 16]
             at += 16
         elif self.ega and entry.packing == RAW_PLANES:
             palette = DEFAULT_PALETTE
+        elif self.ega and self.later and entry.packing == LZW:
+            # a piece of the picture before it that has a palette, in that one's colors
+            before = [other for other in self.entries[: entry.number] if other.offset and other.has_palette]
+            palette = self._palette_at(before[-1]) if before else DEFAULT_PALETTE
         row_bytes = (entry.width + 7) // 8
-        if entry.packing == LZW:
+        if entry.width == 0 or entry.height == 0:
+            # a palette alone, or nothing
+            pixels = b""
+        elif entry.packing == LZW:
             pixels = _unpack_lzw(self.data, at, entry.width * entry.height)
             pixels = pixels.ljust(entry.width * entry.height, b"\0")
         elif entry.packing == HUFFMAN:
