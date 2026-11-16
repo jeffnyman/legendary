@@ -482,7 +482,8 @@ public sealed class World
     /// means something only to the start.
     /// </summary>
     /// <param name="stack">The linear address of the top of the stack, SS:SP.</param>
-    public WorldTimer TimerArgument(int stack) => TimerAt(stack + 4);
+    public WorldTimer TimerArgument(int stack) =>
+        Map.TimerSize == 4 ? new(0, Word(stack + 4) & 0xFF, (short)Word(stack + 6)) : TimerAt(stack + 4);
 
     // a far pointer and a count, as the table and the stack both have them, or where timers
     // are numbers, the number in a byte and the count

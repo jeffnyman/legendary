@@ -156,11 +156,6 @@ public sealed record AnswerPoint(ushort Offset, Asked Asked);
 /// <param name="PersonFlagNames">The flags that are something else for a person.</param>
 /// <param name="StateFlags">The flags that say how a thing is for now, worth saying beside its name.</param>
 /// <param name="Layouts">The records' layouts, by type.</param>
-/// <param name="Watched">
-/// Whether the places in the program the map names, where an action is performed and a
-/// command parsed and a timer started, are known: without them a game's world can be read
-/// as it is, and what the program does to it can't be said as it does it.
-/// </param>
 /// <param name="TableOffset">Where the table of objects starts in its segment.</param>
 /// <param name="TypesSegment">The segment the table of types is in, when it isn't the data's.</param>
 /// <param name="NamesFile">The file the objects' names are in, for a game that keeps them out of the program.</param>
@@ -201,12 +196,17 @@ public sealed record WorldMap(
     IReadOnlyDictionary<int, string> PersonFlagNames,
     IReadOnlyList<int> StateFlags,
     IReadOnlyDictionary<int, RecordLayout> Layouts,
-    bool Watched = true,
     ushort TableOffset = 0, ushort? TypesSegment = null, string? NamesFile = null,
     ushort FlagsSegment = 0, ushort FlagsOffset = 0, int FlagCount = 0,
     ushort ExitsSegment = 0, ushort ExitsOffset = 0, ushort DoorsSegment = 0, ushort DoorsOffset = 0,
     bool WideGrammar = false, int TimerSize = 6, int ClockStep = 5)
 {
+    /// <summary>
+    /// Whether the places in the program where a command is parsed are known. A map can have
+    /// a game's world, and where its actions are performed, without them.
+    /// </summary>
+    public bool Parses => TokenOffset != 0;
+
     /// <summary>What a flag is for an object of a type, or null when it isn't known.</summary>
     public string? FlagName(int flag, int type) =>
         type == PlaceType && PlaceFlagNames.TryGetValue(flag, out string? place) ? place
@@ -344,23 +344,34 @@ public sealed record WorldMap(
         });
 
     /// <summary>
-    /// <i>Spellcasting 201: The Sorcerer's Appliance</i> (1991). Its world as it is, without
-    /// yet the places in its program where the world is changed.
+    /// <i>Spellcasting 201: The Sorcerer's Appliance</i> (1991). Its world, and where its
+    /// actions are performed and its timers kept, without yet the places where a command is
+    /// parsed.
     /// </summary>
     public static WorldMap Spellcasting201 { get; } = new(
         DataSegment: 0x4974, TableSegment: 0x2918, ObjectCount: 482, CountOffset: 0x3E70, TypesOffset: 0xFFFD,
         RoomOffset: 0x2A06, ActorOffset: 0x2A08, MovesOffset: 0x2A0A, ClockOffset: 0x2A0C,
-        ActionSegment: 0x3FA7, ActionOffset: 0, ObjectOffset: 0, SecondObjectOffset: 0,
-        PerformSegment: 0, PerformOffset: 0, DepthOffset: 0, Answers: [],
-        JumpBackOffset: 0, GoAction: 0, DirectionOffset: 0,
+        ActionSegment: 0x3FA7, ActionOffset: 0xB2, ObjectOffset: 0xAE, SecondObjectOffset: 0xB0,
+        PerformSegment: 0x0D68, PerformOffset: 0x0EDF, DepthOffset: 0x7D9E,
+        Answers:
+        [
+            // the room, the player when someone else is acting, what the actor is in, and the
+            // actor; the routine before the action's; what the second object is in, and it;
+            // what the first is in, and it; the action's
+            new(0x10B0, Asked.Object), new(0x10E2, Asked.Object), new(0x111D, Asked.Object), new(0x113C, Asked.Object),
+            new(0x1159, Asked.Before),
+            new(0x1195, Asked.Object), new(0x11B4, Asked.Object), new(0x11ED, Asked.Object), new(0x1209, Asked.Object),
+            new(0x1223, Asked.Action),
+        ],
+        JumpBackOffset: 0x2A25, GoAction: 211, DirectionOffset: 0xB3,
         Directions: Spellcasting101.Directions,
         GrammarSegment: 0x2C03, FormsOffset: 0x00E2, SecondsOffset: 0x10B4, VocabularyFile: "VOCAB.DAT",
-        ActionNames: new Dictionary<int, string>(),
+        ActionNames: new Dictionary<int, string> { [211] = "go" },
         TokenSegment: 0, TokenOffset: 0, AfterStopOffset: 0, AfterAndOffset: 0, TokenWordOffset: 0,
         WordTokens: Spellcasting101.WordTokens, MarkTokens: Spellcasting101.MarkTokens, EndTokens: Spellcasting101.EndTokens,
         FormOffset: 0, FormIndexOffset: 0, FormActionOffset: 0, FoundOffset: 0, LotsOffset: 0, LotSize: 12, LotCountOffset: 0,
         TimersOffset: 0x5D2A, TimerCountOffset: 0x7EF0, TimerIndexOffset: 0x7EF2,
-        TimerSegment: 0x13A2, TimerStartOffset: 0x0027, TimerStopOffset: 0x009E, TimerRunOffset: 0,
+        TimerSegment: 0x13A2, TimerStartOffset: 0x0027, TimerStopOffset: 0x009E, TimerRunOffset: 0x0213,
         TimerNames: new Dictionary<int, string>
         {
             [1] = "the day's initiation",
@@ -468,7 +479,6 @@ public sealed record WorldMap(
             [7] = new(28, Places: 0x0A, Relation: 0x0C, Next: 0x0E, Lists: 0x10, Names: 4),
             [8] = new(18, Places: 0x0A, Relation: 0x0C, Next: 0x0E, Names: 4),
         },
-        Watched: false,
         TableOffset: 0x00B8, TypesSegment: 0x2918, NamesFile: "OBJECT.DAT",
         FlagsSegment: 0x2918, FlagsOffset: 0x0014, FlagCount: 40,
         ExitsSegment: 0x2918, ExitsOffset: 0x29CC, DoorsSegment: 0x2918, DoorsOffset: 0x2DF4,
