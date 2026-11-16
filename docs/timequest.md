@@ -365,7 +365,7 @@ instruction for instruction, and checked by playing.
 
 ## The game as it runs
 
-The game starts and plays on [the PC](the-pc.md), and the player's `--watch` and `--panel`
+The game starts and plays on [the PC](the-pc.md), with its pictures, music and sounds, and the player's `--watch` and `--panel`
 follow it as they do the other two: the place and time, the clock, each command's words,
 form and objects, each action and who answered it, the timers, and what changed.
 
