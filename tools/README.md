@@ -131,7 +131,8 @@ python -m legendary_tools dis ../../legend/sc101/game 3670:054e
   101* and *Spellcasting 201*, whose timers are
   [numbers](../docs/spellcasting-201.md#the-timers), and names each one's by
   [what its routine does](../docs/spellcasting-201.md#what-each-timer-does). It reads
-  [*Timequest*'s](../docs/timequest.md#the-timers) too, which are numbers without names yet.
+  [*Timequest*'s](../docs/timequest.md#the-timers) too, 124 numbered timers, with
+  [a name for each](../docs/timequest.md#what-each-timer-does).
 
 - **`sentence`** prints the grammar the parser matches a command against, rule by rule, with
   the names the program has for the rules: `<noun_phrase> ::= <pe_article>

@@ -113,6 +113,33 @@ Kinds 1 to 4 are the first game's, with the far pointer each row had there repla
 number, which is how *Spellcasting 201* has them. That game dropped kind 3 as well, and
 gives the text to a routine.
 
+## A place and a time
+
+The game is six places, each visited in up to nine times. Two bytes of the game's state say
+where you are: the place at `006C`, from 0 to 5, or 6 for home, and the time at `006D`, from
+0 to 8.
+
+A table at `4333:07C2` has a word for each place in each time, six rows of nine: the number of
+the block of `TIMESTR.DAT` with that visit's text, or `FFFF` where the place can't be visited
+then. Each place's overlays load their block by it, into an array of their own, when you
+arrive.
+
+| Row | Place | Its overlays | Its blocks, by time |
+|---|---|---|---|
+| 0 | Baghdad | 17, 18 | 45, 45, 45, 42, 45, 43, 44, 45, 45 |
+| 1 | Peking | 15, 16 | 19, 20, 21, 22, 23, 24, none, 25, 26 |
+| 2 | Cairo | 13, 14 | 12, 13, none, 14, none, none, none, 15, 16 |
+| 3 | Dover | 4, 5, 6 | 28, none, 30, none, 31, 32, 32, 33, 34 |
+| 4 | Mexico | 12 | 36, 37, none, none, 38, 39, none, none, none |
+| 5 | Rome | 7 to 11 | 49, 50, 51, 52, 53, 54, 55, 56, 57 |
+
+The places' names here are from the text of their blocks and the game's own words for them.
+Overlay 3 is home, and loads blocks 1, 7 and 8 by number. Overlay 11 also has the end of the
+game, with block 9.
+
+This is why most calls that load a block take its number from a variable, and why the tools
+can't say which string a line of code prints without knowing the time.
+
 ## The timers
 
 124 of them, by number. The table is at `3C2B:388A`, sixteen rows of four bytes: a timer's
@@ -142,15 +169,100 @@ Of the 124, 119 are started, stopped or asked about by number in 315 calls, whic
 tool finds who uses each. One is started to run every turn, timer 84. Two calls give a
 number that is worked out.
 
+### What each timer does
+
+A timer's routine mostly prints, and what it prints names it. Few of the strings are in the
+code: a routine prints the string at a place in an array, and the array is the block of text
+[its place and time](#a-place-and-a-time) loaded. So a routine in the overlays of Rome that
+prints string 31 prints one thing in 44 BC and another in 1798, and which it is has to be
+judged: by who starts the timer, by the timers it starts, and by which blocks have a string
+31 at all. A run of timers that print strings 28 to 33, one after another, is one scene, and
+only one of Rome's blocks has those six strings as a scene.
+
+So these names are less sure than the other games'. Those with a turn count are from the
+count the timer gives itself again. Timers 24, 55, 113, 115 and 121 print nothing that was
+found and are named from the objects they move. No call
+starts timers 1, 12, 24, 25, 30, 55, 59, 62, 70, 98, 105, 112, 113 and 123 by number. Two calls start a timer whose number is worked out, so some
+of these are started that way, and the rest may be left over.
+
+| Timer | What it is | Timer | What it is |
+|---|---|---|---|
+| 1 | the sultan presents you to Yahya | 63 | the shout for Charlemagne |
+| 2 | the sultan gives up on you | 64 | the pope sets out |
+| 3 | the wives leave off | 65 | the pope asks for Attila |
+| 4 | the wives go to bathe | 66 | a barbarian strides into the tent |
+| 5 | the stolen veil is missed | 67 | Attila comes out of the tent |
+| 6 | a rustling behind the wall | 68 | war cries outside the tent |
+| 7 | the sultan is heard outside | 69 | Attila's patience ends |
+| 8 | the sultan finds you under the bed | 70 | Pope Leo comes out of the Vatican |
+| 9 | the sultan spares you | 71 | Pope Leo comes down the road |
+| 10 | a soldier grabs you in the bazaar | 72 | the pope is shoved into the tent |
+| 11 | the mule lowers his ears | 73 | Hitler and Mussolini at the radio, turn by turn |
+| 12 | the soldiers search the House | 74 | Hitler gets the radio going |
+| 13 | Vettenmyer bursts in | 75 | Hitler says to hop to it |
+| 14 | Vettenmyer tells the key's secret | 76 | Hitler throws you out |
+| 15 | footsteps on the stairs | 77 | Mussolini asks the word |
+| 16 | another you comes in | 78 | Vettenmyer sneers |
+| 17 | Vettenmyer grabs the laser | 79 | the old man stares |
+| 18 | Vettenmyer fires at you | 80 | Vettenmyer grows agitated |
+| 19 | Vettenmyer fires at the other you | 81 | Vettenmyer's look of hatred |
+| 20 | Vettenmyer laughs last | 82 | Vettenmyer dies |
+| 21 | Vettenmyer waits for the other you | 83 | the old man's last breath |
+| 22 | the other you materializes | 84 | the ether evaporates |
+| 23 | the other you stops the Doomsday Device | 85 | the surroundings melt away |
+| 24 | Vettenmyer is met in Rome | 86 | the bracelet glows and goes |
+| 25 | the riddle's word was never said | 87 | Vettenmyer steps out of the wall |
+| 26 | Drake goes up to the queen | 88 | the general's orders |
+| 27 | the strumpet is thrown out | 89 | the general says to stop wasting time |
+| 28 | Churchill's broadcast | 90 | the Olmec sneaks a look |
+| 29 | what's seen at the Tavern | 91 | the Olmec knocks you out |
+| 30 | the courier calls for a horse | 92 | the Olmec's knife is sharp |
+| 31 | the courier gallops past | 93 | the Olmec raises his knife |
+| 32 | the courier is ambushed | 94 | the eclipse |
+| 33 | the courier rides by | 95 | the eclipse ends |
+| 34 | the outlaws melt into the forest | 96 | the Olmec throws his spear |
+| 35 | the courier stirs | 97 | the spear hits |
+| 36 | the courier comes to | 98 | a messenger to Montezuma |
+| 37 | the cleric examines the letter | 99 | Montezuma and the mural |
+| 38 | the courier reaches Runnymede | 100 | Montezuma's messenger returns |
+| 39 | the cleric reads the letter to King John | 101 | the priest's sacrifice |
+| 40 | an arrow from the trees | 102 | the priest sees an imposter |
+| 41 | the Shed, turn by turn | 103 | the priest's knife |
+| 42 | a hue and cry past the shed | 104 | the sacrificial priest comes in |
+| 43 | the sky brightens | 105 | the mourners file into the cave |
+| 44 | the sun comes up | 106 | the mourners tire of waiting |
+| 45 | the pope's book, every ten turns | 107 | the mourners drink the poison |
+| 46 | nothing | 108 | the Mongol leader leaves the tent |
+| 47 | a man on a bench speaks | 109 | Genghis storms back |
+| 48 | the focaccia man comes by | 110 | the women come back |
+| 49 | the focaccia man wanders off | 111 | the funeral procession, every ten turns |
+| 50 | the parade of lions begins | 112 | the barbarian army |
+| 51 | the lion breaks away | 113 | the fortune cookie |
+| 52 | the lion charges | 114 | nothing |
+| 53 | the lion kills | 115 | the girl |
+| 54 | the chariot race | 116 | Cleopatra's sedan chair, every hour |
+| 55 | the Circus empties | 117 | nothing |
+| 56 | Napoleon's aide argues | 118 | a word cleared |
+| 57 | Napoleon is overheard | 119 | Caesar congratulates you |
+| 58 | Napoleon dismisses the aide | 120 | a rock from the window |
+| 59 | Napoleon decides | 121 | from the Royal Palace to the Royal compound |
+| 60 | the hanky dries | 122 | Vettenmyer's welcome |
+| 61 | the priest misses the crown | 123 | the vizier overthrows the sultan |
+| 62 | the pope comes for the crown | 124 | Napoleon has you taken away |
+
+Timer 29 prints the first string of the block when you're in the Tavern, which is a different
+arrival in each time. Several can end the game, 41, 111 and 112 among them: they call the routine
+at `0AAD:0C09`, which says `You have failed in your mission.`
+
 ### The clock
 
 After the timers, the same routine counts the move, at `0092` in the game's state, and adds a
 minute to a clock of four bytes: a day in a word, an hour, and a minute, which carry at 60
 and at 24. Which clock depends on two bytes of the state, at `006C` and `006D`. When the
 first is 6 it is the one at `4333:0082`. Otherwise it is in a table at `27B0:010C`, where the
-first byte picks a row of 36 bytes and the second a clock of the nine in it. That looks like
-a clock for each place in each of its times, with the one apart for home, but which byte is
-the place and which the time hasn't been checked.
+first byte picks a row of 36 bytes and the second a clock of the nine in it. It is a clock for each
+place in each of its times, with the one apart for home: the byte at `006C` is
+[the place and the one at `006D` the time](#a-place-and-a-time).
 
 A turn is a minute here, where it is five in both *Spellcasting* games.
 
@@ -222,7 +334,6 @@ It is what the mouse does with a click on a picture, by the look of it.
 
 ## Still to do
 
-- The timers have no names yet.
 - Flags 9, 13 and 20, and what flag 10 is for a thing. The Tavern alone has 9 and nothing
   asks about it. 217 objects have 13, and a routine at `0A12:000A` moves each one that has it.
   Nothing starts with 20, and the routine that matches a noun to an object asks it.
