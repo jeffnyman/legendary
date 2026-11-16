@@ -53,6 +53,9 @@ These are read by what was written for *Spellcasting 101*, with nothing changed:
   instruments, though the table at the start of a `.MUS` file is still the first game's ten
   bytes to an entry. A file's table has 120 entries, where the first game's has 30.
 
+- **The timers.** They are numbers, in a table of four bytes each, where the first game's
+  are far pointers to their routines. How they are called is [its own](#the-timers).
+
 ## The objects
 
 518 of them, in the first game's eight types: 79 rooms, 127 things, 73 that are only words,
@@ -109,10 +112,50 @@ Kinds 1 to 4 are the first game's, with the far pointer each row had there repla
 number, which is how *Spellcasting 201* has them. That game dropped kind 3 as well, and
 gives the text to a routine.
 
+## The timers
+
+124 of them, by number. The table is at `3C2B:388A`, sixteen rows of four bytes: a timer's
+number in a byte, and its count in a word two bytes on. How many are in it is at
+`4333:527E`, which one is being run at `4333:5280`, and at `4333:527C` is a byte that makes
+the next run skip the counting, as the first game has.
+
+The routines are in segment `1101`, in the first game's order:
+
+| Routine | What it does |
+|---|---|
+| `1101:0006` | empties the table |
+| `1101:002B` | starts a timer, given its number and a count, or gives one that's going a new count |
+| `1101:00A2` | stops one |
+| `1101:0114` | says whether one is going |
+| `1101:0151` | runs them, after a turn |
+
+*Spellcasting 201* has a sixth, which gives a timer's count. It isn't here.
+
+What is this game's own is how a timer's routine is called. The first game calls the far
+pointer in the table, and the third has a table of far pointers, one for each number. Here
+the routine that runs them calls `0C77:000C` with the number, and that is a `switch` of 124
+cases, each a call to the timer's routine. All but four of the routines are in overlays.
+Timers 46, 114 and 117 all call `1134:0AAF` in the root, and nothing starts them.
+
+Of the 124, 119 are started, stopped or asked about by number in 315 calls, which is how the
+tool finds who uses each. One is started to run every turn, timer 84. Two calls give a
+number that is worked out.
+
+### The clock
+
+After the timers, the same routine counts the move, at `0092` in the game's state, and adds a
+minute to a clock of four bytes: a day in a word, an hour, and a minute, which carry at 60
+and at 24. Which clock depends on two bytes of the state, at `006C` and `006D`. When the
+first is 6 it is the one at `4333:0082`. Otherwise it is in a table at `27B0:010C`, where the
+first byte picks a row of 36 bytes and the second a clock of the nine in it. That looks like
+a clock for each place in each of its times, with the one apart for home, but which byte is
+the place and which the time hasn't been checked.
+
+A turn is a minute here, where it is five in both *Spellcasting* games.
+
 ## Still to do
 
-- The routines that keep the timers aren't found: they aren't where the first game's are,
-  and the timers aren't numbers as the third's are.
+- The timers have no names yet.
 - The flags have no names yet. Flag 11 is open, from the routine that follows an exit.
 - A room's word at `12`, a thing's at `1C` and `22`, a person's at `1C`, and type 8's at `16`.
 - The saved game's layout: there is no `RESTART.DAT` to check it against until the game
