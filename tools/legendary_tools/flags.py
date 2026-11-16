@@ -67,7 +67,7 @@ FLAG_NAMES_201 = {
     2: "its name takes `an`",
     3: "plural: `some`, and `they`",
     4: "takes `some`, and is still `it`",
-    5: "noted: something to do with it has happened",
+    5: "seen by the player",
     6: "touched, or for a place visited",
     7: "taking it is special",
     8: "not listed among a room's contents",
