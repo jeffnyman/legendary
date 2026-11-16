@@ -444,6 +444,15 @@ def is_pointer(image: Image, obj: GameObject, at: int) -> bool:
 # cmp [bp-n],ax for each loop's end
 _SAVED = re.compile(rb"\x8e\x06(..)\x26\xff\xb4(..)\x26\xff\xb4(..)\x26\xff\xb4(..)", re.DOTALL)
 _LOOP_END = re.compile(rb"\x8e\x06(..)\x26\xa1(..)\x39\x86", re.DOTALL)
+# the same with the loop's own variable near: cmp [bp-n],ax with n in a byte
+_LOOP_END_NEAR = re.compile(rb"\x8e\x06(..)\x26\xa1(..)\x39\x46", re.DOTALL)
+# mov ax,1 / push ax / mov ax,<size> / push ax / mov ax,<offset> / mov dx,<segment> / push dx /
+# push ax / push cs / call: one thing of a size written, which before the objects is what
+# starts the file
+_HEADER = re.compile(rb"\xb8\x01\x00\x50\xb8(..)\x50\xb8..\xba..\x52\x50\x0e\xe8", re.DOTALL)
+# push es:[count] / mov ax,<size> / push ax / mov ax,<offset> / mov dx,<segment> / push dx /
+# push ax / push cs / call: the timers written, a count of them and the size of one
+_TIMER_ROWS = re.compile(rb"\x26\xff\x36(..)\xb8(..)\x50\xb8..\xba..\x52\x50\x0e\xe8", re.DOTALL)
 # mov ax,2 / push ax / mov ax,<offset> / mov dx,<segment> / push dx / push ax / push cs / call:
 # the count of timers, written as a word
 _TIMERS = re.compile(rb"\xb8\x02\x00\x50\xb8(..)\xba(..)\x52\x50\x0e\xe8", re.DOTALL)
@@ -460,9 +469,10 @@ class SavedVariable:
 
 class SavedState:
     """
-    What the program saves, which is what RESTART.DAT has: four bytes, every object's record
-    in the table's order, each saved variable, a count, and six bytes for each it counts.
-    What it counts is taken here to be timers, things due to happen later; that is a guess.
+    What the program saves, which is what RESTART.DAT has: some bytes that start it, every
+    object's record in the table's order, each saved variable, a count, and some bytes for
+    each it counts, which are the timers. Spellcasting 101 starts with four bytes and has six
+    for a timer; Spellcasting 201 starts with 34 and has four.
     """
 
     def __init__(self, program: Program, objects: ObjectTable):
@@ -479,11 +489,18 @@ class SavedState:
         table_segment = objects.image.word(objects.data_segment * 16 + word(saved[1]))
         table = table_segment * 16 + word(saved[4])
         self.timer_count_offset = word(timers[1])
+        # what starts the file is written just before the objects, where a size for it is found
+        header = list(_HEADER.finditer(root, max(0, saved.start() - 256), saved.start()))
+        self.header_size = word(header[-1][1]) if header else 4
+        rows = _TIMER_ROWS.search(root, saved.end())
+        self.timer_size = word(rows[2]) if rows and word(rows[1]) == self.timer_count_offset else 6
 
-        # the loop that isn't the objects' or the timers' is the saved variables'
+        # the loop that isn't the objects' or the timers' is the saved variables': the one
+        # that ends just after the variables are written, or the only other one there is
+        near = _LOOP_END_NEAR.search(root, saved.end(), saved.end() + 64)
         counts = {
             (word(match[1]), word(match[2]))
-            for match in _LOOP_END.finditer(root)
+            for match in ([near] if near else _LOOP_END.finditer(root))
             if word(match[2]) != self.timer_count_offset
         }
         variables = None
@@ -503,8 +520,8 @@ class SavedState:
 
     def size(self, timers: int) -> int:
         """The size of a saved state with that many timers."""
-        return 4 + self.objects_size + self.variables_size + 2 + 6 * timers
+        return self.header_size + self.objects_size + self.variables_size + 2 + self.timer_size * timers
 
     def timers_in(self, file: bytes) -> int:
         """The count of timers in a saved state, which is the word after the variables."""
-        return struct.unpack_from("<H", file, 4 + self.objects_size + self.variables_size)[0]
+        return struct.unpack_from("<H", file, self.header_size + self.objects_size + self.variables_size)[0]

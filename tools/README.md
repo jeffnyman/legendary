@@ -24,8 +24,8 @@ relative to where the program loads, as the files have them. How the programs ar
 ## The program
 
 These read a program linked by PLINK86, *Spellcasting 101* and *Timequest*, or by
-.RTLink/Plus 4.10, *Spellcasting 201*. All of them read *Spellcasting 201* but `objects
---saved`; what each makes of *Timequest* is said with it.
+.RTLink/Plus 4.10, *Spellcasting 201*. All of them read *Spellcasting 201*; what each makes
+of *Timequest* is said with it.
 
 ```
 python -m legendary_tools exe <the game's folder>
