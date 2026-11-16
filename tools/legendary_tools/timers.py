@@ -17,6 +17,10 @@ six bytes there, a call to the routine that does the work, in an overlay, and a 
 *Spellcasting 201* numbers its timers. Its table has four bytes for each of the sixteen, a
 timer's number and its count, and a second table has a far pointer for each number, which
 is the routine or a thunk to it. A fifth routine there gives a timer's count.
+
+*Timequest*, between them, already numbers its timers and keeps the same table of four
+bytes. It has no table of routines: the routine that runs the timers calls one that switches
+on a timer's number, and each case is a far call to the timer's routine.
 """
 
 from __future__ import annotations
@@ -26,6 +30,7 @@ import struct
 from dataclasses import dataclass
 
 from .flags import CodeReader, routine_labels
+from .handlers import _Code
 from .program import Program
 
 # Spellcasting 101's: the segment the routines are in, and where each starts
@@ -90,6 +95,11 @@ TIMER_NAMES = {
 # mov es,[segment variable] / call far es:[bx-4], with BX four times a timer's number: its
 # routine, called from the table of them
 _BY_NUMBER = re.compile(rb"\x8e\x06(..)\x26\xff\x9f\xfc\xff", re.DOTALL)
+# mov es,[segment variable] / cmp word es:[bx+count],-1: is the timer one that runs every
+# turn? The routine that runs the timers asks it first
+_EVERY_TURN = re.compile(rb"\x8e\x06..\x26\x83\xbf..\xff", re.DOTALL)
+# push [bp-n] / call far / add sp,2: a routine called with one argument
+_CALLED_WITH_ONE = re.compile(rb"\xff\x76.\x9a(....)\x83\xc4\x02", re.DOTALL)
 _PROLOGUE = b"\x55\x8b\xec"
 # what the routines are where timers are numbers, in the order they come in their segment,
 # before the one that runs them
@@ -112,7 +122,7 @@ class Timers:
 
 
 def find_timers(program: Program) -> Timers:
-    """The routines that keep the timers, where Spellcasting 101 has them or by a table of numbers."""
+    """The routines that keep the timers, where Spellcasting 101 has them or by the timers' numbers."""
     image = program.image()
     memory = image.memory
     framed = [offset for offset, kind in ROUTINES.items() if kind != "empties"]
@@ -121,39 +131,73 @@ def find_timers(program: Program) -> Timers:
 
     root = memory[: program.root_size]
     by_number = _BY_NUMBER.search(root)
+    every_turn = _EVERY_TURN.search(root)
     notice = memory.find(_NOTICE)
-    if not by_number or notice < 0:
+    if not (by_number or every_turn) or notice < 0:
         raise ValueError("the routines that keep the timers weren't found")
     segments = sorted(image.segment_references())
 
     def segment_of(linear: int) -> int:
         return max(segment for segment in segments if segment * 16 <= linear)
 
-    # the routine that calls a timer by its number, and the one call to it, from the routine
-    # that runs the timers
-    start = root.rindex(_PROLOGUE, 0, by_number.start())
-    base = segment_of(start)
-    call = root.find(bytes([0x9A, *struct.pack("<HH", start - base * 16, base)]))
-    if call < 0:
-        raise ValueError("the routine that runs the timers wasn't found")
-    segment = segment_of(call)
-    runs = root.rindex(_PROLOGUE, segment * 16, call)
+    numbered: list[tuple[int, int]] = []
+    if by_number:
+        # the routine that calls a timer by its number, and the one call to it, from the
+        # routine that runs the timers
+        start = root.rindex(_PROLOGUE, 0, by_number.start())
+        base = segment_of(start)
+        call = root.find(bytes([0x9A, *struct.pack("<HH", start - base * 16, base)]))
+        if call < 0:
+            raise ValueError("the routine that runs the timers wasn't found")
+        segment = segment_of(call)
+        runs = root.rindex(_PROLOGUE, segment * 16, call)
+        table = image.word(notice - 8 + int.from_bytes(by_number[1], "little")) * 16
+        while table + 4 * len(numbered) + 2 in image.relocations:
+            offset, target = struct.unpack_from("<HH", memory, table + 4 * len(numbered))
+            numbered.append((target, offset))
+    else:
+        # the routine that runs the timers, by its test
+        assert every_turn is not None
+        runs = root.rindex(_PROLOGUE, 0, every_turn.start())
+        segment = segment_of(runs)
+        numbered = _switched(program, runs, root.index(b"\x5d\xcb", every_turn.start()))
     starts = [
         match.start()
         for match in re.finditer(re.escape(_PROLOGUE), root[:runs])
         if match.start() >= segment * 16
     ]
     empties = root.find(_FRAMELESS, segment * 16, starts[0] if starts else runs)
-    if len(starts) != len(_KINDS) or empties < 0:
+    # the one that gives a timer's count came later: Timequest has the three before it
+    if len(starts) not in (len(_KINDS) - 1, len(_KINDS)) or empties < 0:
         raise ValueError("the routines that keep the timers aren't the ones that are known")
     routines = {empties: "empties", **dict(zip(starts, _KINDS))}
-
-    table = image.word(notice - 8 + int.from_bytes(by_number[1], "little")) * 16
-    numbered = []
-    while table + 4 * len(numbered) + 2 in image.relocations:
-        offset, target = struct.unpack_from("<HH", memory, table + 4 * len(numbered))
-        numbered.append((target, offset))
     return Timers(segment, routines, tuple(numbered))
+
+
+def _switched(program: Program, runs: int, end: int) -> list[tuple[int, int]]:
+    """
+    Each numbered timer's routine, where the routine that runs the timers calls one that
+    switches on a timer's number: each case is a far call to the timer's routine.
+    """
+    image = program.image()
+    memory = image.memory
+    code = _Code(program)
+    cases: dict[int, int] = {}
+    for called in _CALLED_WITH_ONE.finditer(memory, runs, end):
+        offset, base = struct.unpack("<HH", called[1])
+        if called.start(1) + 2 in image.relocations and (cases := code.cases(base * 16 + offset)):
+            break
+    if not cases or min(cases) != 1:
+        raise ValueError("the routine that calls a timer by its number wasn't found")
+    numbered = []
+    for number in range(1, max(cases) + 1):
+        at = cases.get(number, 0)
+        if memory[at] == 0x9A and at + 3 in image.relocations:
+            offset, target = struct.unpack_from("<HH", memory, at + 1)
+            numbered.append((target, offset))
+        else:
+            numbered.append((0, 0))
+    return numbered
 
 
 # Spellcasting 201's, by number, from the same reading: most from what its routine prints

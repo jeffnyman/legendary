@@ -9,7 +9,7 @@ import re
 import sys
 
 from . import data
-from .flags import describe_flag, flag_name, flag_uses
+from .flags import GAME_201, describe_flag, flag_name, flag_uses
 from .game import GameFolder
 from .grammar import NO_TURN, Form, action_flags, describe_flags, read_grammar
 from .handlers import action_routines, object_routines
@@ -584,14 +584,17 @@ def timers(args: argparse.Namespace) -> None:
     folder = GameFolder(args.folder)
     program = _program(folder)
     words = data.vocabulary(folder.read(folder.one("vocab.dat")))
-    names = {found.number: found.name for found in _object_table(folder, program, words).objects}
+    table = _object_table(folder, program, words)
+    names = {found.number: found.name for found in table.objects}
     shapes = {number: made[0] for number, made in _shapes(read_grammar(program, words), words).items()}
     calls = timer_calls(program, names, shapes)
+    # the names of the numbers are Spellcasting 201's alone
+    numbered = TIMER_NAMES_201 if table.game == GAME_201 else {}
     found = sorted({(call.number or 0, call.timer) for call in calls if call.timer})
     for number, timer in found:
         code = timer_code(program, timer)
         if number:
-            name = f": {TIMER_NAMES_201[number]}" if number in TIMER_NAMES_201 else ""
+            name = f": {numbered[number]}" if number in numbered else ""
         else:
             name = f": {TIMER_NAMES[timer]}" if timer in TIMER_NAMES else ""
         said = f"{number}, {timer[0]:04x}:{timer[1]:04x}" if number else f"{timer[0]:04x}:{timer[1]:04x}"
