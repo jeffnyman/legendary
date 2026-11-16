@@ -70,23 +70,25 @@ internal sealed class WorldWatch(
             }
 
             Say($"the game is in memory, loaded at {_world.LoadSegment:X4}h, with {map.ObjectCount} objects", PanelTone.Dim);
-            if (!map.Watched)
-            {
-                // the places in the program aren't known yet: the world is said as it is found
-                Say("what the game does isn't followed yet, only what changes", PanelTone.Dim);
-                return;
-            }
-
             machine.Cpu.Watch((uint)_world.PerformAddress, Performing);
             machine.Cpu.Watch((uint)_world.JumpBackAddress, JumpedBack);
-            machine.Cpu.Watch((uint)_world.TokenAddress, () => Token(Taken.Next));
-            machine.Cpu.Watch((uint)_world.AfterStopAddress, () => Token(Taken.AfterStop));
-            machine.Cpu.Watch((uint)_world.AfterAndAddress, () => Token(Taken.AfterAnd));
-            machine.Cpu.Watch((uint)_world.FormAddress, Form);
             machine.Cpu.Watch((uint)_world.TimerStartAddress, () => Timer(started: true));
             machine.Cpu.Watch((uint)_world.TimerStopAddress, () => Timer(started: false));
             machine.Cpu.Watch((uint)_world.TimerRunAddress, TimerRuns);
-            machine.Cpu.Watch((uint)_world.FoundAddress, Found);
+            if (map.Parses)
+            {
+                machine.Cpu.Watch((uint)_world.TokenAddress, () => Token(Taken.Next));
+                machine.Cpu.Watch((uint)_world.AfterStopAddress, () => Token(Taken.AfterStop));
+                machine.Cpu.Watch((uint)_world.AfterAndAddress, () => Token(Taken.AfterAnd));
+                machine.Cpu.Watch((uint)_world.FormAddress, Form);
+                machine.Cpu.Watch((uint)_world.FoundAddress, Found);
+            }
+            else
+            {
+                // where the program parses isn't known yet: its actions are said, and not how it came to them
+                Say("how the game parses a command isn't followed yet", PanelTone.Dim);
+            }
+
             foreach (var point in map.Answers)
             {
                 machine.Cpu.Watch((uint)_world.AnswerAddress(point), () => Answered(point));

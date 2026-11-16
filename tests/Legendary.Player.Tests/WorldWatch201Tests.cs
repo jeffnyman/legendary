@@ -4,8 +4,8 @@ using Legendary.Pc;
 namespace Legendary.Player.Tests;
 
 /// <summary>
-/// The watch on <i>Spellcasting 201</i>'s world, with the game played under it: what it is
-/// and what changes, without yet what the game does. Without the game (in LEGENDARY_GAMES, or
+/// The watch on <i>Spellcasting 201</i>'s world, with the game played under it: what it is,
+/// what changes, each action and each timer, without yet how a command is parsed. Without the game (in LEGENDARY_GAMES, or
 /// legend/sc201/game above the tests), its test passes without checking.
 /// </summary>
 public sealed class WorldWatch201Tests : IDisposable
@@ -102,12 +102,28 @@ public sealed class WorldWatch201Tests : IDisposable
         string[] lines = said.ToString().Split('\n', StringSplitOptions.RemoveEmptyEntries);
         Assert.StartsWith("world: the game is in memory, loaded at ", lines[0], StringComparison.Ordinal);
         Assert.EndsWith(", with 482 objects", lines[0], StringComparison.Ordinal);
-        Assert.Equal("world: what the game does isn't followed yet, only what changes", lines[1]);
+        Assert.Equal("world: how the game parses a command isn't followed yet", lines[1]);
 
         // as it starts: the names from OBJECT.DAT, and the exits from the one table of them
         Assert.Equal("world: 1:35 pm, turn 0, in The Sorcerer's Lab (46)", lines[2]);
         Assert.StartsWith("world:   here: skull (478), globe light (477), you (217) [registration form (85), ", lines[3], StringComparison.Ordinal);
         Assert.Equal("world:   exits: northwest to The Sorcerer's Yard (47); up to The Sorcerer's Yard (47); out to The Sorcerer's Yard (47)", lines[4]);
+
+        // the timers the game starts with, which are numbers here and are named by them
+        Assert.Contains("world:   timer 27 (the Sorcerer returns) started: 24 turns to go", lines);
+        Assert.Contains("world:   timer 5 (sleepiness) started: 99 turns to go", lines);
+
+        // each action as it is performed, named by the grammar, and who answered it
+        int got = Array.IndexOf(lines, "world:   action 83: get small wooden bucket (193)");
+        Assert.True(got > 0);
+        Assert.Equal("world:     answered by the action's own routine: 1", lines[got + 1]);
+        Assert.Contains("world:   action 211: go up", lines);
+        Assert.Contains("world:   action 206: wait", lines);
+
+        // waiting lets the clock's timer come due: it runs, and puts itself back
+        int ran = Array.IndexOf(lines, "world:   timer 7 (the tower clock chimes) runs");
+        Assert.True(ran > 0);
+        Assert.Equal("world:   timer 7 (the tower clock chimes) started: 1 turn to go", lines[ran + 1]);
 
         // what the room's description shows is marked as seen, by the game's table of flags
         Assert.Contains("world:   workbench (188): flag 5, seen, set", lines);
