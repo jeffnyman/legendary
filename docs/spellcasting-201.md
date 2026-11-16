@@ -298,7 +298,7 @@ it and who uses it.
 | 2 | Its name takes `an` | 2 | `envelope`, `ancient key`, `emerald`; the same routine |
 | 3 | Plural | 3 | `eyeglasses`, `nerds`, `cookies`; the same routine |
 | 4 | Takes `some` | 4 | `water`, `pizza`, `ale`, `graffiti`; the same routine |
-| 5 | Noted: something to do with it has happened | | Nothing but what you start with has it; set 201 times, nearly all by one object's routine of another, and tested by the routines that ask whether a thing has been done yet. *101*'s 6, seen, may be the same |
+| 5 | Seen by the player | 6 | Nothing but what you start with has it. Played, the game sets it of the room and of each thing the room's description shows, as it shows it; the 201 calls that set it are objects' routines saying something has now been seen |
 | 6 | Touched; for a place, visited | 10 | Nothing has it at the start. Taking a thing sets it, and so does opening one; the routine that describes the room sets it of the room |
 | 7 | Taking it is special | 8 | `torch`, `crocodile`, the spell boxes, the donuts. Taking one clears it and sets 15 |
 | 8 | Not listed among a room's contents | 7 | 202 objects, most of them type 8, the scenery; taking one clears it |
@@ -334,13 +334,13 @@ it and who uses it.
 | 39 | Not known | | `you` and eight more, the students among the people |
 | 40 | Not known | | Eight dials and knobs, of type 8 |
 
-Thirty-one of the forty are a flag *Spellcasting 101* had, most under a new number. The ones without
+Thirty-two of the forty are a flag *Spellcasting 101* had, most under a new number. The ones without
 are this game's own: its sewer, its campus, its Appliance and its beds. *101*'s flag 32, on
 80 objects and never explained, has no heir here, unless 34 is one: both mark the things a
 game is a search for.
 
-Flags 5, 16, 17, 30, 36 and 37 are named from who has them more than from code that was read,
-and say so in the table.
+Flags 16, 17, 30, 36 and 37 are named from who has them more than from code that was read,
+and say so in the table. Flag 5 was named by watching the game played.
 
 ### The exits are rows of one table
 
@@ -679,8 +679,13 @@ pointers in them, and how it put those right on restoring was never found.
 
 Everything past the program, the vocabulary, the objects, the grammar, the routines, the
 timers, the text, the music and a saved game's parts. Flags 35, 39 and 40 have no meaning
-yet, and six more are named from who has them. Three timers are named only from what they
+yet, and five more are named from who has them. Three timers are named only from what they
 touch.
+
+The player's `--watch` and `--panel` show this game's world as it is and as it changes, and
+not yet what the game does: for that the routine that performs an action, the places where
+it asks each object's routine, the parser's steps and the main loop's jump back have to be
+found in this program as they were in the first.
 
 The pictures, their regions and the sounds are read by the tools as they are. Their output
 hasn't been checked by eye.
