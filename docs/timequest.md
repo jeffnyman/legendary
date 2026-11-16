@@ -44,7 +44,8 @@ These are read by what was written for *Spellcasting 101*, with nothing changed:
   file. There is no `OBJECT.DAT`.
 - **The flags.** A flag's number is its bit: there is no table of them. The numbers are
   [its own](#the-flags).
-- **The pictures, their regions, and the sounds.**
+- **The pictures' regions, and the sounds.** The pictures are packed the first game's four
+  ways, and say which [another way](#the-pictures).
 
 ## What is already the third game's
 
@@ -333,6 +334,39 @@ There is also a routine, at `0000:1797`, that picks a verb for an object: `Take`
 with flag 30 or one of type 8 with flag 12, `Open` or `Close` for a container or a door that
 can be, `Read`, `Eat`, `Greet` for a person, `Go to` for a place, and `Look at` for the rest.
 It is what the mouse does with a click on a picture, by the look of it.
+
+## The pictures
+
+776 of them, in nine files for the EGA and nine for the CGA. A file's directory is the first
+game's, twelve bytes to a picture, and the pixels are packed the first game's four ways: by
+LZW, by Huffman's codes, a plane as it is, or four planes as they are. What changed is the
+byte that says which.
+
+| Bit | First game | Timequest and after |
+|---|---|---|
+| `01` | set for no palette | set for a palette |
+| the rest | the way, as a number: 0 LZW, 1 Huffman, 4 a plane, 5 four planes | the way, as a bit: `02` LZW, `04` Huffman, `20` a plane, `40` four planes |
+
+So a 2 or a 3 is a picture packed by Huffman's codes in the first game and by LZW here, and
+a file with nothing else in it can't say which game's it is. The tools tell from the game's
+other pictures: a 4, or `20` and up, is this game's kind, and a 0, 1, or 8 to 11 the first's.
+
+Two things are new with it:
+
+- **A picture in sixteen colors without a palette is a piece of another.** It is to be drawn
+  over the picture before it that has a palette, at the places it starts with, and is in
+  that picture's colors: a door open where the picture has it shut. The tools give it that
+  palette. Of the EGA's 346 pictures packed by LZW, 212 are pieces.
+- **An entry can be a palette alone**, with no width or height. There are 22 entries of no
+  size, and they aren't written out.
+
+All but four of the 144 palettes have white for color 0 and black for color 15, the reverse
+of the EGA's own.
+
+The title, read this way, is the game's title, and a room's pieces are in the room's colors.
+*Spellcasting 201* keeps its pictures the same way. *Spellcasting 301* and *Gateway* set
+more bits in the byte, and combinations of them, with pictures of 320 by 200: theirs aren't
+read.
 
 ## Where a command is parsed and performed
 

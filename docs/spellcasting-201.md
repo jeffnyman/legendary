@@ -757,5 +757,9 @@ touch.
 
 The player's `--watch` and `--panel` follow this game as they do the first.
 
-The pictures, their regions and the sounds are read by the tools as they are. Their output
-hasn't been checked by eye.
+The pictures are kept [as *Timequest* keeps them](timequest.md#the-pictures): the first
+game's four ways of packing, said by bits where the first game had a number, with pieces
+that borrow the palette of the picture they're drawn over. All 1,110 are read, three of them
+of no size, and those looked at are right. Every palette in them has white for
+color 0 and black for color 15, the reverse of the EGA's own. The regions and the sounds
+are read as they are.
