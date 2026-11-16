@@ -16,7 +16,7 @@ question of what a player is stays open until more of the games is understood.
 | Game | Year | Short name | Where it stands |
 |---|---|---|---|
 | *Spellcasting 101: Sorcerers Get All the Girls* | 1990 | `sc101` | Plays, with AdLib music and the speaker's sounds. Its program and overlays are read, its text unpacked, its objects, vocabulary, grammar and routines listed, and its pictures, music and sounds unpacked; [notes](docs/spellcasting-101.md) |
-| *Timequest* | 1991 | `tquest` | Built as *Spellcasting 101* is: its overlays are read, its text unpacked, and its objects, exits, vocabulary, grammar, routines, timers and music listed; [notes](docs/timequest.md) |
+| *Timequest* | 1991 | `tquest` | Built as *Spellcasting 101* is: its overlays are read, its text unpacked, and its objects, flags, exits, vocabulary, grammar, routines, timers and music listed; [notes](docs/timequest.md) |
 | *Spellcasting 201: The Sorcerer's Appliance* | 1991 | `sc201` | Starts on the PC and runs on into the game itself; not yet played. Linked with .RTLink, not PLINK86: its program, run-time library and overlays are read, and its vocabulary, objects, flags, grammar, routines, timers, text and music, and
 `--watch` and `--panel` show its world; [notes](docs/spellcasting-201.md) |
 | *Gateway* | 1992 | `gateway` | Not yet tried |

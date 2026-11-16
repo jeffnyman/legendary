@@ -93,8 +93,7 @@ python -m legendary_tools dis ../../legend/sc101/game 3670:054e
   prints the parts of `RESTART.DAT` and their sizes, which come to the file's. How the objects
   are kept is in [docs/spellcasting-101.md](../docs/spellcasting-101.md#the-objects). It reads
   *Spellcasting 101* and, with its names from `OBJECT.DAT` and its other differences,
-  [*Spellcasting 201*](../docs/spellcasting-201.md#the-objects); the flags' names are the first's
-  alone. It reads [*Timequest*](../docs/timequest.md#the-objects) too, whose records are
+  [*Spellcasting 201*](../docs/spellcasting-201.md#the-objects); each game's flags have their own names. It reads [*Timequest*](../docs/timequest.md#the-objects) too, whose records are
   between the two, with a [kind of exit](../docs/timequest.md#the-exits) of its own.
 
 - **`grammar`** lists the forms a command can take, from the program's tables: for each verb
@@ -119,8 +118,9 @@ python -m legendary_tools dis ../../legend/sc101/game 3670:054e
   is, whose routine it's in, and what object it asks about, as `313a:2293 in overlay 1: action
   128 (open OBJECT) tests it of the object`. That is how a flag's meaning is found, which is in
   [docs/spellcasting-101.md](../docs/spellcasting-101.md#what-the-flags-are). `objects` with
-  a number says each of the object's flags by name. It names *Spellcasting 101*'s flags and
-  [*Spellcasting 201*'s](../docs/spellcasting-201.md#what-the-flags-are), and for the second
+  a number says each of the object's flags by name. It names *Spellcasting 101*'s flags,
+  [*Timequest*'s](../docs/timequest.md#the-flags) and
+  [*Spellcasting 201*'s](../docs/spellcasting-201.md#what-the-flags-are), and for the last
   gives each flag's bit and the types that have it too, from the game's table of flags.
 
 - **`timers`** lists the game's timers, the routines it puts by to run on a later turn or on

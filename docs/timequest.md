@@ -42,7 +42,8 @@ These are read by what was written for *Spellcasting 101*, with nothing changed:
   object's are found the same way: 165 actions, and 249 of the objects have a routine.
 - **The names.** An object's two names are far pointers into the program, not places in a
   file. There is no `OBJECT.DAT`.
-- **The flags.** A flag's number is its bit: there is no table of them.
+- **The flags.** A flag's number is its bit: there is no table of them. The numbers are
+  [its own](#the-flags).
 - **The pictures, their regions, and the sounds.**
 
 ## What is already the third game's
@@ -68,8 +69,8 @@ size with different things in it:
 
 | Type | Bytes | Bytes of flags | What follows the flags and the two lists of words |
 |---|---|---|---|
-| 1, a room | 28 | 4 | `10` its list, `12` not known, `14` what's also here, `16` what's seen from it, `18` how many exits, `1A` the first of them |
-| 2, a thing | 36 | 6 | `12` its place, `14` relation, `16` next, `18` two lists, `1C` and `22` not known |
+| 1, a room | 28 | 4 | `10` its list, `12` the points for coming to it, `14` what's also here, `16` what's seen from it, `18` how many exits, `1A` the first of them |
+| 2, a thing | 36 | 6 | `12` its place, `14` relation, `16` next, `18` two lists, `1C` not known, `22` the points for taking it |
 | 3 | 14 | 2 | nothing |
 | 4 | 22 | 2 | `0E` two lists |
 | 5 | 24 | 4 | `10` two lists |
@@ -153,11 +154,79 @@ the place and which the time hasn't been checked.
 
 A turn is a minute here, where it is five in both *Spellcasting* games.
 
+## The flags
+
+Three routines, one after another, do everything with them, as in the first game:
+`01B9:1415` tests a flag of an object, `01B9:146E` sets it and `01B9:14C0` clears it. A flag
+is the bit of its number, less one, counted from the start of the record's flags.
+
+The same things are flags as in the two *Spellcasting* games, with numbers of their own.
+Each name is from the code that tests the flag, or says what else it's from.
+
+| Flag | What it is | From |
+|---|---|---|
+| 1 | takes `some`, and is still `it` | what has it: water, oil, blood, powder |
+| 2 | touched; a place, visited | set by the routine that takes a thing, and by `open` |
+| 3 | seen by the player | set by the routine that prints an object's name |
+| 4 | left out of `all` | the routine that says what `all` can take turns it away first |
+| 5 | its name takes no article | the routine that prints `the` |
+| 6 | its name takes `an` | what has it |
+| 7 | plural | what has it |
+| 8 | not listed among a room's contents; a place, outdoors | cleared when a thing is taken; and the places that have it |
+| 10 | a person, female | `turn on` of a person asks it |
+| 11 | open; a person, someone other than you | `open` sets it and an exit by a door asks it; and everyone has it but you |
+| 12 | can be taken, and hasn't been; a person, can't answer | see below |
+| 14 | can be opened and closed | `open` and `close` |
+| 15 | a container | `open` says what's found in one |
+| 16 | burns | `burn` |
+| 17 | a door | what has it: five doors and a gate |
+| 18 | what's dropped in it lands outside it | `drop` asks it of where you are |
+| 19 | can be eaten | `eat` |
+| 21 | a liquid | what has it; nothing asks |
+| 22, 25 | cuts | `cut` asks both |
+| 23 | lit; a place, has light | set and cleared of a lighter and a cigar; six places lack it: a maze, a pit and passages |
+| 24 | things can be on it | `drop on`, `pour`, `empty` |
+| 26 | can be read | `examine` |
+| 28 | a key | `open` and `unlock` ask it of what's used |
+| 29 | can be turned on and off | `turn on` and `blow out` |
+| 30 | can be taken | see below |
+| 32 | can be seen into | `open` doesn't say what's found in one |
+| 33 | an animal | the mule alone has it; `greet` and `feed` ask |
+| 34 | turned on | `turn on` sets it, `blow out` clears it |
+| 35 | can be got in or on | `climb in` |
+| 36 | locked | `open` says it appears to be locked |
+| 37 | can be worn | `put on` and `doff` |
+| 38 | worn | the wreath has it; cleared of the costume |
+
+Flags 33 and up are a thing's alone: no other type's record has room for them. Nothing
+starts locked, and no call that names flag 36 sets it.
+
+Two flags say a thing can be taken. Before `get`, the game asks for flag 30 or flag 12, and
+refuses when the object has neither. The routine that takes a thing, at `01B9:15D7`, clears
+flag 12 if it's there and sets flag 30. So 12 is a thing that hasn't been taken yet. 41
+things start with it, an altar and a statue among them, and their own routines answer the
+taking: it is the first game's "taking it is special", which the first taking ends.
+
+The same routine gives the points for taking a thing, from the word at `22` in its record,
+and zeroes the word so they are given once. A room's word at `12` is read by the same
+field routine, at `01B9:22C8`, and is taken to be the points for coming to it. The things'
+come to 170 points and the rooms' to 140, of the 1,000 the game has.
+
+For a person, flag 12 is asked by `ask`, `tell`, `show`, `attack`, `call` and `wake`, and no
+person starts with it. It is taken to be one who can't answer.
+
+There is also a routine, at `0000:1797`, that picks a verb for an object: `Take` for a thing
+with flag 30 or one of type 8 with flag 12, `Open` or `Close` for a container or a door that
+can be, `Read`, `Eat`, `Greet` for a person, `Go to` for a place, and `Look at` for the rest.
+It is what the mouse does with a click on a picture, by the look of it.
+
 ## Still to do
 
 - The timers have no names yet.
-- The flags have no names yet. Flag 11 is open, from the routine that follows an exit.
-- A room's word at `12`, a thing's at `1C` and `22`, a person's at `1C`, and type 8's at `16`.
+- Flags 9, 13 and 20, and what flag 10 is for a thing. The Tavern alone has 9 and nothing
+  asks about it. 217 objects have 13, and a routine at `0A12:000A` moves each one that has it.
+  Nothing starts with 20, and the routine that matches a noun to an object asks it.
+- A thing's word at `1C`, a person's at `1C`, and type 8's at `16`.
 - The saved game's layout: there is no `RESTART.DAT` to check it against until the game
   is run.
 - The player doesn't watch it: `--watch` and `--panel` need the map of where its world is.
