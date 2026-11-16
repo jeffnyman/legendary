@@ -4,7 +4,7 @@ Legend Entertainment, 1991. The second *Spellcasting*, by Steve Meretzky, on the
 [*Spellcasting 101*](spellcasting-101.md) was built on, a year on.
 
 This is what the first look found, and so far it is how the program is built, its
-vocabulary, its objects, its grammar, which routine is whose, its timers and its text. What is
+vocabulary, its objects, its grammar, which routine is whose, its timers, its text and its music. What is
 known for certain is said plainly; what is inferred says so. Addresses are `segment:offset` in
 hex, with segments relative to where the program loads. Every one of them can be looked at
 with the [tools](../tools/README.md).
@@ -592,13 +592,51 @@ The program calls the two 766 times, and in 741 of the calls the word is a const
 call names a string in blocks 0, 44 to 71, 73, 74 or 82 to 86 that way: those are reached by
 numbers worked out, the jokes of block 0 among them.
 
+## The music
+
+The music is two files, `INTRO_M1.MUS` for the title and `S201_M1.MUS` for the game, where
+*Spellcasting 101* had six. A `.MUS` file is still [songs kept
+twice](spellcasting-101.md#the-music), once for a Roland MT-32 and once for an AdLib card,
+after a table of them. Two things are different.
+
+**The table is bigger.** It has 120 entries, where it had 30, and an entry is twelve bytes,
+where it was ten:
+
+| Bytes | What |
+|---|---|
+| 4 | Where the song starts in the file; 0 for no song |
+| 2 | Its length |
+| 2 | 1 for the MT-32's, 0 for the AdLib's |
+| 2 | A word, not yet understood; 0 for the AdLib's |
+| 2 | A second word, new, the same |
+
+A byte follows the table, and a byte follows each song. The game's file has 46 songs, each
+both ways, and the title's has one.
+
+**The AdLib's song is a MIDI file.** In *Spellcasting 101* it was a `.ROL` file, AdLib
+Visual Composer's own, played with the instruments in `S101.BNK`. Here it is a MIDI file of
+one track, of the kind Ad Lib called `.MDI`: the notes are MIDI's, and the instruments come
+in the song itself, as events kept for a sequencer's own use that start with Ad Lib's
+number, `00 00 3F`, and then a word that says what they are. Three kinds are in the songs:
+1, with a voice's number and 28 values, 2 and 3, each with one byte. As the format is
+generally described, the first defines a voice's instrument, the second sets the rhythm
+mode and the third the range of the pitch wheel; the game's own player hasn't been read to
+confirm it. So there is no `.BNK` file, and each song carries the instruments it uses.
+
+Twenty of the game's 46 AdLib songs are 119 bytes, a header and no notes: those songs play
+on the MT-32 alone.
+
+*Timequest* already kept its AdLib songs this way, in a table of 120 entries of ten bytes,
+and the three games after *Spellcasting 201* keep theirs as it does. The tools list and
+write out all six games' songs. None of the `.MDI` files written has been played to check
+it.
+
 ## Still to do
 
 Everything past the program, the vocabulary, the objects, the grammar, the routines, the
-timers and the text. Flags 35, 39 and 40 have no meaning yet, and six more are named from
-who has them. Three timers are named only from what they touch. The rules of the parser's
-own grammar aren't found either. The music is in a form *Spellcasting 101*'s reader doesn't
-read: a song in a `.MUS` file has two more bytes in its entry.
+timers, the text and the music. Flags 35, 39 and 40 have no meaning yet, and six more are
+named from who has them. Three timers are named only from what they touch. The rules of the
+parser's own grammar aren't found either, nor what a saved game holds.
 
 The pictures, their regions and the sounds are read by the tools as they are. Their output
 hasn't been checked by eye.
