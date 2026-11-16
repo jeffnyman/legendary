@@ -629,8 +629,8 @@ internal static class Program
               --headless         no window: run --seconds seconds and stop
               --watch            say the game's world on the terminal as it changes: the time,
                                  the turn, the room and what is in it, and each action (for a
-                                 game whose world is known: Spellcasting 101, and
-                                 Spellcasting 201 without its parsing yet)
+                                 game whose world is known: Spellcasting 101 and
+                                 Spellcasting 201)
               --panel            the same in a panel down the window's right side: the world as
                                  it is now, and under it the last of what happened
               --panel-text <n>   the panel, with its text n times its size, from 1 to 4, as in

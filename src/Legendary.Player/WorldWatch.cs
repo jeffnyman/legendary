@@ -376,6 +376,14 @@ internal sealed class WorldWatch(
             return;
         }
 
+        // in a game that keeps the gathering routine in an overlay, another overlay's code
+        // can be at the same place
+        int place = taken switch { Taken.AfterStop => world.AfterStopAddress, Taken.AfterAnd => world.AfterAndAddress, _ => world.TokenAddress };
+        if (!world.IsGathering(place))
+        {
+            return;
+        }
+
         int code = (short)machine.Cpu.Eax, number = world.TokenWord;
         var word = words is not null && number >= 1 && number <= words.Count ? words[number - 1] : null;
         bool ends = map.EndTokens.Contains(code);
