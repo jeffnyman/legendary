@@ -101,25 +101,73 @@ FLAG_NAMES_201 = {
     37: "someone other than you",
     38: "female",
 }
-GAME_101, GAME_201 = "Spellcasting 101", "Spellcasting 201"
+# Timequest's, the same way. A flag's number is its bit, as in Spellcasting 101, and the
+# numbers are its own
+FLAG_NAMES_TIMEQUEST = {
+    1: "takes `some`, and is still `it`",
+    2: "touched",
+    3: "seen by the player",
+    4: "left out of `all`",
+    5: "its name takes no article",
+    6: "its name takes `an`",
+    7: "plural: `some`, and `they`",
+    8: "not listed among a room's contents",
+    11: "open",
+    12: "can be taken, and hasn't been: taking it can be special",
+    14: "can be opened and closed",
+    15: "a container",
+    16: "burns",
+    17: "a door",
+    18: "what's dropped in it lands outside it",
+    19: "can be eaten",
+    21: "a liquid",
+    22: "cuts",
+    23: "lit",
+    24: "things can be on it",
+    25: "cuts",
+    26: "can be read",
+    28: "a key",
+    29: "can be turned on and off",
+    30: "can be taken",
+    32: "can be seen into",
+    33: "an animal",
+    34: "turned on",
+    35: "can be got in or on",
+    36: "locked",
+    37: "can be worn",
+    38: "worn",
+}
+PLACE_FLAG_NAMES_TIMEQUEST = {2: "visited", 8: "outdoors", 23: "has light"}
+PERSON_FLAG_NAMES_TIMEQUEST = {
+    10: "female",
+    11: "someone other than you",
+    12: "can't answer: asleep, or dead",
+}
+GAME_101, GAME_TIMEQUEST, GAME_201 = "Spellcasting 101", "Timequest", "Spellcasting 201"
+# each game's names: for any object, and what a place's and a person's are instead
+_NAMES = {
+    GAME_101: (FLAG_NAMES, PLACE_FLAG_NAMES, PERSON_FLAG_NAMES),
+    GAME_TIMEQUEST: (FLAG_NAMES_TIMEQUEST, PLACE_FLAG_NAMES_TIMEQUEST, PERSON_FLAG_NAMES_TIMEQUEST),
+    GAME_201: (FLAG_NAMES_201, {}, {}),
+}
 
 
 def flag_name(flag: int, kind: int | None = None, game: str | None = GAME_101) -> str | None:
     """What a flag is, for an object of a type if one is given; None when it isn't known."""
-    if game == GAME_201:
-        return FLAG_NAMES_201.get(flag)
-    if game != GAME_101:
+    if game not in _NAMES:
         return None
-    special = PLACE_FLAG_NAMES if kind == 1 else PERSON_FLAG_NAMES if kind == 7 else {}
-    return special.get(flag) or FLAG_NAMES.get(flag)
+    names, place, person = _NAMES[game]
+    special = place if kind == 1 else person if kind == 7 else {}
+    return special.get(flag) or names.get(flag)
 
 
 def describe_flag(flag: int, game: str | None = GAME_101) -> str:
     """What a flag is, for every type at once."""
-    if game != GAME_101:
-        return flag_name(flag, None, game) or "not known"
-    name = FLAG_NAMES.get(flag, "not known")
-    for label, special in (("a place", PLACE_FLAG_NAMES), ("a person", PERSON_FLAG_NAMES)):
+    if game not in _NAMES:
+        return "not known"
+    names, place, person = _NAMES[game]
+    name = names.get(flag, "not known")
+    for label, special in (("a place", place), ("a person", person)):
         if flag in special:
             name += f"; for {label}, {special[flag]}"
     return name
