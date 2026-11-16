@@ -147,11 +147,8 @@ you (153) moved: from Bedchamber (1) to Potty
 The cloak is on your second list, which is what you wear. `--watch` and `--panel` can be given
 together, for the panel and the terminal's full record of the play.
 
-*Spellcasting 201* can be watched too: the time, the turn, the room with what is in it and
-its exits, each action as it is performed and who answered it, the timers as they start, run
-and stop, and every object that moves or has a flag set or cleared. How it parses a command,
-the words, the form and the objects found, isn't followed yet: the places in its program
-where it does that haven't been found.
+*Spellcasting 201* can be watched the same way, with all of it: the room, each command's
+words, form and objects, each action and who answered it, the timers, and what changed.
 
 The panel's text is small: 8 pixels, doubled once the window is 960 high. `--panel-text 1.5`
 asks for the panel with its text one and a half times that size, and any size from 1 to 4 can

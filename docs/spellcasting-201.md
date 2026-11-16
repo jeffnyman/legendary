@@ -441,6 +441,41 @@ pointer, one after another; name each word and token by what it is; and, because
 is the first game's exactly, give the rules the names they had there. *Timequest*, between
 the two, still has the names, and the same grammar.
 
+### Where a command is parsed
+
+The parser's routines are [the first game's](spellcasting-101.md#where-the-parse-is-kept),
+moved. Three of the four are in overlays now, and the main loop reaches them by thunks.
+
+| Routine | Where | In *101* |
+|---|---|---|
+| Takes the next word off the line and makes it a token | `12F1:027C`, in the root | `11C5:0266` |
+| Gathers a command's tokens | `32B1:005E`, in overlay 4 | `130E:005E` |
+| Searches the grammar for the command's form | `31E1:01DD`, in overlay 3 | `12A6:01D0` |
+| Finds the objects a lot of phrases could be | `3252:0687`, in overlay 3 | `0B6C:0684` |
+
+The gathering routine is the same code at the same offset in its segment, so the three places
+in it where a token has just been taken are the first game's three, `00ED`, `017E` and `01FC`.
+Being in an overlay, they are that routine's only while overlay 4 is the one loaded at
+`31E1`, which three other overlays share; the player's watch looks for the call to the
+tokenizer just before each, and says nothing when it isn't there.
+
+What the parse leaves is kept as before, in the segment at `3FA7`:
+
+| What | Where |
+|---|---|
+| The number of the word the token is | `3FA7:4029` |
+| The sentence | `3FA7:00E3` |
+| How many lots of phrases the command has | `3FA7:0117` |
+| Where each lot's objects may be looked for | `3FA7:0118`, a byte each |
+| The lots, twelve bytes each | `3FA7:011D` |
+| The action the form makes of the command | `3FA7:0135` |
+| Which form was found | `3FA7:0139` |
+| What each lot's phrases were found to be | `3FA7:88EA`, 96 bytes a lot |
+
+One thing is done differently. In *Spellcasting 101* a phrase that was `all` was left for the
+action to gather. Here the parser gathers it: `drop all` comes back from the object finder as
+the four things in hand that can be dropped, and the action is performed once for each.
+
 ## Which routine is whose
 
 As before, no table says which routine is an object's or an action's. The source had a C
@@ -720,9 +755,7 @@ timers, the text, the music and a saved game's parts. Flags 35, 39 and 40 have n
 yet, and five more are named from who has them. Three timers are named only from what they
 touch.
 
-The player's `--watch` and `--panel` show this game's world, its actions and its timers, and
-not yet how it parses a command: the parser's steps have to be found in this program as they
-were in the first.
+The player's `--watch` and `--panel` follow this game as they do the first.
 
 The pictures, their regions and the sounds are read by the tools as they are. Their output
 hasn't been checked by eye.
