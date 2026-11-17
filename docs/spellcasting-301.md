@@ -2,7 +2,8 @@
 
 Legend Entertainment, 1992. The third *Spellcasting*, by Steve Meretzky.
 
-This is the first look, and so far it is only how the program is built and loaded. What is
+This is the first look, and so far it is how the program is built and loaded, its
+vocabulary and its grammar. What is
 known for certain is said plainly; what is inferred says so. Addresses are `segment:offset`
 in hex, with segments relative to where the program loads. Every one of them can be looked
 at with the [tools](../tools/README.md).
@@ -68,16 +69,40 @@ Overlay 10 is empty. `S301MAIN.OVL` is laid out as before: each overlay's reloca
 then its contents on a paragraph, and the file is eight bytes short of where the last one's
 size would end it.
 
+## The vocabulary
+
+`VOCAB.DAT` is [*Spellcasting 201*'s](spellcasting-201.md#the-vocabulary) with one word
+meaning something else: a tree, the words' text packed by Huffman's codes, a table of the
+words in alphabetical order, and the synonyms.
+
+The word before the text was the text's size there, unpacked. Here it is how many bytes the
+text is packed into: 6,959, for 12,845 bytes of text. So the reader of the older file stopped
+partway through the words and found nothing where it looked for the table. The tools take
+the word either way, whichever leaves the rest of the file ending where the file does.
+
+| What | How many |
+|---|---|
+| Words | 1,801 |
+| The tree | 70 words, so 35 pairs |
+| Synonyms | 303 |
+
+*Gateway*'s vocabulary is kept the same way, and is read: 2,644 words.
+
+## The grammar
+
+458 forms that make 249 actions, in *Spellcasting 201*'s wider table. It is found and read
+as that game's is, with nothing changed.
+
 ## Still to do
 
-Everything else. The tools that read the program now load it; the ones that need its words
-or its text stop at those:
+The tools that read the program load it, and its words and grammar are read. The rest stop
+where something is kept a new way:
 
-- `VOCAB.DAT` is packed another way again: the reader of *Spellcasting 201*'s finds its
-  words don't end where the file does.
-- `S301STR.DAT`'s table of blocks doesn't end where the file does either.
+- The objects, and the flags and timers that wait on them: the table of objects is found, and
+  its records are laid out another way.
+- The routine that calls an action's routine isn't found.
+- `S301STR.DAT`'s table of blocks doesn't end where the file does.
 - The pictures are [a third kind](timequest.md#the-pictures), many of them 320 by 200.
-- The objects, flags, grammar, routines and timers wait on the words.
 
 The parser's own grammar is read, and is the first game's 46 ways. The music and the sounds
 are read as they are.

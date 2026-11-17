@@ -26,8 +26,8 @@ relative to where the program loads, as the files have them. How the programs ar
 These read a program linked by PLINK86, *Spellcasting 101* and *Timequest*, or by
 .RTLink/Plus 4.10, *Spellcasting 201*, or 5.02, *Spellcasting 301*. All of them read
 *Spellcasting 201*; what each makes of *Timequest* is said with it. Of *Spellcasting 301*,
-the first seven read the program, and the rest wait on its words and text, which are packed
-[a way that isn't read yet](../docs/spellcasting-301.md#still-to-do).
+the first seven read the program, and `grammar`, `sentence` and `vocab` read it too; the
+rest [stop at something kept a new way](../docs/spellcasting-301.md#still-to-do).
 
 ```
 python -m legendary_tools exe <the game's folder>
@@ -201,7 +201,9 @@ python -m legendary_tools vocab <the game's folder>
 - **`vocab`** lists the vocabulary in `VOCAB.DAT`: each word's number, its parts of speech,
   and, for a synonym, the word it stands for and as what. It reads *Spellcasting 101*'s and
   *Timequest*'s plain file and *Spellcasting 201*'s packed one, which is in
-  [docs/spellcasting-201.md](../docs/spellcasting-201.md#the-vocabulary).
+  [docs/spellcasting-201.md](../docs/spellcasting-201.md#the-vocabulary), and
+  [*Spellcasting 301*'s](../docs/spellcasting-301.md#the-vocabulary) and *Gateway*'s, which
+  say the packed text's size another way.
 
 ## The modules
 
