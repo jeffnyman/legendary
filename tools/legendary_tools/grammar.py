@@ -47,6 +47,7 @@ import struct
 from dataclasses import dataclass, field
 
 from .data import Word
+from .handlers import tabled_action_flags
 from .program import Program
 
 # lea ax,[bx+table] / mov dx,<segment> / push dx / push ax / push [bp+8] / push [bp+6] /
@@ -146,7 +147,13 @@ _WIDE = ("<HHHBBBB", "<HHBB")
 
 
 def action_flags(program: Program) -> bytes:
-    """A byte for each action, the first for action 1: what's in the forms' segment before them."""
+    """
+    A byte for each action, the first for action 1: what's in the forms' segment before them,
+    or, where the actions' routines are in a table, the first byte of each entry.
+    """
+    tabled = tabled_action_flags(program)
+    if tabled is not None:
+        return tabled
     memory, segment, first, _ = _tables(program)
     return memory[segment * 16 : segment * 16 + first]
 

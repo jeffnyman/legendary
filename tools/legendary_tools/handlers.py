@@ -43,6 +43,12 @@ _BY_NUMBER = re.compile(
     rb"\x3d(..)\x77.\xff\x4e\xfe\x8b\x5e\xfe\xd1\xe3\xd1\xe3\x8e\x06(..)\x26\x8b\x87(..)\x26\x8b\x97",
     re.DOTALL,
 )
+# cmp byte [bp+6],<how many> / ja <none> / mov al,6 / mul byte [bp+6] / mov bx,ax /
+# mov es,[segment variable] / call far es:[bx+table]: an action's routine, from a table of
+# six bytes an action
+_ACTION_TABLE = re.compile(
+    rb"\x80\x7e\x06(.)\x77.\xb0\x06\xf6\x66\x06\x8b\xd8\x8e\x06(..)\x26\xff\x9f(..)", re.DOTALL
+)
 _NOTICE = b"MS Run-Time Library"
 # mov al,es:[<the action>] / sub ah,ah / push ax / call far: the action handed to a routine
 _BY_ACTION = re.compile(rb"\x26\xa0..\x2a\xe4\x50\x9a(..)(..)", re.DOTALL)
@@ -198,4 +204,50 @@ def action_routines(program: Program) -> tuple[dict[int, Routine], dict[int, Rou
             return code.routines(start), before
         # the switch called first, of few cases, is the routines that come before
         before = code.routines(start)
+    tabled = _tabled_actions(code)
+    if tabled is not None:
+        return tabled
     raise ValueError("the code that calls an action's routine wasn't found")
+
+
+def tabled_action_flags(program: Program) -> bytes | None:
+    """A byte for each action, where the actions' routines are in a table; None where they aren't."""
+    code = _Code(program)
+    match = _ACTION_TABLE.search(code.root)
+    notice = code.memory.find(_NOTICE)
+    if not match or notice < 0:
+        return None
+    table = code.word(notice - 8 + int.from_bytes(match[2], "little")) * 16
+    # the far pointer the call takes is two bytes into an entry
+    table += int.from_bytes(match[3], "little") - 2
+    return bytes(code.memory[table + 6 * number] for number in range(1, match[1][0] + 1))
+
+
+def _tabled_actions(code: _Code) -> tuple[dict[int, Routine], dict[int, Routine]] | None:
+    """
+    The same, where the routines are in a table: six bytes an action, which are its byte of
+    flags, a byte that is the number of the routine that comes before it, or 0, and a far
+    pointer to its own. The routines that come before are far pointers from the start of the
+    table's segment.
+    """
+    match = _ACTION_TABLE.search(code.root)
+    notice = code.memory.find(_NOTICE)
+    if not match or notice < 0:
+        return None
+    segment = code.word(notice - 8 + int.from_bytes(match[2], "little")) * 16
+    table = segment + int.from_bytes(match[3], "little")
+
+    def routine(at: int) -> Routine:
+        offset, target = struct.unpack_from("<HH", code.memory, at)
+        thunk = code.program.thunk_at(target, offset)
+        if thunk:
+            return Routine(thunk.overlay, thunk.target_segment, thunk.target_offset)
+        return Routine(None, target, offset)
+
+    actions, before = {}, {}
+    for number in range(1, match[1][0] + 1):
+        entry = table + 6 * number
+        actions[number] = routine(entry)
+        if earlier := code.memory[entry - 1]:
+            before[number] = routine(segment + 4 * (earlier - 1))
+    return actions, before
