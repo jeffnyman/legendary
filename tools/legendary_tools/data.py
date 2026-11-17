@@ -135,7 +135,7 @@ def vocabulary(data: bytes) -> list[Word]:
             return _plain_vocabulary(data, size, count)
     try:
         return _packed_vocabulary(data)
-    except (struct.error, IndexError, UnicodeDecodeError):
+    except (struct.error, IndexError, ValueError):
         raise ValueError("the vocabulary's words don't end where its file does") from None
 
 
@@ -155,37 +155,8 @@ def _plain_vocabulary(data: bytes, size: int, count: int) -> list[Word]:
     return words
 
 
-def _packed_vocabulary(data: bytes) -> list[Word]:
-    """
-    Spellcasting 201's: the words' text packed by Huffman's codes, and the synonyms apart.
-
-    The file is a tree, the text, a table of the words, and the synonyms. The tree is a count
-    of words and then the words, in pairs, one for a 0 bit and one for a 1: a word from zero
-    up is where in the tree the next pair is, and one below zero is a character, as its
-    complement, and ends the code. The last pair is the root. The text is its size unpacked
-    and then the codes, read from each byte's low bit up; each word ends in a zero, and they
-    are in no order. The table is a count and four bytes for each word, in alphabetical
-    order: where its text starts, and its parts of speech. The synonyms are a count of groups,
-    and each group a word's number, a count, and that many pairs: a word that stands for it,
-    and the parts of speech it stands for it as.
-    """
-    (links,) = struct.unpack_from("<H", data, 0)
-    tree = struct.unpack_from(f"<{links}h", data, 2)
-    at = 2 + 2 * links
-    (size,) = struct.unpack_from("<H", data, at)
-    bit = (at + 2) * 8
-    text = bytearray()
-    node = links - 2
-    while len(text) < size:
-        link = tree[node + (data[bit >> 3] >> (bit & 7) & 1)]
-        bit += 1
-        if link >= 0:
-            node = link
-        else:
-            text.append(~link)
-            node = links - 2
-    at = (bit + 7) >> 3
-
+def _vocabulary_tables(data: bytes, at: int) -> tuple[list[tuple[int, int]], dict[int, tuple[int, int]]]:
+    """A packed vocabulary's table of words and its synonyms, which end the file."""
     (count,) = struct.unpack_from("<H", data, at)
     table = [struct.unpack_from("<HH", data, at + 2 + 4 * index) for index in range(count)]
     at += 2 + 4 * count
@@ -200,6 +171,51 @@ def _packed_vocabulary(data: bytes) -> list[Word]:
         at += 4 + 4 * members
     if at != len(data):
         raise ValueError("the vocabulary's words don't end where its file does")
+    return table, synonyms
+
+
+def _packed_vocabulary(data: bytes) -> list[Word]:
+    """
+    Spellcasting 201's: the words' text packed by Huffman's codes, and the synonyms apart.
+
+    The file is a tree, the text, a table of the words, and the synonyms. The tree is a count
+    of words and then the words, in pairs, one for a 0 bit and one for a 1: a word from zero
+    up is where in the tree the next pair is, and one below zero is a character, as its
+    complement, and ends the code. The last pair is the root. The text is its size unpacked
+    and then the codes, read from each byte's low bit up; each word ends in a zero, and they
+    are in no order. In Spellcasting 301 the size is of the codes, in bytes, and not of the
+    text. The table is a count and four bytes for each word, in alphabetical
+    order: where its text starts, and its parts of speech. The synonyms are a count of groups,
+    and each group a word's number, a count, and that many pairs: a word that stands for it,
+    and the parts of speech it stands for it as.
+    """
+    (links,) = struct.unpack_from("<H", data, 0)
+    tree = struct.unpack_from(f"<{links}h", data, 2)
+    at = 2 + 2 * links
+    (size,) = struct.unpack_from("<H", data, at)
+    bit = (at + 2) * 8
+    text = bytearray()
+    node = links - 2
+    # the size is the text's, unpacked, in Spellcasting 201, and in Spellcasting 301 it is how
+    # many bytes the text is packed into: whichever has the rest end where the file does
+    packed_end = (at + 2 + size) * 8
+    table = synonyms = None
+    while bit < min(packed_end, len(data) * 8):
+        link = tree[node + (data[bit >> 3] >> (bit & 7) & 1)]
+        bit += 1
+        if link >= 0:
+            node = link
+            continue
+        text.append(~link)
+        node = links - 2
+        if len(text) == size:
+            try:
+                table, synonyms = _vocabulary_tables(data, (bit + 7) >> 3)
+                break
+            except (struct.error, IndexError, ValueError):
+                pass
+    if table is None or synonyms is None:
+        table, synonyms = _vocabulary_tables(data, at + 2 + size)
     return [
         Word(number, text[start : text.index(0, start)].decode("ascii"), parts, *synonyms.get(number, (0, 0)))
         for number, (start, parts) in enumerate(table, 1)
