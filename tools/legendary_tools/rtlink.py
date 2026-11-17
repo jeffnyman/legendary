@@ -13,7 +13,7 @@ the linker's own. The image starts with a header:
          and an offset
     +14  where the records start, and at +16 how many
     +1C  a run-time library: 1, its name, and at +26 a stamp its file has to have too
-    +34  the linker's version, 019A here: 4.10
+    +34  the linker's version: 019A for 4.10, 01F6 for 5.02
     +4E  the library's extension, RTL
 
 The program isn't kept as it sits in memory. It is kept as records, one for each stretch of
@@ -46,6 +46,11 @@ It has a table of the overlays, 18 bytes each, and after it the thunks, to the s
 Each overlay is in the .OVL as PLINK86's are: its relocations, then its contents on a
 paragraph.
 
+Version 5.02, 01F6 at +34, keeps a program the same way: the header, the records and the
+fixups' flags are 4.10's. Its overlay manager is another: the entries of its table start
+eight bytes after the count, not four, and its thunks come after its segment, in segments of
+its group, where 4.10's end it.
+
 Every segment here is relative to where the program loads, as the file has them.
 """
 
@@ -60,7 +65,8 @@ from .program import Overlay, Program, Thunk
 
 # how the stub begins: call <find the startup code> / jmp far cs:[4]
 _ENTRY = bytes.fromhex("e805002eff2e0400")
-_VERSION = 0x19A  # the one version whose flags are read here
+# the versions read here, 4.10 and 5.02: their files are the same, and their managers differ
+_VERSIONS = (0x19A, 0x1F6)
 _LIBRARY_MAGIC = 0x37BA
 _ENTRY_SIZE = 18  # of an overlay's entry in the manager's table
 _THUNK_SIZE = 10
@@ -198,7 +204,7 @@ class RtlinkProgram(Program):
         if image[entry : entry + len(_ENTRY)] != _ENTRY:
             raise ValueError("not a .RTLink program: it doesn't start in .RTLink's stub")
         self.version = struct.unpack_from("<H", image, 0x34)[0]
-        if self.version != _VERSION:
+        if self.version not in _VERSIONS:
             raise ValueError(f"linked by a version of .RTLink that isn't known here: {self.version:04x}")
         (
             self.start_offset,
@@ -333,13 +339,17 @@ class RtlinkProgram(Program):
         )
         segment = bytes(self._memory[base : base + length])
         # the manager says where its table is: where the count is, where the entries start,
-        # and an entry's size, one after another
+        # and an entry's size, one after another. The entries are 4 bytes past the count in
+        # 4.10 and 8 in 5.02
         table = next(
             (
                 (count_at, entries)
-                for at in range(0, length - 6, 2)
+                for at in range(length - 6)
                 for count_at, entries, size in [struct.unpack_from("<HHH", segment, at)]
-                if size == _ENTRY_SIZE and entries == count_at + 4 and entries + _ENTRY_SIZE <= length
+                if size == _ENTRY_SIZE
+                and entries - count_at in (4, 8)
+                and entries + _ENTRY_SIZE <= length
+                and 0 < struct.unpack_from("<H", segment, count_at)[0] <= (length - entries) // _ENTRY_SIZE
             ),
             None,
         )
@@ -359,20 +369,26 @@ class RtlinkProgram(Program):
             end = segment.upper().find(b".OVL\0", table[1])
             if end >= 0:
                 self.ovl_name = segment[segment.rindex(b"\0", 0, end) + 1 : end + 4].decode("ascii")
-            self._find_thunks(segment)
+            # the thunks end the manager's segment in 4.10; in 5.02 they come after it, in
+            # segments of its group, and are reached through its own
+            self._find_thunks(bytes(self._memory[base : base + 0x10000]))
         self._thunks = {(thunk.segment, thunk.offset): thunk for thunk in self.thunks}
 
     def _find_thunks(self, segment: bytes) -> None:
-        """The thunks: every one calls the same place, and they run to the segment's end."""
+        """The thunks: ten bytes each, one after another, every one calling the same place."""
         found = []
-        for at in range(len(segment) - _THUNK_SIZE, -1, -_THUNK_SIZE):
+        at = 0
+        while at + _THUNK_SIZE <= len(segment):
             if segment[at] != 0xE8 or segment[at + 3] != 0xEA:
-                break
+                at += 1
+                continue
             called = (at + 3 + struct.unpack_from("<h", segment, at + 1)[0]) & 0xFFFF
             offset, target, index = struct.unpack_from("<HHH", segment, at + 4)
-            if index >= len(self.overlays):
-                break
+            if index >= len(self.overlays) or called >= at:
+                at += 1
+                continue
             found.append((called, Thunk(self.start_segment, at, index + 1, target, offset)))
+            at += _THUNK_SIZE
         calls = Counter(called for called, _ in found)
         if calls:
             manager = calls.most_common(1)[0][0]
