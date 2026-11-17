@@ -153,6 +153,59 @@ find *Spellcasting 201*'s. The routines that read a record's fields are in segme
 and switch on the type as before. Four of them keep the flags: `0305:030F` finds a flag's
 byte and bit from the table, `03A8` tests it, `03E2` sets it and `0415` clears it.
 
+### What the flags are
+
+51 flags, each with a bit and the types that have it, in the table at `2BDB:0018`. The names
+are from the code that asks about each, which the tools list, or from what has it.
+
+| Flag | What it is | From |
+|---|---|---|
+| 1 | its name takes no article | what has it |
+| 2 | its name takes `an` | what has it |
+| 3 | plural | what has it |
+| 4 | takes `some` | what has it |
+| 5 | seen by the player | set 346 times, by nearly everything that describes |
+| 6 | touched; a place, visited | `open` sets it |
+| 7 | taking it is special | the routine before `get` asks it |
+| 8 | not listed among a room's contents | `get` clears it |
+| 9 | gives light | 79 of the 84 places; `light` sets it and `blow out` clears it |
+| 10 | an animal | what has it: a bull, a dog, a seagull; `greet` asks |
+| 11 | can't be opened or closed | `open` and `close` |
+| 12 | a door | the three doors |
+| 14 | can be read | `examine`; what has it |
+| 15 | locked | `open` says it appears to be locked; `unlock` asks it |
+| 16 | open | `open` sets it, and says `already open` |
+| 17 | things can be on it | what has it; `empty` and `climb off` ask |
+| 18 | a container | `open`, `fill` |
+| 19 | can be taken | the routine before `get` asks it |
+| 20 | a place under water | what has it: Harbor Bottom, Sunken Ship; `swim` asks |
+| 23 | lit | `light` sets it, `blow out` clears it |
+| 24 | can be seen through | what has it: the trophy case, the lobster trap |
+| 26 | can be got in or on | `climb in` |
+| 27 | burns | `burn` |
+| 30 | can be worn | `wear` |
+| 31 | a key | `open` and `unlock` ask it of what's used |
+| 32, 33 | cuts | `cut` asks both |
+| 35 | can be eaten | `eat` |
+| 37 | magic: a spell, its box, or the spell book | what has it |
+| 38 | can be lit | `light` and `blow out` |
+| 39 | a bed | `make` |
+| 41 | a tube of paint | what has it |
+| 45 | a seahorse | what has it |
+| 46 | outdoors | 35 places; `tan` and `look up` ask |
+| 47 | someone other than you | everyone has it but you |
+| 48 | female | what has it |
+
+They are the same things as *Spellcasting 201*'s flags, in another order: `open` was 13
+there and `locked` 14. The trophy case, as the game starts, is locked, a container, and can
+be seen through.
+
+Flags 20, 24 and 17 are named from what has them more than from a test that settles it. Not
+named: 13, which the Crawl Space alone has; 22, 25, 34, 42 and 43, which nothing starts
+with and the game sets and clears; 28 and 29, of places; 36, 40 and 44, of one or a few
+things each; and 50, which the banker has. Flags 21, 49 and 51 are in the table and nothing
+has them or asks about them.
+
 ## Which routine is whose
 
 The actions' routines are in a table too. The earlier games had a `switch` on the action,
@@ -280,8 +333,7 @@ which the tools don't follow.
 The tools that read the program load it, and its words and grammar are read. The rest stop
 where something is kept a new way:
 
-- The flags have no names. Their numbers aren't *Spellcasting 201*'s: `open` tests flag 15
-  here, and 13 there.
+- Twelve flags aren't named.
 - The timers have no names.
 - The saved game's layout: the code that saves isn't found.
 - The strings that aren't named by a constant: half of them.
