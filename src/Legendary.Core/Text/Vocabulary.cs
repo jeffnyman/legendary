@@ -78,16 +78,33 @@ public static class Vocabulary
     // bit up. The table is in alphabetical order, and a word's number is its place in it. A
     // group of synonyms is a word's number, a count, and that many pairs: a word that stands
     // for it, and the parts of speech it stands for it as.
+    //
+    // The word before the codes is the text's size unpacked in Spellcasting 201, and in
+    // Spellcasting 301 how many bytes the codes are: the file is read the first way, and the
+    // second if that doesn't leave the rest ending where the file does.
     private static List<VocabularyWord> ReadPacked(ReadOnlySpan<byte> file)
+    {
+        try
+        {
+            return ReadPacked(file, sizeIsOfCodes: false);
+        }
+        catch (InvalidDataException)
+        {
+            return ReadPacked(file, sizeIsOfCodes: true);
+        }
+    }
+
+    private static List<VocabularyWord> ReadPacked(ReadOnlySpan<byte> file, bool sizeIsOfCodes)
     {
         try
         {
             int links = BinaryPrimitives.ReadUInt16LittleEndian(file);
             var tree = file.Slice(2, 2 * links);
             int at = 2 + (2 * links);
-            byte[] text = new byte[BinaryPrimitives.ReadUInt16LittleEndian(file[at..])];
-            int bit = (at + 2) * 8;
-            for (int made = 0, node = links - 2; made < text.Length; bit++)
+            int size = BinaryPrimitives.ReadUInt16LittleEndian(file[at..]);
+            int bit = (at + 2) * 8, end = sizeIsOfCodes ? (at + 2 + size) * 8 : int.MaxValue;
+            var unpacked = new List<byte>(size);
+            for (int node = links - 2; bit < end && (sizeIsOfCodes || unpacked.Count < size); bit++)
             {
                 int link = BinaryPrimitives.ReadInt16LittleEndian(tree[(2 * (node + (file[bit >> 3] >> (bit & 7) & 1)))..]);
                 if (link >= 0)
@@ -96,12 +113,13 @@ public static class Vocabulary
                 }
                 else
                 {
-                    text[made++] = (byte)~link;
+                    unpacked.Add((byte)~link);
                     node = links - 2;
                 }
             }
 
-            at = (bit + 7) >> 3;
+            byte[] text = [.. unpacked];
+            at = sizeIsOfCodes ? at + 2 + size : (bit + 7) >> 3;
             int count = BinaryPrimitives.ReadUInt16LittleEndian(file[at..]);
             int table = at + 2;
             at = table + (4 * count);
@@ -125,11 +143,11 @@ public static class Vocabulary
             for (int number = 1; number <= count; number++)
             {
                 int start = BinaryPrimitives.ReadUInt16LittleEndian(file[(table + (4 * (number - 1)))..]);
-                int end = Array.IndexOf(text, (byte)0, start);
+                int zero = Array.IndexOf(text, (byte)0, start);
                 var (synonym, parts) = synonyms.GetValueOrDefault(number);
                 words.Add(new VocabularyWord(
                     number,
-                    Encoding.ASCII.GetString(text, start, (end < 0 ? text.Length : end) - start),
+                    Encoding.ASCII.GetString(text, start, (zero < 0 ? text.Length : zero) - start),
                     BinaryPrimitives.ReadUInt16LittleEndian(file[(table + (4 * (number - 1)) + 2)..]),
                     synonym,
                     parts));

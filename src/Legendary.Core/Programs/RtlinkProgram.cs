@@ -42,7 +42,8 @@ public sealed class RtlinkProgram : OverlaidProgram
 
     // the one version whose flags are read here, the library's first word, and the sizes of
     // an overlay's entry in the manager's table and of a thunk
-    private const int Version = 0x019A, LibraryMagic = 0x37BA, EntrySize = 18, ThunkSize = 10;
+    // the versions read here, 4.10 and 5.02: their files are the same, and their managers differ
+    private const int Version = 0x019A, LaterVersion = 0x01F6, LibraryMagic = 0x37BA, EntrySize = 18, ThunkSize = 10;
 
     // a list of fixups' flags: named; the value counted from the frame and not from the
     // place; what is put there; a number to add comes with the places; what the target's
@@ -76,7 +77,7 @@ public sealed class RtlinkProgram : OverlaidProgram
 
         var image = Mz.Image.Span;
         LinkerVersion = Word(image, 0x34);
-        if (LinkerVersion != Version)
+        if (LinkerVersion is not (Version or LaterVersion))
         {
             throw new InvalidDataException($"Linked by a version of .RTLink that isn't known here: {LinkerVersion:X4}.");
         }
@@ -159,7 +160,7 @@ public sealed class RtlinkProgram : OverlaidProgram
     /// <inheritdoc/>
     public override string Linker => ".RTLink/Plus";
 
-    /// <summary>The linker's version, as the header has it: 019A is, by the look of it, 4.10.</summary>
+    /// <summary>The linker's version, as the header has it: 019A is, by the look of it, 4.10, and 01F6 is 5.02.</summary>
     public ushort LinkerVersion { get; }
 
     /// <summary>The segment of the program's first instruction, which is the overlay manager's.</summary>
@@ -391,14 +392,17 @@ public sealed class RtlinkProgram : OverlaidProgram
         var segment = _memory.AsSpan(start, length);
 
         // the manager says where its table is: where the count is, where the entries start,
-        // and an entry's size, one after another
+        // and an entry's size, one after another. The entries are 4 bytes past the count in
+        // 4.10 and 8 in 5.02
         int entries = -1, countAt = 0;
-        for (int at = 0; at + 6 <= length && entries < 0; at += 2)
+        for (int at = 0; at + 6 <= length && entries < 0; at++)
         {
             countAt = Word(segment, at);
-            if (Word(segment, at + 4) == EntrySize && Word(segment, at + 2) == countAt + 4 && countAt + 4 + EntrySize <= length)
+            int first = Word(segment, at + 2);
+            if (Word(segment, at + 4) == EntrySize && first - countAt is 4 or 8 && first + EntrySize <= length
+                && Word(segment, countAt) is > 0 and var count && count <= (length - first) / EntrySize)
             {
-                entries = countAt + 4;
+                entries = first;
             }
         }
 
@@ -431,23 +435,27 @@ public sealed class RtlinkProgram : OverlaidProgram
             name = Encoding.ASCII.GetString(segment[from..(entries + ending + 4)]);
         }
 
-        // the thunks run to the segment's end: call <the manager> / jmp far <the routine> /
-        // dw <the overlay's number, from 0>, and every one calls the same place
-        var thunks = new List<ProgramThunk>();
-        int manager = -1;
-        for (int at = length - ThunkSize; at >= 0 && segment[at] == 0xE8 && segment[at + 3] == 0xEA; at -= ThunkSize)
+        // the thunks: call <the manager> / jmp far <the routine> / dw <the overlay's number,
+        // from 0>, ten bytes each, one after another, every one calling the same place. They
+        // end the manager's segment in 4.10; in 5.02 they come after it, in segments of its
+        // group, and are reached through its own
+        var group = _memory.AsSpan(start, Math.Min(0x10000, _memory.Length - start));
+        var found = new List<(int Called, ProgramThunk Thunk)>();
+        for (int at = 0; at + ThunkSize <= group.Length;)
         {
-            int called = (ushort)(at + 3 + Word(segment, at + 1)), index = Word(segment, at + 8);
-            if (index >= overlays.Count || (manager >= 0 && called != manager))
+            int called = (ushort)(at + 3 + Word(group, at + 1)), index = Word(group, at + 8);
+            if (group[at] != 0xE8 || group[at + 3] != 0xEA || index >= overlays.Count || called >= at)
             {
-                break;
+                at++;
+                continue;
             }
 
-            manager = called;
-            thunks.Add(new ProgramThunk(StartSegment, (ushort)at, index + 1, Word(segment, at + 6), Word(segment, at + 4)));
+            found.Add((called, new ProgramThunk(StartSegment, (ushort)at, index + 1, Word(group, at + 6), Word(group, at + 4))));
+            at += ThunkSize;
         }
 
-        thunks.Reverse();
+        int manager = found.GroupBy(thunk => thunk.Called).OrderByDescending(calls => calls.Count()).Select(calls => calls.Key).FirstOrDefault(-1);
+        var thunks = found.Where(thunk => thunk.Called == manager).Select(thunk => thunk.Thunk).ToList();
         return (overlays, thunks, name);
     }
 
