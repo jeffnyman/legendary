@@ -12,7 +12,7 @@ import struct
 import sys
 
 from . import data
-from .flags import GAME_201, GAME_TIMEQUEST, describe_flag, flag_name, flag_uses
+from .flags import GAME_201, GAME_301, GAME_TIMEQUEST, describe_flag, flag_name, flag_uses
 from .game import GameFolder
 from .grammar import NO_TURN, Form, action_flags, describe_flags, read_grammar
 from .handlers import action_routines, object_routines
@@ -35,7 +35,15 @@ from .regions import read_regions
 from .rtlink import RtlinkProgram, is_rtlink, library_name
 from .sentence import read_sentence_grammar
 from .sound import read_songs, read_sound
-from .timers import EVERY_TURN, TIMER_NAMES, TIMER_NAMES_201, TIMER_NAMES_TIMEQUEST, timer_calls, timer_code
+from .timers import (
+    EVERY_TURN,
+    TIMER_NAMES,
+    TIMER_NAMES_201,
+    TIMER_NAMES_301,
+    TIMER_NAMES_TIMEQUEST,
+    timer_calls,
+    timer_code,
+)
 
 
 def _program(folder: GameFolder) -> Program:
@@ -625,7 +633,11 @@ def timers(args: argparse.Namespace) -> None:
     shapes = {number: made[0] for number, made in _shapes(read_grammar(program, words), words).items()}
     calls = timer_calls(program, names, shapes)
     # the names of the numbers are each game's own
-    numbered = {GAME_201: TIMER_NAMES_201, GAME_TIMEQUEST: TIMER_NAMES_TIMEQUEST}.get(table.game or "", {})
+    numbered = {
+        GAME_201: TIMER_NAMES_201,
+        GAME_TIMEQUEST: TIMER_NAMES_TIMEQUEST,
+        GAME_301: TIMER_NAMES_301,
+    }.get(table.game or "", {})
     found = sorted({(call.number or 0, call.timer) for call in calls if call.timer})
     for number, timer in found:
         code = timer_code(program, timer)
