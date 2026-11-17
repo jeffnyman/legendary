@@ -3,7 +3,7 @@
 Legend Entertainment, 1992. The third *Spellcasting*, by Steve Meretzky.
 
 This is the first look, and so far it is how the program is built and loaded, its
-vocabulary, its grammar and its objects. What is
+vocabulary, its grammar, its objects and which routine is whose. What is
 known for certain is said plainly; what is inferred says so. Addresses are `segment:offset`
 in hex, with segments relative to where the program loads. Every one of them can be looked
 at with the [tools](../tools/README.md).
@@ -153,15 +153,45 @@ find *Spellcasting 201*'s. The routines that read a record's fields are in segme
 and switch on the type as before. Four of them keep the flags: `0305:030F` finds a flag's
 byte and bit from the table, `03A8` tests it, `03E2` sets it and `0415` clears it.
 
+## Which routine is whose
+
+The actions' routines are in a table too. The earlier games had a `switch` on the action,
+found by its table of jumps. Here segment `2E2A`, the one the grammar's forms are in, starts
+with the routines:
+
+| At | What |
+|---|---|
+| `2E2A:0000` | 20 far pointers: the routines that come before an action's own |
+| `2E2A:0050` | 249 entries of six bytes, one for each action |
+| `2E2A:0626` | the grammar's forms |
+
+An action's entry is a byte of flags, a byte that is the number of the routine that comes
+before its own, or 0, and a far pointer to its own. Two routines in segment `067E` use it:
+`067E:0002` calls the one before an action's, and `067E:0040` the action's.
+
+The byte of flags is the one the earlier games kept apart, before the forms, a byte an
+action: its bit 0 is still that the action takes no turn, and the 30 that have it are the
+ones that would, `inventory`, `look`, `quit`, `restart`. The other bits aren't the earlier
+games': the four ways of asking have 20 here, and had 08.
+
+So every routine is named: 249 actions, 61 of them with one of the 20 that come first, and
+[507 objects](#the-objects). All but one of the actions' routines are in overlays 6 to 9.
+
+The routine that performs an action is at `0000:01A4`, and asks them in the order the
+earlier games do. Segment `067E` has two more tables it reads the same way, each a word and
+a far pointer: 139 entries at `2E2A:228A` and 46 at `2E2A:25CC`. What they are isn't known
+yet.
+
+With the routines named, the tool that finds every test of a flag works: 1,243 calls about
+a flag are read, and 146 more aren't.
+
 ## Still to do
 
 The tools that read the program load it, and its words and grammar are read. The rest stop
 where something is kept a new way:
 
-- The code that calls an action's routine isn't found, so the actions' routines aren't
-  named, and the flags' uses, which are told by whose routine a call is in, wait on it.
-- The flags have no names. The first of them look to be *Spellcasting 201*'s, with the same
-  numbers.
+- The flags have no names. Their numbers aren't *Spellcasting 201*'s: `open` tests flag 15
+  here, and 13 there.
 - The routines that keep the timers aren't the ones that are known.
 - The saved game's layout: the code that saves isn't found.
 - `S301STR.DAT`'s table of blocks doesn't end where the file does.
