@@ -3,7 +3,7 @@
 Legend Entertainment, 1992. The third *Spellcasting*, by Steve Meretzky.
 
 This is the first look, and so far it is how the program is built and loaded, its
-vocabulary, its grammar, its objects and which routine is whose. What is
+vocabulary, its grammar, its objects, which routine is whose and its timers. What is
 known for certain is said plainly; what is inferred says so. Addresses are `segment:offset`
 in hex, with segments relative to where the program loads. Every one of them can be looked
 at with the [tools](../tools/README.md).
@@ -185,6 +185,39 @@ yet.
 With the routines named, the tool that finds every test of a flag works: 1,243 calls about
 a flag are read, and 146 more aren't.
 
+## The timers
+
+65 of them, numbered, and kept as
+[*Spellcasting 201*'s](spellcasting-201.md#the-timers) are: a table of sixteen, four bytes
+each, a timer's number in a byte and its count in a word two bytes on, and a second table
+with a far pointer to each number's routine.
+
+| What | Where |
+|---|---|
+| The table of timers going | `3E77:4D68` |
+| How many are in it | `4934:3852` |
+| Which one is being run | `4934:3854` |
+| The byte that makes the next run skip the counting | `4934:3850` |
+| The routines, 65 far pointers | `3113:0000` |
+| The routine that calls a timer's routine by its number | `09C9:0004` |
+
+The routines that keep the table are in segment `02D3`, the same six in the same order:
+
+| Routine | What it does |
+|---|---|
+| `02D3:000E` | empties the table |
+| `02D3:002C` | starts a timer, given its number and a count |
+| `02D3:009E` | stops one |
+| `02D3:010B` | says whether one is going |
+| `02D3:0143` | gives one's count |
+| `02D3:0180` | runs them, after a turn |
+
+Starting a seventeenth says `[ERROR: Queue overflow]`.
+
+62 of the 65 are started, stopped or asked about by number, in 305 calls; 15 more calls give
+a number that is worked out. 21 calls start one to run every turn. All but six of the
+routines are in overlays. Timers 20, 32 and 51 aren't named by any call.
+
 ## Still to do
 
 The tools that read the program load it, and its words and grammar are read. The rest stop
@@ -192,7 +225,7 @@ where something is kept a new way:
 
 - The flags have no names. Their numbers aren't *Spellcasting 201*'s: `open` tests flag 15
   here, and 13 there.
-- The routines that keep the timers aren't the ones that are known.
+- The timers have no names.
 - The saved game's layout: the code that saves isn't found.
 - `S301STR.DAT`'s table of blocks doesn't end where the file does.
 - The pictures are [a third kind](timequest.md#the-pictures), many of them 320 by 200.
