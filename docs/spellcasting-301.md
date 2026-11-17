@@ -271,6 +271,58 @@ Starting a seventeenth says `[ERROR: Queue overflow]`.
 a number that is worked out. 21 calls start one to run every turn. All but six of the
 routines are in overlays. Timers 20, 32 and 51 aren't named by any call.
 
+### What each timer does
+
+A timer's routine mostly prints, and since [a string is named where it's
+used](#how-the-program-names-a-string), what each prints can be read beside it. These names
+are from that.
+
+| Timer | What it is | Timer | What it is |
+|---|---|---|---|
+| 1 | sleepiness | 34 | the magic mushrooms come out |
+| 2 | two words forgotten | 35 | the mushrooms take hold, turn by turn |
+| 3 | a byte forgotten | 36 | the tan fades |
+| 4 | what was raised settles back | 37 | Moe's turn |
+| 5 | you open your eyes | 38 | Vince's turn |
+| 6 | a count down by sixes | 39 | Ralph's turn |
+| 7 | the carpet is loaded, turn by turn | 40 | Ollie's turn |
+| 8 | the carpet flies east, turn by turn | 41 | Izzie's turn |
+| 9 | the carpet spirals down | 42 | Fred's turn |
+| 10 | the world's most beautiful woman passes | 43 | the Pharts come to the Dance Club |
+| 11 | Fred fetches you to the lobby | 44 | the building shakes |
+| 12 | Sid takes you to the beach, turn by turn | 45 | the baby squid is found |
+| 13 | Moe calls it a day | 46 | the hunger pains |
+| 14 | Gary says the bash is near | 47 | the baby squid whimpers, every turn |
+| 15 | the bimbos follow the studfinder | 48 | Joey shoots at your feet |
+| 16 | The Judge passes through the lobby | 49 | the dog digs under the fence |
+| 17 | The Judge comes to the party | 50 | Ollie says Fred has passed out |
+| 18 | the cell's bars rust away | 51 | Sid visits the cell |
+| 19 | the studfinder hums | 52 | a count down by fours |
+| 20 | The Judge judges the sand castles | 53 | the mama bull returns |
+| 21 | The Judge's event at the bandstand, turn by turn | 54 | the carpet sputters |
+| 22 | the mouse race | 55 | your hostess in Room 1812 loses patience |
+| 23 | the event at the pool, turn by turn | 56 | Snorty's nose clears |
+| 24 | everyone comes into the bar, turn by turn | 57 | Snorty pops the inflatable cow |
+| 25 | the Sheriff jails you | 58 | the crowds swarm to Blather Beach |
+| 26 | BIGFINNO wears off | 59 | your order is called |
+| 27 | the Soda-Barfing Contest, turn by turn | 60 | Moe says to get a move on |
+| 28 | the drawing of straws, turn by turn | 61 | the human pyramid comes apart |
+| 29 | the laxative works | 62 | the Copy Nymph flies in |
+| 30 | the Sheriff jails you, from the arena | 63 | the moby berry shrinks |
+| 31 | the volleyball face-off, turn by turn | 64 | the berry plant shrivels |
+| 32 | the Yus swagger onto the beach | 65 | you feel filled with vigor |
+| 33 | the showdown on the boulevard, turn by turn |  |  |
+
+Timers 2 and 3 clear variables and print nothing, as the timers called `a word forgotten`
+do in the games before; 6 and 52 count a byte down and start themselves again. Timers 37 to
+42 are six of one kind, each handing one of your fraternity brothers to a routine they
+share, and what that does hasn't been read. Timers 25 and 30 print nothing that was found
+and are named from what they move: you, to the cell, with the Sheriff.
+
+Much of the game is its contests, and each is one timer that runs every turn and steps
+through the event: the sand castles, the soda-barfing, the volleyball, the drawing of
+straws.
+
 ## The text
 
 `S301STR.DAT` has 37 blocks and 4,777 strings: 512,066 bytes of text packed into 269,161. *Spellcasting 201*'s file had 1,815 strings, 292,504 bytes of text, and left most of the game's
@@ -334,7 +386,6 @@ The tools that read the program load it, and its words and grammar are read. The
 where something is kept a new way:
 
 - Twelve flags aren't named.
-- The timers have no names.
 - The saved game's layout: the code that saves isn't found.
 - The strings that aren't named by a constant: half of them.
 - The pictures are [a third kind](timequest.md#the-pictures), many of them 320 by 200.
