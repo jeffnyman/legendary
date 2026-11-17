@@ -94,7 +94,7 @@ TIMER_NAMES = {
 
 # mov es,[segment variable] / call far es:[bx-4], with BX four times a timer's number: its
 # routine, called from the table of them
-_BY_NUMBER = re.compile(rb"\x8e\x06(..)\x26\xff\x9f\xfc\xff", re.DOTALL)
+_BY_NUMBER = re.compile(rb"\x8e\x06(..)\x26\xff(?:\x9f\xfc\xff|\x5f\xfc)", re.DOTALL)
 # mov es,[segment variable] / cmp word es:[bx+count],-1: is the timer one that runs every
 # turn? The routine that runs the timers asks it first
 _EVERY_TURN = re.compile(rb"\x8e\x06..\x26\x83\xbf..\xff", re.DOTALL)
@@ -107,6 +107,9 @@ _KINDS = ("starts", "stops", "asks about", "asks the count of")
 # xor ax,ax / call far: how the one before them starts, which empties the table and has no
 # arguments or variables to make a frame for
 _FRAMELESS = b"\x33\xc0\x9a"
+# mov ax,40h / push ax / sub ax,ax / push ax: how it starts where the compiler was told to
+# leave out the check of the stack, with the size of the table to clear
+_FRAMELESS_UNCHECKED = b"\xb8\x40\x00\x50\x2b\xc0\x50"
 _NOTICE = b"MS Run-Time Library"
 
 
@@ -167,6 +170,8 @@ def find_timers(program: Program) -> Timers:
         if match.start() >= segment * 16
     ]
     empties = root.find(_FRAMELESS, segment * 16, starts[0] if starts else runs)
+    if empties < 0:
+        empties = root.find(_FRAMELESS_UNCHECKED, segment * 16, starts[0] if starts else runs)
     # the one that gives a timer's count came later: Timequest has the three before it
     if len(starts) not in (len(_KINDS) - 1, len(_KINDS)) or empties < 0:
         raise ValueError("the routines that keep the timers aren't the ones that are known")
