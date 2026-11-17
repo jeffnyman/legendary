@@ -20,6 +20,7 @@ from __future__ import annotations
 
 import re
 import struct
+from collections import Counter
 from dataclasses import dataclass
 from typing import Optional
 
@@ -178,6 +179,48 @@ class Named:
     @property
     def where(self) -> str:
         return "root" if self.overlay is None else f"overlay {self.overlay}"
+
+
+# mov ax,<number> / mov dx,F000h / push dx / push ax: a string named as a far pointer whose
+# segment is one no text is in, and whose offset is the string's number
+_POINTED = re.compile(rb"\xb8(..)\xba\x00\xf0\x52\x50", re.DOTALL)
+POINTER_SEGMENT = 0xF000
+
+
+def pointed_string(number: int) -> tuple[int, int]:
+    """The block and the string that such a pointer's offset names: the block is above ten bits."""
+    return number >> 10, number & 0x3FF
+
+
+def find_pointed(program: Program) -> tuple[list[Named], tuple[int, int] | None]:
+    """
+    Every place that names a string as a far pointer of that kind, in the root and each
+    overlay, and the routine most of them hand it to at once, which prints it.
+    """
+    found: list[tuple[int, int | None, int, tuple[int, int] | None]] = []
+
+    def scan(image: Image, start: int, end: int, overlay: int | None) -> None:
+        for match in _POINTED.finditer(image.memory, start, end):
+            if match.start() + 4 in image.relocations:
+                continue
+            called = None
+            if image.memory[match.end()] == 0x9A and match.end() + 3 in image.relocations:
+                offset, segment = struct.unpack_from("<HH", image.memory, match.end() + 1)
+                called = (segment, offset)
+            found.append((match.start(), overlay, int.from_bytes(match[1], "little"), called))
+
+    scan(program.image(), 0, program.root_size, None)
+    for overlay in program.overlays:
+        if not overlay.preloaded:
+            image = program.image(overlay.number)
+            scan(image, overlay.load_segment * 16, overlay.end_segment * 16, overlay.number)
+    calls = Counter(called for _, _, _, called in found if called)
+    printer = calls.most_common(1)[0][0] if calls else None
+    named = [
+        Named(linear, overlay, called == printer and printer is not None, *pointed_string(number))
+        for linear, overlay, number, called in found
+    ]
+    return sorted(named, key=lambda call: (call.overlay or 0, call.linear)), printer
 
 
 def find_namers(program: Program) -> dict[tuple[int, int], bool]:

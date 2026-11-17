@@ -16,7 +16,16 @@ from .flags import GAME_201, GAME_TIMEQUEST, describe_flag, flag_name, flag_uses
 from .game import GameFolder
 from .grammar import NO_TURN, Form, action_flags, describe_flags, read_grammar
 from .handlers import action_routines, object_routines
-from .loads import StringNames, find_loader, find_loads, find_named, find_namers
+from .loads import (
+    POINTER_SEGMENT,
+    StringNames,
+    find_loader,
+    find_loads,
+    find_named,
+    find_namers,
+    find_pointed,
+    pointed_string,
+)
 from .mz import MzExecutable
 from .objects import DIRECTIONS, Exit, GameObject, ObjectTable, SavedState, is_pointer
 from .pictures import HUFFMAN, LZW, RAW_PLANE, RAW_PLANES, PictureFile, is_known, is_later
@@ -217,10 +226,13 @@ def _literal_notes(folder: GameFolder, program: Program, image: Image):
     memory = image.memory
     notice = memory.find(b"MS Run-Time Library")
     try:
-        namers = find_namers(program)
         file = data.StringFile(folder.read(folder.one("str.dat")))
     except ValueError:
-        namers, file = {}, None
+        file = None
+    try:
+        namers = find_namers(program)
+    except ValueError:
+        namers = {}
 
     def text_at(start: int) -> str:
         end = memory.find(b"\0", start, start + 400)
@@ -236,6 +248,12 @@ def _literal_notes(folder: GameFolder, program: Program, image: Image):
         if file and after[:2] == b"\x50\x9a" and (image.word(linear + 7), image.word(linear + 5)) in namers:
             block, string = word >> 8, word & 255
             if block < len(file.blocks) and string < file.blocks[block].strings:
+                return f"  ; string {block}.{string}: {_shown(file.strings(file.blocks[block])[string], 70)}"
+        # mov dx,F000h: a string's number, as the offset of a far pointer no text is at
+        if file and after[0] == 0xBA and image.word(linear + 4) == POINTER_SEGMENT:
+            block, string = pointed_string(word)
+            known = block < len(file.blocks) and string < file.blocks[block].strings
+            if known and linear + 4 not in image.relocations:
                 return f"  ; string {block}.{string}: {_shown(file.strings(file.blocks[block])[string], 70)}"
         # mov dx,<segment> / push dx / push ax: a far pointer
         if after[0] == 0xBA and linear + 4 in image.relocations:
@@ -282,13 +300,28 @@ def _string_notes(folder: GameFolder, program: Program, overlay: int | None):
 
 def _named_strings(program: Program, file: data.StringFile) -> None:
     """Each call that names a string by its number, with the string."""
-    namers = find_namers(program)
-    found = find_named(program)
-    for (segment, offset), prints in sorted(namers.items()):
-        what = "prints a string by its number" if prints else "gives a string's pointer by its number"
-        print(f"the routine that {what} is at {segment:04x}:{offset:04x}")
-    print(f"{len(found)} calls name a string by a number that is a constant\n")
-    print("call      in          string  kind    text")
+    try:
+        namers = find_namers(program)
+    except ValueError:
+        # no routine takes a string's number: the number is given as a pointer's offset
+        found, printer = find_pointed(program)
+        if not found:
+            raise
+        print(
+            f"a string is named by a far pointer whose segment is {POINTER_SEGMENT:04X}:"
+            " its offset is the block times 1024, and the string's place in it"
+        )
+        if printer:
+            print(f"the routine most are handed to, which prints, is at {printer[0]:04x}:{printer[1]:04x}")
+        print(f"{len(found)} places name a string that way\n")
+        print("place     in          string  kind    text")
+    else:
+        found = find_named(program)
+        for (segment, offset), prints in sorted(namers.items()):
+            what = "prints a string by its number" if prints else "gives a string's pointer by its number"
+            print(f"the routine that {what} is at {segment:04x}:{offset:04x}")
+        print(f"{len(found)} calls name a string by a number that is a constant\n")
+        print("call      in          string  kind    text")
     unpacked: dict[int, list[str]] = {}
     for call in found:
         text = "not in the file"
