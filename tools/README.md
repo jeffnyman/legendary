@@ -26,7 +26,7 @@ relative to where the program loads, as the files have them. How the programs ar
 These read a program linked by PLINK86, *Spellcasting 101* and *Timequest*, or by
 .RTLink/Plus 4.10, *Spellcasting 201*, or 5.02, *Spellcasting 301*. All of them read
 *Spellcasting 201*; what each makes of *Timequest* is said with it. Of *Spellcasting 301*,
-the first seven read the program, and `grammar`, `sentence` and `vocab` read it too; the
+the first seven read the program, and `objects`, `grammar`, `sentence` and `vocab` read it too; the
 rest [stop at something kept a new way](../docs/spellcasting-301.md#still-to-do).
 
 ```
@@ -95,7 +95,9 @@ python -m legendary_tools dis ../../legend/sc101/game 3670:054e
   prints the parts of `RESTART.DAT` and their sizes, which come to the file's. How the objects
   are kept is in [docs/spellcasting-101.md](../docs/spellcasting-101.md#the-objects). It reads
   *Spellcasting 101* and, with its names from `OBJECT.DAT` and its other differences,
-  [*Spellcasting 201*](../docs/spellcasting-201.md#the-objects); each game's flags have their own names. It reads [*Timequest*](../docs/timequest.md#the-objects) too, whose records are
+  [*Spellcasting 201*](../docs/spellcasting-201.md#the-objects); each game's flags have their own names. It reads
+  [*Spellcasting 301*'s](../docs/spellcasting-301.md#the-objects), whose lists end another
+  way and whose records name their routines by number, without names for its flags yet. It reads [*Timequest*](../docs/timequest.md#the-objects) too, whose records are
   between the two, with a [kind of exit](../docs/timequest.md#the-exits) of its own.
 
 - **`grammar`** lists the forms a command can take, from the program's tables: for each verb

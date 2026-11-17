@@ -27,8 +27,9 @@ hold.
   of exit of its own that a variable opens.
 - [Spellcasting 301: Spring Break](spellcasting-301.md): 1992. A first look: linked by a
   newer .RTLink whose file is the older one's exactly, with an overlay manager that keeps its
-  thunks outside its own segment; 36 overlays and 949 thunks. A vocabulary of 1,801 words and a grammar of 458 forms that
-  makes 249 actions. Its text and pictures are each packed a new way, and aren't read yet.
+  thunks outside its own segment; 36 overlays and 949 thunks. A vocabulary of 1,801 words, a grammar of 458 forms that
+  makes 249 actions, and 517 objects kept as the game before keeps them, each with the
+  number of its routine. Its text and pictures are each packed a new way, and aren't read yet.
 - [Spellcasting 201: The Sorcerer's Appliance](spellcasting-201.md): 1991. The same system,
   linked by .RTLink/Plus in place of PLINK86: a program DOS can't load by itself, kept as
   records of its segments with their fixups, which the linker's own startup code puts in
