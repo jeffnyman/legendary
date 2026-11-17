@@ -207,6 +207,10 @@ public sealed record AnswerPoint(ushort Offset, Asked Asked);
 /// <param name="HomeClockOffset">In the data, the clock for home.</param>
 /// <param name="PlaceNames">The places' names, by number: as many as there are places, and each has a clock for every time.</param>
 /// <param name="Times">How many times a place can be visited in.</param>
+/// <param name="FoundSegment">
+/// The segment the place at <paramref name="FoundOffset"/> is in, for a game whose main loop
+/// isn't in the segment of the routine that performs an action; null when it is.
+/// </param>
 public sealed record WorldMap(
     ushort DataSegment, ushort TableSegment, int ObjectCount, ushort CountOffset, ushort TypesOffset,
     ushort RoomOffset, ushort ActorOffset, ushort MovesOffset, ushort ClockOffset,
@@ -235,7 +239,7 @@ public sealed record WorldMap(
     ushort ExitTextsSegment = 0, ushort ExitTextsOffset = 0, ushort ExitVariablesSegment = 0, ushort ExitVariablesOffset = 0,
     ushort PlaceOffset = 0, ushort TimeOffset = 0, ushort YearsOffset = 0,
     ushort ClocksSegment = 0, ushort ClocksOffset = 0, ushort HomeClockOffset = 0,
-    IReadOnlyList<string>? PlaceNames = null, int Times = 0)
+    IReadOnlyList<string>? PlaceNames = null, int Times = 0, ushort? FoundSegment = null)
 {
     /// <summary>
     /// Whether the places in the program where a command is parsed are known. A map can have
@@ -731,4 +735,161 @@ public sealed record WorldMap(
         PlaceOffset: 0x6C, TimeOffset: 0x6D, YearsOffset: 0x6E,
         ClocksSegment: 0x27B0, ClocksOffset: 0x010C, HomeClockOffset: 0x82,
         PlaceNames: ["Baghdad", "Peking", "Cairo", "Dover", "Mexico", "Rome"], Times: 9);
+
+    /// <summary>
+    /// <i>Spellcasting 301: Spring Break</i> (1992): kept as <i>Spellcasting 201</i> is, with
+    /// its routines in tables, a main loop apart from the routine that performs an action, and
+    /// the routine that gathers a command's tokens in an overlay with the one that takes them.
+    /// </summary>
+    public static WorldMap Spellcasting301 { get; } = new(
+        DataSegment: 0x4934, TableSegment: 0x2BDB, ObjectCount: 517, CountOffset: 0x48B2, TypesOffset: 0xFFFD,
+        RoomOffset: 0x388C, ActorOffset: 0x388E, MovesOffset: 0x3890, ClockOffset: 0x3892,
+        ActionSegment: 0x3E77, ActionOffset: 0xABB6, ObjectOffset: 0x059C, SecondObjectOffset: 0x059A,
+        PerformSegment: 0x0000, PerformOffset: 0x01A4, DepthOffset: 0x3812,
+        Answers:
+        [
+            // the same ten, in the same order
+            new(0x0370, Asked.Object), new(0x03A2, Asked.Object), new(0x03DA, Asked.Object), new(0x03F9, Asked.Object),
+            new(0x0416, Asked.Before),
+            new(0x044F, Asked.Object), new(0x046E, Asked.Object), new(0x04A4, Asked.Object), new(0x04C0, Asked.Object),
+            new(0x04DA, Asked.Action),
+        ],
+        JumpBackOffset: 0x0847, GoAction: 236, DirectionOffset: 0xABB7,
+        Directions: Spellcasting101.Directions,
+        GrammarSegment: 0x2E2A, FormsOffset: 0x0626, SecondsOffset: 0x180A, VocabularyFile: "VOCAB.DAT",
+        ActionNames: new Dictionary<int, string> { [236] = "go" },
+        // the routine that gathers the tokens is in overlay 2, with the one that takes a word off the line
+        TokenSegment: 0x350B, TokenOffset: 0x236B, AfterStopOffset: 0x23FC, AfterAndOffset: 0x247A, TokenWordOffset: 0x4BF8,
+        WordTokens: Spellcasting101.WordTokens, MarkTokens: Spellcasting101.MarkTokens, EndTokens: Spellcasting101.EndTokens,
+        FormOffset: 0x0DE5, FormIndexOffset: 0x4C04, FormActionOffset: 0x023E, FoundOffset: 0x0A63, LotsOffset: 0x0226, LotSize: 12, LotCountOffset: 0x0220,
+        TimersOffset: 0x4D68, TimerCountOffset: 0x3852, TimerIndexOffset: 0x3854,
+        TimerSegment: 0x02D3, TimerStartOffset: 0x002C, TimerStopOffset: 0x009E, TimerRunOffset: 0x020A,
+        TimerNames: new Dictionary<int, string>
+        {
+            [1] = "sleepiness",
+            [2] = "two words forgotten",
+            [3] = "a byte forgotten",
+            [4] = "what was raised settles back",
+            [5] = "you open your eyes",
+            [6] = "a count down by sixes",
+            [7] = "the carpet is loaded, turn by turn",
+            [8] = "the carpet flies east, turn by turn",
+            [9] = "the carpet spirals down",
+            [10] = "the world's most beautiful woman passes",
+            [11] = "Fred fetches you to the lobby",
+            [12] = "Sid takes you to the beach, turn by turn",
+            [13] = "Moe calls it a day",
+            [14] = "Gary says the bash is near",
+            [15] = "the bimbos follow the studfinder",
+            [16] = "The Judge passes through the lobby",
+            [17] = "The Judge comes to the party",
+            [18] = "the cell's bars rust away",
+            [19] = "the studfinder hums",
+            [20] = "The Judge judges the sand castles",
+            [21] = "The Judge's event at the bandstand, turn by turn",
+            [22] = "the mouse race",
+            [23] = "the event at the pool, turn by turn",
+            [24] = "everyone comes into the bar, turn by turn",
+            [25] = "the Sheriff jails you",
+            [26] = "BIGFINNO wears off",
+            [27] = "the Soda-Barfing Contest, turn by turn",
+            [28] = "the drawing of straws, turn by turn",
+            [29] = "the laxative works",
+            [30] = "the Sheriff jails you, from the arena",
+            [31] = "the volleyball face-off, turn by turn",
+            [32] = "the Yus swagger onto the beach",
+            [33] = "the showdown on the boulevard, turn by turn",
+            [34] = "the magic mushrooms come out",
+            [35] = "the mushrooms take hold, turn by turn",
+            [36] = "the tan fades",
+            [37] = "Moe's turn",
+            [38] = "Vince's turn",
+            [39] = "Ralph's turn",
+            [40] = "Ollie's turn",
+            [41] = "Izzie's turn",
+            [42] = "Fred's turn",
+            [43] = "the Pharts come to the Dance Club",
+            [44] = "the building shakes",
+            [45] = "the baby squid is found",
+            [46] = "the hunger pains",
+            [47] = "the baby squid whimpers, every turn",
+            [48] = "Joey shoots at your feet",
+            [49] = "the dog digs under the fence",
+            [50] = "Ollie says Fred has passed out",
+            [51] = "Sid visits the cell",
+            [52] = "a count down by fours",
+            [53] = "the mama bull returns",
+            [54] = "the carpet sputters",
+            [55] = "your hostess in Room 1812 loses patience",
+            [56] = "Snorty's nose clears",
+            [57] = "Snorty pops the inflatable cow",
+            [58] = "the crowds swarm to Blather Beach",
+            [59] = "your order is called",
+            [60] = "Moe says to get a move on",
+            [61] = "the human pyramid comes apart",
+            [62] = "the Copy Nymph flies in",
+            [63] = "the moby berry shrinks",
+            [64] = "the berry plant shrivels",
+            [65] = "you feel filled with vigor",
+        },
+        PlaceType: 1, PersonType: 7,
+        FlagNames: new Dictionary<int, string>
+        {
+            [1] = "its name takes no article",
+            [2] = "its name takes an",
+            [3] = "plural",
+            [4] = "takes some",
+            [5] = "seen",
+            [6] = "touched",
+            [7] = "special to take",
+            [8] = "not listed",
+            [9] = "gives light",
+            [10] = "an animal",
+            [11] = "can't be opened or closed",
+            [12] = "a door",
+            [14] = "can be read",
+            [15] = "locked",
+            [16] = "open",
+            [17] = "things can be on it",
+            [18] = "a container",
+            [19] = "can be taken",
+            [20] = "under water",
+            [23] = "lit",
+            [24] = "can be seen through",
+            [26] = "can be got in or on",
+            [27] = "burns",
+            [30] = "can be worn",
+            [31] = "a key",
+            [32] = "cuts",
+            [33] = "cuts",
+            [35] = "can be eaten",
+            [37] = "magic",
+            [38] = "can be lit",
+            [39] = "a bed",
+            [41] = "a tube of paint",
+            [45] = "a seahorse",
+            [46] = "outdoors",
+            [47] = "someone other than you",
+            [48] = "female",
+        },
+        PlaceFlagNames: new Dictionary<int, string> { [6] = "visited" },
+        PersonFlagNames: new Dictionary<int, string>(),
+        StateFlags: [15, 16, 23],
+        Layouts: new Dictionary<int, RecordLayout>
+        {
+            [1] = new(24, Lists: 0x0A, ExitCount: 0x14, ExitStart: 0x16, Names: 4),
+            [2] = new(40, Places: 0x0E, Relation: 0x10, Next: 0x12, Lists: 0x14, FlagBytes: 6, Names: 4),
+            [3] = new(12, Names: 4),
+            [4] = new(20, Lists: 0x0A, Names: 4),
+            [5] = new(20, Lists: 0x0A, Names: 4),
+            [6] = new(24, Places: 0x0A, Lists: 0x0E, Names: 4),
+            [7] = new(30, Places: 0x0A, Relation: 0x0C, Next: 0x0E, Lists: 0x10, Names: 4),
+            [8] = new(20, Places: 0x0A, Relation: 0x0C, Next: 0x0E, Names: 4),
+        },
+        TableOffset: 0x00E4, TypesSegment: 0x2BDB, NamesFile: "OBJECT.DAT",
+        FlagsSegment: 0x2BDB, FlagsOffset: 0x0014, FlagCount: 51,
+        ExitsSegment: 0x2BDB, ExitsOffset: 0x1F36, DoorsSegment: 0x4934, DoorsOffset: 0x48B4,
+        WideGrammar: true, TimerSize: 4,
+        TokenizerSegment: 0x350B, TokenizerOffset: 0x01F4,
+        FoundSegment: 0x0166);
 }

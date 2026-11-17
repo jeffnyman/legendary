@@ -492,7 +492,7 @@ public sealed class World
     }
 
     /// <summary>The linear address of the place where the objects a lot of phrases could be have just been found.</summary>
-    public int FoundAddress => Linear(Map.PerformSegment, Map.FoundOffset);
+    public int FoundAddress => Linear(Map.FoundSegment ?? Map.PerformSegment, Map.FoundOffset);
 
     /// <summary>
     /// What was found, for a program that is at <see cref="FoundAddress"/>: which of the
@@ -510,7 +510,7 @@ public sealed class World
             int entry = found + (6 * phrase), objects = Far(entry + 2), words = said + (0x28 * phrase);
             phrases.Add(new FoundPhrase(
                 Word(words) != 0,
-                [.. Enumerable.Range(0, Math.Min(Word(words + 4), 15)).Select(index => Word(words + 6 + (2 * index)))],
+                [.. Enumerable.Range(0, Math.Min((int)_read(words + 4), 15)).Select(index => Word(words + 6 + (2 * index)))],
                 Word(words + 0x26),
                 [.. Enumerable.Range(0, _read(entry)).Select(index => Word(objects + (2 * index)))]));
         }
