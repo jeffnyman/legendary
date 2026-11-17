@@ -26,8 +26,8 @@ relative to where the program loads, as the files have them. How the programs ar
 These read a program linked by PLINK86, *Spellcasting 101* and *Timequest*, or by
 .RTLink/Plus 4.10, *Spellcasting 201*, or 5.02, *Spellcasting 301*. All of them read
 *Spellcasting 201*; what each makes of *Timequest* is said with it. Of *Spellcasting 301*,
-the first seven read the program, and `objects`, `actions`, `flags`, `timers`, `grammar`, `sentence` and
-`vocab` read it too; the
+the first seven read the program, and `objects`, `actions`, `flags`, `timers`, `grammar`, `sentence`,
+`strings`, `text` and `vocab` read it too; the
 rest [stop at something kept a new way](../docs/spellcasting-301.md#still-to-do).
 
 ```
@@ -198,8 +198,8 @@ python -m legendary_tools vocab <the game's folder>
 - **`text`** unpacks the text: every block's strings, or one block's, a string to a line, each
   after its block and its number in it, as `2.0`. Line ends and tabs in a string are written
   `\n` and `\t`. It reads *Spellcasting 101*, *Timequest* and *Spellcasting 201*, whose
-  packing [differs a little](../docs/spellcasting-201.md#the-text); the games after pack
-  their text another way again. How the packing works is in
+  packing [differs a little](../docs/spellcasting-201.md#the-text), and *Spellcasting 301*
+  and *Gateway*, whose file [says each string's length](../docs/spellcasting-301.md#the-text). How the packing works is in
   [docs/spellcasting-101.md](../docs/spellcasting-101.md#the-text).
 - **`vocab`** lists the vocabulary in `VOCAB.DAT`: each word's number, its parts of speech,
   and, for a synonym, the word it stands for and as what. It reads *Spellcasting 101*'s and

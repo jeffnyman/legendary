@@ -3,7 +3,7 @@
 Legend Entertainment, 1992. The third *Spellcasting*, by Steve Meretzky.
 
 This is the first look, and so far it is how the program is built and loaded, its
-vocabulary, its grammar, its objects, which routine is whose and its timers. What is
+vocabulary, its grammar, its objects, which routine is whose, its timers and its text. What is
 known for certain is said plainly; what is inferred says so. Addresses are `segment:offset`
 in hex, with segments relative to where the program loads. Every one of them can be looked
 at with the [tools](../tools/README.md).
@@ -218,6 +218,35 @@ Starting a seventeenth says `[ERROR: Queue overflow]`.
 a number that is worked out. 21 calls start one to run every turn. All but six of the
 routines are in overlays. Timers 20, 32 and 51 aren't named by any call.
 
+## The text
+
+`S301STR.DAT` has 37 blocks and 4,777 strings: 512,066 bytes of text packed into 269,161. *Spellcasting 201*'s file had 1,815 strings, 292,504 bytes of text, and left most of the game's
+text in its overlays.
+
+The packing is that game's: a Huffman tree in the form its vocabulary's has, 217 nodes, with
+128 common words that a code can stand for. What changed is how a string is found.
+
+| The file | What |
+|---|---|
+| A word | how many blocks: 37 |
+| Four bytes for each block | how many strings it has, and how many bytes it is packed into |
+| A word for every string in the file | how many bytes the string is packed into |
+| The tree | a count of words, and the words in pairs |
+| The words | a count, where each starts, and each with a zero |
+| The blocks | each string's codes, one string after another |
+
+The older file had six bytes for a block, with its size unpacked, and nothing for a string:
+strings ran on from one to the next, a bit after the last, and the tenth was reached by
+unpacking the nine before it. Here every string starts on a byte and the file says how long
+each is, so one can be gone to directly. The lengths of a block's strings add up to the
+block's size, for every block, which is how the form is known to be read right.
+
+*Gateway*'s text is kept the same way, and is read: 6,013 strings.
+
+How the program names a string isn't found yet: the routine that
+[took one by its number](spellcasting-201.md#how-the-program-names-a-string) in
+*Spellcasting 201* isn't here in a form the tools know.
+
 ## Still to do
 
 The tools that read the program load it, and its words and grammar are read. The rest stop
@@ -227,7 +256,7 @@ where something is kept a new way:
   here, and 13 there.
 - The timers have no names.
 - The saved game's layout: the code that saves isn't found.
-- `S301STR.DAT`'s table of blocks doesn't end where the file does.
+- How the program names a string, so that the text a routine prints can be put beside it.
 - The pictures are [a third kind](timequest.md#the-pictures), many of them 320 by 200.
 
 The parser's own grammar is read, and is the first game's 46 ways. The music and the sounds
