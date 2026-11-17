@@ -36,6 +36,14 @@ _COMPARE = re.compile(rb"\x3d(..)(?:\x74(.)|\x75\x03\xe9(..))", re.DOTALL)
 _BY_TYPE = re.compile(
     rb"\x26\x8a\x87..\x2a\xe4\x2d\x01\x00\x3d(..)\x77.\x03\xc0\x93\x2e\xff\xa7(..)", re.DOTALL
 )
+# cmp ax,<how many> / ja <none> / dec [bp-2] / mov bx,[bp-2] / shl bx,1 / shl bx,1 /
+# mov es,[segment variable] / mov ax,es:[bx] / mov dx,es:[bx+2]: an object's routine, taken
+# from a table of them by the number its record has
+_BY_NUMBER = re.compile(
+    rb"\x3d(..)\x77.\xff\x4e\xfe\x8b\x5e\xfe\xd1\xe3\xd1\xe3\x8e\x06(..)\x26\x8b\x87(..)\x26\x8b\x97",
+    re.DOTALL,
+)
+_NOTICE = b"MS Run-Time Library"
 # mov al,es:[<the action>] / sub ah,ah / push ax / call far: the action handed to a routine
 _BY_ACTION = re.compile(rb"\x26\xa0..\x2a\xe4\x50\x9a(..)(..)", re.DOTALL)
 
@@ -147,7 +155,35 @@ def object_routines(program: Program) -> dict[int, Routine]:
                 if isinstance(switch, int):
                     found.update(code.routines(switch))
             return found
+    numbered = _numbered_routines(code)
+    if numbered is not None:
+        return numbered
     raise ValueError("the code that calls an object's routine wasn't found")
+
+
+def _numbered_routines(code: _Code) -> dict[int, Routine] | None:
+    """The same, where a record has the number of its object's routine and a table has the routines."""
+    match = _BY_NUMBER.search(code.root)
+    notice = code.memory.find(_NOTICE)
+    if not match or notice < 0:
+        return None
+    count = int.from_bytes(match[1], "little")
+    table = code.word(notice - 8 + int.from_bytes(match[2], "little")) * 16
+    table += int.from_bytes(match[3], "little")
+    # the objects are read for the numbers, by a module that needs this one's routines
+    from .objects import ObjectTable  # noqa: PLC0415
+
+    found = {}
+    for thing in ObjectTable(code.program).objects:
+        if 1 <= thing.routine <= count:
+            offset, segment = struct.unpack_from("<HH", code.memory, table + 4 * (thing.routine - 1))
+            thunk = code.program.thunk_at(segment, offset)
+            found[thing.number] = (
+                Routine(thunk.overlay, thunk.target_segment, thunk.target_offset)
+                if thunk
+                else Routine(None, segment, offset)
+            )
+    return found
 
 
 def action_routines(program: Program) -> tuple[dict[int, Routine], dict[int, Routine]]:

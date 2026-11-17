@@ -43,7 +43,7 @@ _COUNT = re.compile(rb"\x8e\x06(..)\x26\xa1(..)\x39\x46\x06", re.DOTALL)
 _TYPES = re.compile(rb"\x8e\x06(..)\x26\x8a\x87(..)\x2a\xe4\x3b\x46", re.DOTALL)
 
 # mov es,[segment variable] / mov si,es:[bx+list] / or si,si: a word from an object's list
-_WORD_LIST = re.compile(rb"\xd1\xe3\x8e\x06(..)\x26\x8b\xb7(..)\x0b\xf6", re.DOTALL)
+_WORD_LIST = re.compile(rb"\xd1\xe3\x8e\x06(..)\x26\x8b\xb7(..)(?:\x0b\xf6|\x8b\xc6)", re.DOTALL)
 
 # shl si,cl / mov es,[segment variable] / mov ax,es:[si+list]: an entry of one of a room's rows
 _ROOM_ROW = re.compile(rb"\xd3\xe6\x8e\x06(..)\x26\x8b\x84(..)", re.DOTALL)
@@ -53,7 +53,7 @@ _ROOM_SEARCH = re.compile(rb"\xd3\xe6\x8e\x06(..)\x26\x83\xbc(..)\x00", re.DOTAL
 
 # shl si,cl / mov es,[segment variable] / mov ax,es:[si+entry] / mov [bp-8],ax / mov ax,1: the
 # types that have a flag, with SI four times the flag's number; the flag's bit is two before
-_FLAG_TABLE = re.compile(rb"\xd3\xe6\x8e\x06(..)\x26\x8b\x84(..)\x89\x46.\xb8\x01\x00", re.DOTALL)
+_FLAG_TABLE = re.compile(rb"\xd3\xe6\x8e\x06(..)\x26\x8b\x84(..)\x89\x46.\xb8[\x01\x06]\x00", re.DOTALL)
 
 # mov cl,2 / shl si,cl / mov al,[bp+6] / mov es,[segment variable] / cmp es:[si+rows],al: is
 # this row of the exits the direction asked for?
@@ -72,6 +72,10 @@ _EXIT_TEXTS = re.compile(
 # mov cl,3 / shl si,cl / mov es,[segment variable] / mov bx,es:[si+rows+2] / cmp byte [bx],0:
 # the variable that says if an exit is open, which the room it leads to is two before
 _EXIT_VARIABLES = re.compile(rb"\xb1\x03\xd3\xe6\x8e\x06(..)\x26\x8b\x9c(..)\x80\x3f\x00", re.DOTALL)
+
+# mov cl,2 / shl si,cl / mov es,[segment variable] / mov ax,es:[si+rows] / and ah,7Fh: a row
+# of a room's list in Spellcasting 301, where the last of a room's rows has its top bit set
+_ROOM_ROW_MARKED = re.compile(rb"\xb1\x02\xd3\xe6\x8e\x06(..)\x26\x8b\x84(..)\x80\xe4\x7f", re.DOTALL)
 
 # Microsoft C's notice is 8 bytes into the segment DS has
 _NOTICE = b"MS Run-Time Library"
@@ -93,6 +97,7 @@ class Layout:
     exit_start: int | None = None  # or the number of its first row in the table of exits
     also_here: int | None = None  # a room's: where its row starts in the list of what's also there
     seen_from: int | None = None  # and in the list of the places that can be seen into from it
+    routine: int | None = None  # the number of its routine, in a game that numbers them
 
 
 # Spellcasting 101's, from its routines that read and write each field for each type
@@ -134,6 +139,29 @@ LAYOUTS_TIMEQUEST = {
     6: Layout(28, flag_bytes=4, places=0x10, lists=0x14),
     7: Layout(34, flag_bytes=4, places=0x10, relation=0x12, next=0x14, lists=0x16),
     8: Layout(24, flag_bytes=4, places=0x10, relation=0x12, next=0x14),
+}
+
+
+# Spellcasting 301's: Spellcasting 201's, with a word more at each record's end but a
+# room's, which is the number of the object's routine, and four bytes more in a thing's
+LAYOUTS_301 = {
+    1: Layout(
+        24,
+        names=4,
+        lists=0x0A,
+        also_here=0x10,
+        seen_from=0x12,
+        exit_count=0x14,
+        exit_start=0x16,
+        routine=0x0E,
+    ),
+    2: Layout(40, flag_bytes=6, names=4, places=0x0E, relation=0x10, next=0x12, lists=0x14, routine=0x26),
+    3: Layout(12, names=4, routine=0x0A),
+    4: Layout(20, names=4, lists=0x0A, routine=0x12),
+    5: Layout(20, names=4, lists=0x0A, routine=0x12),
+    6: Layout(24, names=4, places=0x0A, lists=0x0E, routine=0x16),
+    7: Layout(30, names=4, places=0x0A, relation=0x0C, next=0x0E, lists=0x10, routine=0x1C),
+    8: Layout(20, names=4, places=0x0A, relation=0x0C, next=0x0E, routine=0x12),
 }
 
 
@@ -193,6 +221,7 @@ class GameObject:
     # and the places whose contents can be seen from it, the same
     also_here: list[tuple[int, bool]] = field(default_factory=list)
     seen_from: list[tuple[int, bool]] = field(default_factory=list)
+    routine: int = 0  # the number of its routine, from 1, in a game that numbers them; 0 for none
 
     def word(self, at: int) -> int:
         return struct.unpack_from("<H", self.record, at)[0]
@@ -248,11 +277,14 @@ class ObjectTable:
         # the two lists of words: mov es,[variable] / mov si,es:[bx+list] / or si,si, for the
         # nouns and then for the adjectives. The code is the parser's, which can be in an overlay
         lists = self._pairs(_WORD_LIST, root)
+        marked: list[tuple[int, int]] = []
         for overlay in program.overlays:
-            if len(lists) >= 2:
-                break
             start, end = overlay.load_segment * 16, overlay.end_segment * 16
-            lists = self._pairs(_WORD_LIST, program.image(overlay.number).memory[start:end])
+            code = program.image(overlay.number).memory[start:end]
+            if len(lists) < 2:
+                lists = self._pairs(_WORD_LIST, code)
+            if len(marked) < 2:
+                marked = self._pairs(_ROOM_ROW_MARKED, code)
         self._word_lists = [self._data_word(variable) * 16 + offset for variable, offset in lists[:2]]
 
         # the two lists a room has a row in, in the order the code that finds objects reads
@@ -260,6 +292,11 @@ class ObjectTable:
         rows = self._pairs(_ROOM_SEARCH, root)
         if len(rows) < 2:
             rows = self._pairs(_ROOM_ROW, root)
+        # or, in Spellcasting 301, by the code in an overlay that goes down each, whose rows
+        # end at one with its top bit set and not at a zero
+        self._rows_marked = len(marked) >= 2
+        if self._rows_marked:
+            rows = marked
         self._room_rows = [self._data_word(variable) * 16 + offset for variable, offset in rows][:2]
 
         self.table_segment = self._data_word(table_variable)
@@ -267,17 +304,7 @@ class ObjectTable:
         types_segment = self._data_word(types_variable)
         table = self.table_segment * 16 + table_offset
         self._find_flags(root, table)
-        self._exit_rows = self._doors = None
-        if exits := self._pairs(_EXIT_ROWS, root):
-            self._exit_rows = self._data_word(exits[0][0]) * 16 + exits[0][1]
-        if doors := self._pairs(_DOORS, root):
-            self._doors = self._data_word(doors[0][0]) * 16 + doors[0][1] - 2
-        self._exit_texts = self._exit_variables = None
-        if self._exit_rows is not None:
-            if texts := self._pairs(_EXIT_TEXTS, root):
-                self._exit_texts = self._data_word(texts[0][0]) * 16 + texts[0][1]
-            if variables := self._pairs(_EXIT_VARIABLES, root):
-                self._exit_variables = self._data_word(variables[0][0]) * 16 + variables[0][1] - 2
+        self._find_exits(root)
 
         self.types: dict[int, TypeEntry] = {}
         entries = [table + 6 * (number - 1) for number in range(1, self.count + 1)]
@@ -289,7 +316,7 @@ class ObjectTable:
         self._layouts: dict[int, Layout] = next(
             (
                 layouts
-                for layouts in (LAYOUTS, LAYOUTS_TIMEQUEST, LAYOUTS_201)
+                for layouts in (LAYOUTS, LAYOUTS_TIMEQUEST, LAYOUTS_201, LAYOUTS_301)
                 if all(
                     kind in layouts and layouts[kind].size == entry.size for kind, entry in self.types.items()
                 )
@@ -304,12 +331,37 @@ class ObjectTable:
             if self._layouts is LAYOUTS_TIMEQUEST
             else "Spellcasting 201"
             if self._layouts is LAYOUTS_201
+            else "Spellcasting 301"
+            if self._layouts is LAYOUTS_301
             else None
         )
         self.objects: list[GameObject] = []
         for number, entry in enumerate(entries, 1):
             offset, segment = struct.unpack_from("<HH", memory, entry + 2)
             self.objects.append(self._read(number, memory[entry], segment, offset))
+
+    def _find_exits(self, root: bytes) -> None:
+        """The one table of exits, where a game has one, with the tables its kinds of exit use."""
+        self._exit_rows = self._doors = None
+        doors = _DOORS.search(root)
+        if doors:
+            self._doors = self._data_word(int.from_bytes(doors[1], "little")) * 16
+            self._doors += int.from_bytes(doors[2], "little") - 2
+        # the timers' table is read the same way: the exits' is the one read nearest the doors'
+        exits = [
+            (abs(match.start() - (doors.start() if doors else 0)), match)
+            for match in _EXIT_ROWS.finditer(root)
+        ]
+        if exits:
+            _, nearest = min(exits, key=lambda found: found[0])
+            self._exit_rows = self._data_word(int.from_bytes(nearest[1], "little")) * 16
+            self._exit_rows += int.from_bytes(nearest[2], "little")
+        self._exit_texts = self._exit_variables = None
+        if self._exit_rows is not None:
+            if texts := self._pairs(_EXIT_TEXTS, root):
+                self._exit_texts = self._data_word(texts[0][0]) * 16 + texts[0][1]
+            if variables := self._pairs(_EXIT_VARIABLES, root):
+                self._exit_variables = self._data_word(variables[0][0]) * 16 + variables[0][1] - 2
 
     @staticmethod
     def _pairs(pattern: re.Pattern[bytes], code: bytes) -> list[tuple[int, int]]:
@@ -422,6 +474,7 @@ class ObjectTable:
             found.nouns = self._list(self._word_lists[0], found.word(at))
             found.adjectives = self._list(self._word_lists[1], found.word(at + 2))
         entry = self.types[kind]
+        found.routine = found.word(layout.routine) if layout.routine else 0
         if layout.places is not None:
             found.places = [found.word(layout.places + 2 * index) for index in range(entry.places)]
         if layout.relation is not None:
@@ -455,16 +508,20 @@ class ObjectTable:
         found = []
         at = table + 4 * (start - 1)
         while start and (number := self.image.word(at)):
-            found.append((number, self.image.memory[at + 2] != 0))
+            found.append((number & 0x7FFF if self._rows_marked else number, self.image.memory[at + 2] != 0))
             at += 4
+            if self._rows_marked and number & 0x8000:
+                break
         return found
 
     def _list(self, table: int, start: int) -> list[int]:
         found = []
         at = table + 2 * (start - 1)
         while start and (word := self.image.word(at)):
-            found.append(word)
+            found.append(word & 0x7FFF if self._rows_marked else word)
             at += 2
+            if self._rows_marked and word & 0x8000:
+                break
         return found
 
     def get(self, number: int) -> GameObject:
