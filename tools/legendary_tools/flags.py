@@ -143,12 +143,53 @@ PERSON_FLAG_NAMES_TIMEQUEST = {
     11: "someone other than you",
     12: "can't answer: asleep, or dead",
 }
+# Spellcasting 301's, the same way: its table gives every type's flags their own numbers
+FLAG_NAMES_301 = {
+    1: "its name takes no article",
+    2: "its name takes `an`",
+    3: "plural: `some`, and `they`",
+    4: "takes `some`, and is still `it`",
+    5: "seen by the player",
+    6: "touched, or for a place visited",
+    7: "taking it is special",
+    8: "not listed among a room's contents",
+    9: "gives light",
+    10: "an animal",
+    11: "can't be opened or closed",
+    12: "a door",
+    14: "can be read",
+    15: "locked",
+    16: "open",
+    17: "things can be on it",
+    18: "a container",
+    19: "can be taken",
+    20: "a place under water",
+    23: "lit",
+    24: "can be seen through",
+    26: "can be got in or on",
+    27: "burns",
+    30: "can be worn",
+    31: "a key",
+    32: "cuts",
+    33: "cuts",
+    35: "can be eaten",
+    37: "magic: a spell, its box, or the spell book",
+    38: "can be lit",
+    39: "a bed",
+    41: "a tube of paint",
+    45: "a seahorse",
+    46: "outdoors",
+    47: "someone other than you",
+    48: "female",
+}
 GAME_101, GAME_TIMEQUEST, GAME_201 = "Spellcasting 101", "Timequest", "Spellcasting 201"
+GAME_301 = "Spellcasting 301"
 # each game's names: for any object, and what a place's and a person's are instead
 _NAMES = {
     GAME_101: (FLAG_NAMES, PLACE_FLAG_NAMES, PERSON_FLAG_NAMES),
     GAME_TIMEQUEST: (FLAG_NAMES_TIMEQUEST, PLACE_FLAG_NAMES_TIMEQUEST, PERSON_FLAG_NAMES_TIMEQUEST),
     GAME_201: (FLAG_NAMES_201, {}, {}),
+    GAME_301: (FLAG_NAMES_301, {}, {}),
 }
 
 
