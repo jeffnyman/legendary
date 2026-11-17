@@ -411,7 +411,7 @@ command's tokens is in an overlay with the routine that takes each word off the 
 
 ## The game as it runs
 
-The game starts on [the PC](the-pc.md) and takes commands, and the player's `--watch` and
+The game starts and plays on [the PC](the-pc.md), with its pictures and music, and the player's `--watch` and
 `--panel` follow it as they do the other three.
 
 ```
@@ -447,5 +447,4 @@ packed text, and this game's world.
 The parser's own grammar is read, and is the first game's 46 ways. The music and the sounds
 are read as they are.
 
-The game hasn't been played through, and its screen hasn't been looked at: it is run here
-without one.
+The game hasn't been played through.

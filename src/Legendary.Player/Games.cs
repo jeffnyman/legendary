@@ -148,7 +148,7 @@ internal static class Games
             "starts and plays, with its pictures, music and sounds; not yet played through", World: Legendary.Core.Worlds.WorldMap.Spellcasting201),
         new("gateway", "Gateway", 1992, ["GATEMAIN.EXE"], "GATE.EXE", At, Untried),
         new("sc301", "Spellcasting 301: Spring Break", 1992, ["S301MAIN.EXE"], "S301.EXE", At,
-            "starts and runs on into the game, and takes commands; not yet played",
+            "starts and plays, with its pictures and music; not yet played through",
             World: Legendary.Core.Worlds.WorldMap.Spellcasting301),
         new("ericun", "Eric the Unready", 1993, ["ERICMAIN.EXE"], "ERIC.EXE", Fast, Untried),
         new("gateway2", "Gateway II: Homeworld", 1993, ["HOMEMAIN.EXE"], "HOME.EXE", Fast, Untried),
