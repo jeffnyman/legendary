@@ -20,7 +20,7 @@ question of what a player is stays open until more of the games is understood.
 | *Spellcasting 201: The Sorcerer's Appliance* | 1991 | `sc201` | Plays, with its pictures, music and sounds; not yet played through. Linked with .RTLink, not PLINK86: its program, run-time library and overlays are read, and its vocabulary, objects, flags, grammar, routines, timers, text and music, and
 `--watch` and `--panel` show its world; [notes](docs/spellcasting-201.md) |
 | *Gateway* | 1992 | `gateway` | Not yet tried |
-| *Spellcasting 301: Spring Break* | 1992 | `sc301` | Starts on the PC and runs on into the game itself; not yet played. Linked with a newer .RTLink: its program, run-time library and overlays are read, and its vocabulary, objects, grammar, routines, timers, text, music and sounds; [notes](docs/spellcasting-301.md) |
+| *Spellcasting 301: Spring Break* | 1992 | `sc301` | Starts on the PC and takes commands; not yet played. Linked with a newer .RTLink: its program, run-time library and overlays are read, and its vocabulary, objects, flags, grammar, routines, timers, text, music and sounds, and `--watch` and `--panel` show its world; [notes](docs/spellcasting-301.md) |
 | *Eric the Unready* | 1993 | `ericun` | Not yet tried |
 | *Gateway II: Homeworld* | 1993 | `gateway2` | Not yet tried |
 | *Mission Critical* | 1995 | `mcritic` | Not yet tried; a 32-bit program, and another kind of game |
@@ -147,7 +147,7 @@ you (153) moved: from Bedchamber (1) to Potty
 The cloak is on your second list, which is what you wear. `--watch` and `--panel` can be given
 together, for the panel and the terminal's full record of the play.
 
-*Spellcasting 201* and *Timequest* can be watched the same way, with all of it: the room,
+*Spellcasting 201*, *Timequest* and *Spellcasting 301* can be watched the same way, with all of it: the room,
 each command's words, form and objects, each action and who answered it, the timers, and
 what changed. For *Timequest* the room comes with the place and the year, as `Rome, 44 BC`.
 

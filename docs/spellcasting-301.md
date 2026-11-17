@@ -2,8 +2,9 @@
 
 Legend Entertainment, 1992. The third *Spellcasting*, by Steve Meretzky.
 
-This is the first look, and so far it is how the program is built and loaded, its
-vocabulary, its grammar, its objects, which routine is whose, its timers and its text. What is
+This is what the first look found: how the program is built and loaded, its vocabulary, its
+grammar, its objects and flags, which routine is whose, its timers, its text, and where a
+command is parsed and performed. What is
 known for certain is said plainly; what is inferred says so. Addresses are `segment:offset`
 in hex, with segments relative to where the program loads. Every one of them can be looked
 at with the [tools](../tools/README.md).
@@ -380,17 +381,71 @@ The routine at `1D3A:10C6`, which prints, is handed 2,348 of them at once. The o
 are reached some other way, by a number that is worked out or from tables in the data,
 which the tools don't follow.
 
+## Where a command is parsed and performed
+
+The steps are the earlier games', and the places the player watches are these:
+
+| What | Where |
+|---|---|
+| The routine that performs an action, given the action and its two objects | `0000:01A4` |
+| How many are being performed, one inside another | `4934:3812` |
+| The action, a byte, and the direction after it | `3E77:ABB6`, `ABB7` |
+| Its object and its second object | `3E77:059C`, `3E77:059A` |
+| The room, the actor, the turns taken, and the clock | `4934:388C`, `388E`, `3890`, `3892` |
+| Where the main loop's `setjmp` returns | `0000:0847` |
+| A token taken: the next, after a full stop, after `and` | `350B:236B`, `23FC`, `247A`, in overlay 2 |
+| The routine that takes a word off the line | `350B:01F4`, in overlay 2 too |
+| The word a token is | `3E77:4BF8` |
+| The form found, which one, and the action it makes | `0000:0DE5`, `3E77:4C04`, `3E77:023E` |
+| The objects found for a lot of phrases | `0166:0A63` |
+| The two lots, twelve bytes each, and how many | `3E77:0226`, `3E77:0220` |
+
+The ten places where a routine asked about an action has answered are at `0000:0370`,
+`03A2`, `03DA`, `03F9`, `0416`, `044F`, `046E`, `04A4`, `04C0` and `04DA`. Going somewhere
+is action 236. The clock is in steps of five minutes, as in the other *Spellcasting* games.
+
+Two things are placed differently here. The objects a phrase could be are found from a
+segment of their own, `0166`, and not from the main loop's. And the routine that gathers a
+command's tokens is in an overlay with the routine that takes each word off the line, where
+*Spellcasting 201* had the one in an overlay and the other in the root.
+
+## The game as it runs
+
+The game starts on [the PC](the-pc.md) and takes commands, and the player's `--watch` and
+`--panel` follow it as they do the other three.
+
+```
+world: 1:10 pm, turn 0, in Beach (1)
+world:   here: spell book (368) [BLERK spell (374)], you (255) [coin (86), eyeglasses (89), bathing suit (87)]
+world:   exits: none
+world:   timer 10 (the world's most beautiful woman passes) started: 1 turn to go
+world:   words: take [verb] off [preposition] glasses [noun] then
+world:   form 377: take off OBJECT, which is action 57
+world:   object "glasses", looked for held: eyeglasses (89)
+world:   action 57: doff eyeglasses (89)
+world:     answered by eyeglasses (89), asked as the object: 1
+world: 1:15 pm, turn 1, in Beach (1)
+```
+
+Watching it found one thing about every game. In a phrase of a command, the count of its
+adjectives is a byte, with the byte after it left as it was. The earlier games happen to
+leave a zero there, and the count had been read as a word; this one doesn't.
+
+`Legendary.Core` reads the newer linker's programs, the vocabulary whose size is of its
+packed text, and this game's world.
+
 ## Still to do
 
-The tools that read the program load it, and its words and grammar are read. The rest stop
-where something is kept a new way:
-
-- Twelve flags aren't named.
+- The pictures are [a third kind](timequest.md#the-pictures), many of them 320 by 200, and
+  aren't read.
 - The saved game's layout: the code that saves isn't found.
 - The strings that aren't named by a constant: half of them.
-- The pictures are [a third kind](timequest.md#the-pictures), many of them 320 by 200.
+- Twelve flags aren't named, and timers 37 to 42 are named only by whose they are.
+- Two tables the code that calls routines reads, of 139 and 46 entries.
+- The four bytes a thing's record has more than *Spellcasting 201*'s.
 
 The parser's own grammar is read, and is the first game's 46 ways. The music and the sounds
 are read as they are.
 
-The game starts on the PC and runs on into the game itself. It hasn't been played.
+The game hasn't been played through, and its screen hasn't been looked at: it is run here
+without one.
