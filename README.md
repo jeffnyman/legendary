@@ -20,7 +20,7 @@ question of what a player is stays open until more of the games is understood.
 | *Spellcasting 201: The Sorcerer's Appliance* | 1991 | `sc201` | Plays, with its pictures, music and sounds; not yet played through. Linked with .RTLink, not PLINK86: its program, run-time library and overlays are read, and its vocabulary, objects, flags, grammar, routines, timers, text and music, and
 `--watch` and `--panel` show its world; [notes](docs/spellcasting-201.md) |
 | *Gateway* | 1992 | `gateway` | Not yet tried |
-| *Spellcasting 301: Spring Break* | 1992 | `sc301` | Not yet tried |
+| *Spellcasting 301: Spring Break* | 1992 | `sc301` | Starts on the PC and runs on into the game itself; not yet played. Linked with a newer .RTLink: its program, run-time library and overlays are read, and its music and sounds; [notes](docs/spellcasting-301.md) |
 | *Eric the Unready* | 1993 | `ericun` | Not yet tried |
 | *Gateway II: Homeworld* | 1993 | `gateway2` | Not yet tried |
 | *Mission Critical* | 1995 | `mcritic` | Not yet tried; a 32-bit program, and another kind of game |
