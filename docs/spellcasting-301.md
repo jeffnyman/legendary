@@ -243,9 +243,37 @@ block's size, for every block, which is how the form is known to be read right.
 
 *Gateway*'s text is kept the same way, and is read: 6,013 strings.
 
-How the program names a string isn't found yet: the routine that
-[took one by its number](spellcasting-201.md#how-the-program-names-a-string) in
-*Spellcasting 201* isn't here in a form the tools know.
+### How the program names a string
+
+*Spellcasting 201* had two routines that took a string's number, one to give its text and
+one to print it. Here there are none. A string is named as a far pointer, wherever a far
+pointer to text could be, with `F000` for its segment and the string's number for its
+offset:
+
+```
+3ad9:01ef  mov ax, 0x240b  ; string 9.11: \tYou suddenly feel filled with vigor.\n
+3ad9:01f2  mov dx, 0xf000
+3ad9:01f5  push dx
+3ad9:01f6  push ax
+3ad9:01f7  lcall 0x1d3a, 0x10c6
+```
+
+No text is ever at segment `F000`, which is the PC's ROM, so the pointer can't be mistaken
+for a real one. The number is the block times 1,024, and the string's place in the block: a
+block can have more than 256 strings now, and one has 284, so the eight bits the older
+number gave the place aren't enough.
+
+The routine at `03F8:05B7` makes a pointer of either kind into text. One whose segment isn't
+`F000` is given back as it is. For one that is, it looks in a list of the strings it has
+unpacked lately, six bytes each at `280A:032E`, and unpacks the string from the file if it
+isn't there. So every routine that takes text takes a string's number as well, with no code
+of its own for it, and the game's writers could move a string out of the program and into
+the file by changing only how it was named.
+
+2,473 places in the program name a string this way, 2,424 different strings of the 4,777.
+The routine at `1D3A:10C6`, which prints, is handed 2,348 of them at once. The other strings
+are reached some other way, by a number that is worked out or from tables in the data,
+which the tools don't follow.
 
 ## Still to do
 
@@ -256,7 +284,7 @@ where something is kept a new way:
   here, and 13 there.
 - The timers have no names.
 - The saved game's layout: the code that saves isn't found.
-- How the program names a string, so that the text a routine prints can be put beside it.
+- The strings that aren't named by a constant: half of them.
 - The pictures are [a third kind](timequest.md#the-pictures), many of them 320 by 200.
 
 The parser's own grammar is read, and is the first game's 46 ways. The music and the sounds

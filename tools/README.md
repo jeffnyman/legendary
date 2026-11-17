@@ -27,7 +27,7 @@ These read a program linked by PLINK86, *Spellcasting 101* and *Timequest*, or b
 .RTLink/Plus 4.10, *Spellcasting 201*, or 5.02, *Spellcasting 301*. All of them read
 *Spellcasting 201*; what each makes of *Timequest* is said with it. Of *Spellcasting 301*,
 the first seven read the program, and `objects`, `actions`, `flags`, `timers`, `grammar`, `sentence`,
-`strings`, `text` and `vocab` read it too; the
+`loads`, `strings`, `text` and `vocab` read it too; the
 rest [stop at something kept a new way](../docs/spellcasting-301.md#still-to-do).
 
 ```
@@ -77,7 +77,9 @@ python -m legendary_tools sentence <the game's folder>
   *Timequest* takes most of its block numbers from variables, which aren't followed. For
   *Spellcasting 201*, which loads no arrays and
   [names a string by one number](../docs/spellcasting-201.md#how-the-program-names-a-string),
-  it lists every call that does, with the string.
+  it lists every call that does, with the string. For *Spellcasting 301*, which names a
+  string [as a far pointer no text is at](../docs/spellcasting-301.md#how-the-program-names-a-string),
+  it lists every place that does.
 
 `segments`, `dump` and `dis` build the program's memory first: the root, the data, and the
 overlays `--overlay` names, which can't be two that load at the same place. Given a routine's
