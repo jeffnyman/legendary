@@ -15,6 +15,8 @@ class StringBlock:
     packed_size: int
     strings: int
     offset: int  # where it starts in the file
+    # how many bytes each string is packed into, where the file says; None where it doesn't
+    lengths: tuple[int, ...] | None = None
 
 
 class StringFile:
@@ -33,18 +35,34 @@ class StringFile:
     pairs, a word from zero up where in the tree the next pair is and one below it a
     character's complement; the last pair is the root; and a string starts at the bit after
     the one before it ends. The tree is kept here in the second form, whichever the file has.
+
+    Spellcasting 301's is a third. A block's entry in the table is four bytes, how many
+    strings it has and its size, with no size unpacked. After the table is a word for every
+    string in the file, how many bytes it is packed into, so a string starts on a byte again
+    and can be found without unpacking the ones before it. The tree is the second form's.
     """
 
     def __init__(self, data: bytes):
         self.data = data
         (count,) = struct.unpack_from("<H", data, 0)
         self._table = [struct.unpack_from("<HHH", data, 2 + 6 * number) for number in range(count)]
+        self._lengths: tuple[int, ...] | None = None
         for packed in (False, True):
             try:
                 if self._read(2 + 6 * count, packed):
                     return
             except (struct.error, UnicodeDecodeError):
                 continue
+        try:
+            # the third form: four bytes a block, and then every string's length
+            short = [struct.unpack_from("<HH", data, 2 + 4 * number) for number in range(count)]
+            self._table = [(0, size, strings) for strings, size in short]
+            total = sum(strings for strings, _ in short)
+            self._lengths = struct.unpack_from(f"<{total}H", data, 2 + 4 * count)
+            if self._read(2 + 4 * count + 2 * total, packed=True):
+                return
+        except (struct.error, UnicodeDecodeError):
+            pass
         raise ValueError("the string blocks don't end where the file does")
 
     def _read(self, at: int, packed: bool) -> bool:
@@ -60,7 +78,7 @@ class StringFile:
             self.tree = [2 * link if link > 0 else link - 1 for link in links]
             self.root = 0
         at += 2 + 2 * len(self.tree)
-        self.byte_aligned = not packed
+        self.byte_aligned = not packed or self._lengths is not None
 
         # the words: a count, where each starts and where the last ends, then each and a zero
         (words,) = struct.unpack_from("<H", data, at)
@@ -72,8 +90,15 @@ class StringFile:
         at += starts[-1]
 
         self.blocks: list[StringBlock] = []
+        first = 0
         for number, (unpacked, size, strings) in enumerate(self._table):
-            self.blocks.append(StringBlock(number, unpacked, size, strings, at))
+            lengths = None
+            if self._lengths is not None:
+                lengths = tuple(self._lengths[first : first + strings])
+                first += strings
+                if sum(lengths) != size:
+                    return False
+            self.blocks.append(StringBlock(number, unpacked, size, strings, at, lengths))
             at += size
         return at == len(data)
 
@@ -87,7 +112,10 @@ class StringFile:
         packed = self.data[block.offset : block.offset + block.packed_size]
         strings = []
         bit = 0
-        for _ in range(block.strings):
+        for index in range(block.strings):
+            if block.lengths is not None:
+                # where the file says each string's length, it starts where those before it end
+                bit = 8 * sum(block.lengths[:index])
             text = []
             node = self.root
             while True:

@@ -839,14 +839,15 @@ def strings(args: argparse.Namespace) -> None:
             print(f"{number:3}  {word!r}")
         return
     print("block  unpacked  packed  strings  at")
-    for block in file.blocks:
-        print(
-            f"{block.number:5}  {block.unpacked_size:8}  {block.packed_size:6}  {block.strings:7}"
-            f"  {block.offset:#07x}"
-        )
+    # a file that doesn't say a block's size unpacked has it counted, a zero to each string
+    sizes = [
+        block.unpacked_size or sum(len(string) + 1 for string in file.strings(block)) for block in file.blocks
+    ]
+    for block, size in zip(file.blocks, sizes):
+        print(f"{block.number:5}  {size:8}  {block.packed_size:6}  {block.strings:7}  {block.offset:#07x}")
     print(
         f"\n{len(file.blocks)} blocks, {sum(block.strings for block in file.blocks)} strings,"
-        f" {sum(block.unpacked_size for block in file.blocks)} bytes packed into"
+        f" {sum(sizes)} bytes packed into"
         f" {sum(block.packed_size for block in file.blocks)},"
         f" with a tree of {len(file.tree) // 2} nodes and {len(file.words)} words"
     )
