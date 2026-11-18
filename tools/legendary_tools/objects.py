@@ -110,6 +110,7 @@ class Layout:
     also_here: int | None = None  # a room's: where its row starts in the list of what's also there
     seen_from: int | None = None  # and in the list of the places that can be seen into from it
     routine: int | None = None  # the number of its routine, in a game that numbers them
+    words: int | None = None  # where its nouns start, then its adjectives, when not after the flags
 
 
 # Spellcasting 101's, from its routines that read and write each field for each type
@@ -210,6 +211,28 @@ LAYOUTS_ERIC = {
     1: LAYOUTS_301[1],
     6: Layout(26, flag_bytes=4, names=4, places=0x0C, lists=0x10, routine=0x18),
     8: Layout(22, flag_bytes=4, names=4, places=0x0C, relation=0x0E, next=0x10, routine=0x14),
+}
+
+
+# Gateway II's, a new design: seven types, with the number of an object's routine and its
+# words last in most. From the routines that read and write each field for each type, and
+# for the routine and the words, which no such routine was found for, from the records
+LAYOUTS_GATEWAY2 = {
+    1: Layout(
+        22, names=4, lists=0x06, routine=0x0A, exit_count=0x0C, exit_start=0x0E, words=0x10, also_here=0x14
+    ),
+    2: Layout(
+        28, flag_bytes=6, names=4, places=0x0A, relation=0x0C, next=0x0E, lists=0x10, routine=0x16, words=0x18
+    ),
+    3: Layout(
+        32, flag_bytes=6, names=4, places=0x0A, relation=0x0C, next=0x0E, lists=0x10, routine=0x1A, words=0x1C
+    ),
+    4: Layout(12, names=4, words=0x06, routine=0x0A),
+    5: Layout(18, names=4, words=0x06, lists=0x0A, routine=0x10),
+    6: Layout(18, flag_bytes=6, names=4, lists=0x0A, routine=0x0C, words=0x0E),
+    7: Layout(
+        34, flag_bytes=6, names=4, places=0x0A, relation=0x0C, next=0x0E, lists=0x10, routine=0x1C, words=0x1E
+    ),
 }
 
 
@@ -364,6 +387,7 @@ class ObjectTable:
         types_segment = self._data_word(types_variable)
         table = self.table_segment * 16 + table_offset
         self._find_flags(root, table)
+        self._find_flags_near(types_segment * 16 + ((types_offset + 3) & 0xFFFF), table)
         self._find_exits(root)
 
         self.types: dict[int, TypeEntry] = {}
@@ -383,6 +407,7 @@ class ObjectTable:
                     LAYOUTS_301,
                     LAYOUTS_GATEWAY,
                     LAYOUTS_ERIC,
+                    LAYOUTS_GATEWAY2,
                 )
                 if all(
                     kind in layouts and layouts[kind].size == entry.size for kind, entry in self.types.items()
@@ -404,6 +429,8 @@ class ObjectTable:
             if self._layouts is LAYOUTS_GATEWAY
             else "Eric the Unready"
             if self._layouts is LAYOUTS_ERIC
+            else "Gateway II"
+            if self._layouts is LAYOUTS_GATEWAY2
             else None
         )
         self.objects: list[GameObject] = []
@@ -456,7 +483,17 @@ class ObjectTable:
         if not found:
             return
         segment = self._data_word(int.from_bytes(found[1], "little"))
-        start = segment * 16 + int.from_bytes(found[2], "little") - 2
+        self._flags_from(segment * 16 + int.from_bytes(found[2], "little") - 2, table)
+
+    def _find_flags_near(self, types: int, table: int) -> None:
+        """Where no code names the table of flags the old way: it is after the types', as ever."""
+        if self.near and self.flag_table is None:
+            kinds = {self.image.memory[table + 6 * (number - 1)] for number in range(1, self.count + 1)}
+            # on a word: seven types of three bytes leave one over
+            self._flags_from(types + (3 * max(kinds) + 1 & ~1) - 4, table)
+
+    def _flags_from(self, start: int, table: int) -> None:
+        """The table of flags from where flag 0 would be: four bytes each, to the table of objects."""
         self.flag_table = {}
         # the table of objects comes after it, and nothing says where the flags end but that
         for flag in range(1, 65):
@@ -560,7 +597,7 @@ class ObjectTable:
         if len(self._word_lists) == 2:
             # after the flags, where its nouns start in the list of all nouns, counted from 1,
             # and the same for its adjectives; each object's words end at a zero
-            at = layout.names + layout.flag_bytes
+            at = layout.words if layout.words is not None else layout.names + layout.flag_bytes
             found.nouns = self._list(self._word_lists[0], found.word(at))
             found.adjectives = self._list(self._word_lists[1], found.word(at + 2))
         entry = self.types[kind]
