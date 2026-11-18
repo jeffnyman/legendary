@@ -267,11 +267,17 @@ def _literal_notes(folder: GameFolder, program: Program, image: Image):
             block, string = word >> 8, word & 255
             if block < len(file.blocks) and string < file.blocks[block].strings:
                 return f"  ; string {block}.{string}: {_shown(file.strings(file.blocks[block])[string], 70)}"
-        # mov dx,F000h: a string's number, as the offset of a far pointer no text is at
-        if file and after[0] == 0xBA and image.word(linear + 4) == POINTER_SEGMENT:
+        # mov dx,F000h, here or where a jump from here goes: a string's number, as the offset
+        # of a far pointer no text is at
+        given = linear + 3
+        if after[0] == 0xEB:
+            given = linear + 5 + int.from_bytes(after[1:2], "little", signed=True)
+        elif after[0] == 0xE9:
+            given = linear + 6 + int.from_bytes(after[1:3], "little", signed=True)
+        pointed = memory[given : given + 3] == b"\xba\x00\xf0" and given + 1 not in image.relocations
+        if file and pointed:
             block, string = pointed_string(word)
-            known = block < len(file.blocks) and string < file.blocks[block].strings
-            if known and linear + 4 not in image.relocations:
+            if block < len(file.blocks) and string < file.blocks[block].strings:
                 return f"  ; string {block}.{string}: {_shown(file.strings(file.blocks[block])[string], 70)}"
         # mov dx,<segment> / push dx / push ax: a far pointer
         if after[0] == 0xBA and linear + 4 in image.relocations:
@@ -322,7 +328,7 @@ def _named_strings(program: Program, file: data.StringFile) -> None:
         namers = find_namers(program)
     except ValueError:
         # no routine takes a string's number: the number is given as a pointer's offset
-        found, printer = find_pointed(program)
+        found, printer = find_pointed(program, [block.strings for block in file.blocks])
         if not found:
             raise
         print(
@@ -347,11 +353,14 @@ def _named_strings(program: Program, file: data.StringFile) -> None:
             strings = unpacked.setdefault(call.block, file.strings(file.blocks[call.block]))
             text = _shown(strings[call.string], 60)
         name = f"{call.block}.{call.string}"
-        kind = "prints" if call.prints else "takes"
+        kind = "prints" if call.prints else "data" if call.in_data else "takes"
         print(f"{call.linear:#07x}   {call.where:10}  {name:>6}  {kind:6}  {text}")
     named = {call.block for call in found}
     missing = [str(block.number) for block in file.blocks if block.number not in named]
     print(f"\nblocks no call names: {', '.join(missing) or 'none'}")
+    strings = {(call.block, call.string) for call in found}
+    total = sum(block.strings for block in file.blocks)
+    print(f"{len(strings)} of the file's {total} strings are named")
 
 
 def loads(args: argparse.Namespace) -> None:

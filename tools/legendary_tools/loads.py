@@ -175,6 +175,7 @@ class Named:
     prints: bool  # the call prints the string; otherwise it takes its pointer
     block: int
     string: int
+    in_data: bool = False  # the string is named by a pointer kept as data, not made by code
 
     @property
     def where(self) -> str:
@@ -185,6 +186,19 @@ class Named:
 # segment is one no text is in, and whose offset is the string's number
 _POINTED = re.compile(rb"\xb8(..)\xba\x00\xf0\x52\x50", re.DOTALL)
 POINTER_SEGMENT = 0xF000
+# mov dx,F000h: what gives a number in AX its segment
+_SEGMENT_GIVEN = b"\xba\x00\xf0"
+# mov ax,<number> and then that at once, or a jump to it: where several strings are handed
+# to one call, the compiler loads each number and jumps to the one place that does the rest
+_LOADED = re.compile(rb"\xb8(..)(?:(?=\xba\x00\xf0)|\xeb(.)|\xe9(..))", re.DOTALL)
+# the number and the segment put by as a far pointer, among a routine's own variables, in
+# the data, or through ES: mov word [where],<number> / mov word [where+2],F000h
+_STORED = re.compile(
+    rb"\xc7\x46(.)(..)\xc7\x46(.)\x00\xf0"
+    rb"|\xc7\x06(..)(..)\xc7\x06(..)\x00\xf0"
+    rb"|\x26\xc7\x06(..)(..)\x26\xc7\x06(..)\x00\xf0",
+    re.DOTALL,
+)
 
 
 def pointed_string(number: int) -> tuple[int, int]:
@@ -192,33 +206,76 @@ def pointed_string(number: int) -> tuple[int, int]:
     return number >> 10, number & 0x3FF
 
 
-def find_pointed(program: Program) -> tuple[list[Named], tuple[int, int] | None]:
+def _loaded(image: Image, start: int, end: int) -> list[tuple[int, int, tuple[int, int] | None]]:
+    """
+    Each place in a stretch of code that makes a string's pointer: where, the number, and the
+    routine it is handed to at once when it is.
+    """
+    memory = image.memory
+    found = []
+    for match in _LOADED.finditer(memory, start, end):
+        if match.start() + 1 in image.relocations:
+            continue
+        # where the segment is given: here, or where the jump goes
+        at = match.end()
+        if match[2] is not None:
+            at += int.from_bytes(match[2], "little", signed=True)
+        elif match[3] is not None:
+            at += int.from_bytes(match[3], "little", signed=True)
+        if not start <= at < end or memory[at : at + 3] != _SEGMENT_GIVEN or at + 1 in image.relocations:
+            continue
+        called = None
+        # push dx / push ax / call far
+        if memory[at + 3 : at + 6] == b"\x52\x50\x9a" and at + 8 in image.relocations:
+            offset, segment = struct.unpack_from("<HH", memory, at + 6)
+            called = (segment, offset)
+        found.append((match.start(), int.from_bytes(match[1], "little"), called))
+    for match in _STORED.finditer(memory, start, end):
+        where, number, above = (group for group in match.groups() if group is not None)
+        if (int.from_bytes(above, "little") - int.from_bytes(where, "little")) & 0xFFFF == 2:
+            found.append((match.start(), int.from_bytes(number, "little"), None))
+    return found
+
+
+def find_pointed(
+    program: Program, strings: list[int] | None = None
+) -> tuple[list[Named], tuple[int, int] | None]:
     """
     Every place that names a string as a far pointer of that kind, in the root and each
-    overlay, and the routine most of them hand it to at once, which prints it.
+    overlay, and the routine most of them hand it to at once, which prints it. Given how many
+    strings each block has, the pointers kept as data are found too: without that, any two
+    bytes before the segment's would pass for one.
     """
-    found: list[tuple[int, int | None, int, tuple[int, int] | None]] = []
+    found: list[tuple[int, int | None, int, tuple[int, int] | None, bool]] = []
 
     def scan(image: Image, start: int, end: int, overlay: int | None) -> None:
-        for match in _POINTED.finditer(image.memory, start, end):
-            if match.start() + 4 in image.relocations:
-                continue
-            called = None
-            if image.memory[match.end()] == 0x9A and match.end() + 3 in image.relocations:
-                offset, segment = struct.unpack_from("<HH", image.memory, match.end() + 1)
-                called = (segment, offset)
-            found.append((match.start(), overlay, int.from_bytes(match[1], "little"), called))
+        memory = image.memory
+        made = _loaded(image, start, end)
+        found.extend((linear, overlay, number, called, False) for linear, number, called in made)
+        if strings is None:
+            return
+        at = memory.find(b"\x00\xf0", start, end)
+        while at >= 0:
+            # a pointer as data: not the one mov dx gives, nor the second half of one stored
+            before = memory[at - 5 : at]
+            in_code = before[-1:] == b"\xba" or before[-3:-2] == b"\x46" or before[:2] == b"\xc7\x06"
+            if at - start >= 5 and not in_code and at not in image.relocations:
+                number = int.from_bytes(memory[at - 2 : at], "little")
+                block, string = pointed_string(number)
+                if block < len(strings) and string < strings[block]:
+                    found.append((at - 2, overlay, number, None, True))
+            at = memory.find(b"\x00\xf0", at + 1, end)
 
     scan(program.image(), 0, program.root_size, None)
     for overlay in program.overlays:
         if not overlay.preloaded:
             image = program.image(overlay.number)
             scan(image, overlay.load_segment * 16, overlay.end_segment * 16, overlay.number)
-    calls = Counter(called for _, _, _, called in found if called)
+    calls = Counter(called for _, _, _, called, _ in found if called)
     printer = calls.most_common(1)[0][0] if calls else None
     named = [
-        Named(linear, overlay, called == printer and printer is not None, *pointed_string(number))
-        for linear, overlay, number, called in found
+        Named(linear, overlay, called == printer and printer is not None, *pointed_string(number), in_data)
+        for linear, overlay, number, called, in_data in found
     ]
     return sorted(named, key=lambda call: (call.overlay or 0, call.linear)), printer
 
