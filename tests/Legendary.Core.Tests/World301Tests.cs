@@ -53,6 +53,29 @@ public sealed class World301Tests
             thunk.TargetSegment, program.Overlays[thunk.Overlay - 1].LoadSegment, program.Overlays[thunk.Overlay - 1].EndSegment - 1));
     }
 
+    /// <summary>
+    /// <i>Gateway</i>, linked the same way a few months on, has its manager's table six bytes
+    /// past its count, where this game's is eight. Without it, the test passes without checking.
+    /// </summary>
+    [Fact]
+    public void Gateways_manager_keeps_its_table_another_six_bytes_on()
+    {
+        if (TestData.Game("gateway/game") is not { } folder || TestData.File(folder, "gatemain.exe") is not { } path)
+        {
+            return;
+        }
+
+        var program = RtlinkProgram.Load(path);
+        Assert.Equal((0x01F6, 0x1CF4, 0x076C), (program.LinkerVersion, program.StartSegment, program.StartOffset));
+        Assert.Equal((283, 56, 64), (program.SegmentCount, program.Records.Count, program.LibraryRecords.Count));
+        Assert.Equal(58, program.Overlays.Count);
+        Assert.Equal([5, 4, 35, 5, 7, 2], program.Overlays.GroupBy(overlay => overlay.LoadSegment).OrderBy(group => group.Key).Select(group => group.Count()));
+        Assert.Equal(1284, program.Thunks.Count);
+        Assert.Equal(new ProgramThunk(0x1CF4, 0x12C7, 1, 0x33DF, 0x06EE), program.Thunks[0]);
+        Assert.All(program.Thunks, thunk => Assert.InRange(
+            thunk.TargetSegment, program.Overlays[thunk.Overlay - 1].LoadSegment, program.Overlays[thunk.Overlay - 1].EndSegment - 1));
+    }
+
     [Fact]
     public void The_game_is_found_in_its_own_image()
     {

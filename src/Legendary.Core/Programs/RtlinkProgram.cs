@@ -393,13 +393,13 @@ public sealed class RtlinkProgram : OverlaidProgram
 
         // the manager says where its table is: where the count is, where the entries start,
         // and an entry's size, one after another. The entries are 4 bytes past the count in
-        // 4.10 and 8 in 5.02
+        // 4.10, and 6 or 8 in 5.02, with what the manager keeps between them
         int entries = -1, countAt = 0;
         for (int at = 0; at + 6 <= length && entries < 0; at++)
         {
             countAt = Word(segment, at);
             int first = Word(segment, at + 2);
-            if (Word(segment, at + 4) == EntrySize && first - countAt is 4 or 8 && first + EntrySize <= length
+            if (Word(segment, at + 4) == EntrySize && first - countAt is 4 or 6 or 8 && first + EntrySize <= length
                 && Word(segment, countAt) is > 0 and var count && count <= (length - first) / EntrySize)
             {
                 entries = first;
