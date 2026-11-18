@@ -48,7 +48,7 @@ paragraph.
 
 Version 5.02, 01F6 at +34, keeps a program the same way: the header, the records and the
 fixups' flags are 4.10's. Its overlay manager is another: the entries of its table start
-eight bytes after the count, not four, and its thunks come after its segment, in segments of
+six or eight bytes after the count, not four, and its thunks come after its segment, in segments of
 its group, where 4.10's end it.
 
 Every segment here is relative to where the program loads, as the file has them.
@@ -340,14 +340,14 @@ class RtlinkProgram(Program):
         segment = bytes(self._memory[base : base + length])
         # the manager says where its table is: where the count is, where the entries start,
         # and an entry's size, one after another. The entries are 4 bytes past the count in
-        # 4.10 and 8 in 5.02
+        # 4.10, and 6 or 8 in 5.02, with what the manager keeps between them
         table = next(
             (
                 (count_at, entries)
                 for at in range(length - 6)
                 for count_at, entries, size in [struct.unpack_from("<HHH", segment, at)]
                 if size == _ENTRY_SIZE
-                and entries - count_at in (4, 8)
+                and entries - count_at in (4, 6, 8)
                 and entries + _ENTRY_SIZE <= length
                 and 0 < struct.unpack_from("<H", segment, count_at)[0] <= (length - entries) // _ENTRY_SIZE
             ),
