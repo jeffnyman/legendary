@@ -904,9 +904,10 @@ def sounds(args: argparse.Namespace) -> None:
 
 def _games_in(path: str) -> list[tuple[str, str]]:
     """
-    The games a folder is or holds, each with a name for it: the folder itself when it has
-    pictures, songs or sounds, named for itself or, when it's called `game`, for the folder
-    it's in; otherwise each folder in it that is one, or has one called `game`.
+    The games a folder is or holds, each with a name for it. A game's files are in its
+    folder, or in the `game` inside that, or in a folder inside the `game`, as Eric the
+    Unready's are, which has its floppy disks and its CD beside them. It is named for the
+    folder above the `game`. A folder with none of that is taken to hold games, one a folder.
     """
 
     def has_media(folder: str) -> bool:
@@ -914,17 +915,27 @@ def _games_in(path: str) -> list[tuple[str, str]]:
             name.lower().endswith((".pic", ".mus", ".rs")) for name in os.listdir(folder)
         )
 
+    def files_of(folder: str) -> str | None:
+        inner = os.path.join(folder, "game")
+        within = sorted(os.listdir(inner)) if os.path.isdir(inner) else []
+        tried = [folder, inner, *(os.path.join(inner, name) for name in within)]
+        return next((one for one in tried if has_media(one)), None)
+
+    def name_of(folder: str) -> str:
+        # the folder above a `game`, when the files are in one or in a folder of one
+        above = os.path.dirname(folder)
+        for one in (folder, above):
+            if os.path.basename(one).lower() == "game":
+                return os.path.basename(os.path.dirname(one))
+        return os.path.basename(folder)
+
     path = os.path.abspath(path)
-    if has_media(path):
-        named = os.path.basename(path)
-        return [(os.path.basename(os.path.dirname(path)) if named.lower() == "game" else named, path)]
+    if (files := files_of(path)) is not None:
+        return [(name_of(files), files)]
     found = []
     for name in sorted(os.listdir(path)) if os.path.isdir(path) else []:
-        for folder in (os.path.join(path, name), os.path.join(path, name, "game")):
-            if has_media(folder):
-                # a game's own folder given, with its files in the `game` inside it
-                found.append((os.path.basename(path) if name.lower() == "game" else name, folder))
-                break
+        if (files := files_of(os.path.join(path, name))) is not None:
+            found.append((name_of(files), files))
     return found
 
 
