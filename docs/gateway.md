@@ -143,6 +143,75 @@ With the routines named, the tools find the timers and every use of a flag:
   started, stopped or asked about by number, in 594 calls.
 - **The flags**: 42, in the game's table, with 1,300 calls about one read.
 
+## What each timer does
+
+108 timers, by number. A timer's routine mostly prints, and what it prints is named where
+it's used, so the names are from the text beside each routine.
+
+| Timer | What it is | Timer | What it is |
+|---|---|---|---|
+| 1 | the woman leaves you the gold card | 55 | the spider robot comes for the waste |
+| 2 | the poker game, turn by turn | 56 | the spider robot goes |
+| 3 | the beast limps about | 57 | the robot's waste box |
+| 4 | the Dorman sun sets | 58 | the field actuator's hum rises |
+| 5 | a byte changed | 59 | something crashes through the anemones |
+| 6 | two bytes forgotten | 60 | the spider decides |
+| 7 | it has dried off | 61 | the spider's pincers |
+| 8 | they have dried off | 62 | the enraged spider |
+| 9 | the Ballroom, turn by turn | 63 | a worm bursts from the ground |
+| 10 | the wheel turns, turn by turn | 64 | the worm chews at your helmet |
+| 11 | the beast goes, with the last berries | 65 | the pod's tongue |
+| 12 | the boulder lands on you | 66 | your drink, every thirty turns |
+| 13 | the portals flare | 67 | the snake strikes |
+| 14 | the demon wanders, turn by turn | 68 | the old man's room, every three turns |
+| 15 | the demons grow restless | 69 | it burrows out of sight |
+| 16 | the hydra's head is knocked into the inferno | 70 | it scampers out of view |
+| 17 | the demon stops coughing | 71 | the bartender snores |
+| 18 | the demon saws at the net | 72 | the salamander comes out of the lake |
+| 19 | tiredness, every thirty turns | 73 | the salamander goes |
+| 20 | the hydra hunts for you | 74 | a wailing from the east |
+| 21 | the beast slams you against the wall | 75 | a wailing, further off |
+| 22 | the dust spills from the bag | 76 | a bubbling moan |
+| 23 | Thom Seldridge comes into the bar | 77 | nothing |
+| 24 | Terri Neilson comes to the bar | 78 | the aliens file off |
+| 25 | the robot bartender comes over | 79 | the program insists, turn by turn |
+| 26 | the robot bartender trundles away | 80 | the firestorm from the broken pyramid |
+| 27 | the robot bartender chirps | 81 | the tech goes back to his newsletter |
+| 28 | Nubar snatches the drink | 82 | the chasm walls lurch, turn by turn |
+| 29 | Nubar plays the trivia game | 83 | at the Tunnel Antechamber |
+| 30 | Terri Neilson at the bar, turn by turn | 84 | the shoots grow around you |
+| 31 | the boots come round the planet | 85 | the salamander comes up in the tank |
+| 32 | nothing | 86 | the cheeping stops |
+| 33 | the prospectors fill the conference room | 87 | Becker begins his story |
+| 34 | the ship handling class ends | 88 | Becker's story ends |
+| 35 | a guard clears the room for a meeting | 89 | a seed spins into the air |
+| 36 | the meeting ends | 90 | it finishes the leaves and runs |
+| 37 | a man comes down the corridor | 91 | sleepiness, every ten turns |
+| 38 | Perry scurries back | 92 | the blister disappears |
+| 39 | Thom Seldridge leaves the bar | 93 | Becker goes through the wooden door |
+| 40 | Nubar Kamalian leaves the bar | 94 | a leaf swats the air |
+| 41 | Terri Neilson leaves the bar | 95 | the raft sinks |
+| 42 | a look at where you are, every thirty turns | 96 | a sense of forgetting something |
+| 43 | a word forgotten | 97 | an opening appears in the wall |
+| 44 | the MP arrests you at the Museum | 98 | Becker sprints ahead |
+| 45 | a creature scurries across the desert | 99 | what comes through Becker's door |
+| 46 | a yellow creature flits near | 100 | Becker asleep, turn by turn |
+| 47 | the blue fog clears | 101 | the tech explains the Guide |
+| 48 | people stare below your navel | 102 | your allotted time ends |
+| 49 | the alien berries, turn by turn | 103 | the banner, every ten turns |
+| 50 | the old maintenance man appears | 104 | Nubar Kamalian sits down next to you |
+| 51 | the old man looks for his key | 105 | the Tanning Room, turn by turn |
+| 52 | the old man finishes and goes | 106 | Becker wants a nap |
+| 53 | the portal disappears | 107 | Becker wakes |
+| 54 | the Hydra lair's rock and path, every ten turns | 108 | the tan, every sixty turns |
+
+Named from what they change or move, having no text that was found: 5, 6 and 43, which only
+set or clear variables; 9, 30, 39, 40, 42, 54, 57, 66, 83, 103 and 105. Timers 32 and 77
+are a return and nothing else. Timers 77, 86, 99 and 101 aren't started by number.
+
+Many restart themselves with a count of 1 and so run every turn while a scene lasts: the
+poker game, the roulette wheel, the demon, the program that insists.
+
 ## The flags
 
 42 flags, each with a bit and the types that have it, in the table at `27E4:0018`. Three
@@ -222,5 +291,5 @@ searched, and it found 140 strings and took the game to name the rest some other
 
 ## Still to do
 
-- The timers have no names, and six flags.
+- Six flags have no names, and some timers are named only from what they move.
 - The game hasn't been run on the PC.
