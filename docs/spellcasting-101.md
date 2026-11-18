@@ -1233,7 +1233,8 @@ second where 115 beats a minute and 8 ticks a beat make 65.22: the songs are wri
 the file says.
 
 Only the title's song was checked this way. The other 22 are played by the same code, and
-haven't been set against the game.
+haven't been set against the game register by register. The recordings have been listened
+to beside the game as it plays, and sound as it does.
 
 ### The sounds
 

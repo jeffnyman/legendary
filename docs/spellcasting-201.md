@@ -746,7 +746,10 @@ things changed:
 four games were played both ways and what was written to the FM chip compared, as for
 *Spellcasting 101*: *Timequest*'s for 59 seconds, which has no drums, and this game's,
 *Spellcasting 301*'s and *Gateway*'s for about 68 each, which have. In all four, every
-register takes the same values in the same order as the game gives it.
+register takes the same values in the same order as the game gives it. Recordings from
+each of the four games have been listened to beside the game as it plays, and sound as it
+does. *Gateway II*'s are made the same way, and haven't been: that game doesn't run here
+yet.
 
 Two things aren't known:
 
