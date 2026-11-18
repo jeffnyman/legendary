@@ -54,6 +54,7 @@ def write_index(folder: str, name: str) -> str:
     pictures = _listed(os.path.join(folder, "pictures"), (".png",))
     sounds = _listed(os.path.join(folder, "sounds"), (".wav",))
     songs = _listed(os.path.join(folder, "music"), (".mid", ".mdi", ".rol"))
+    moving = _listed(os.path.join(folder, "animations"), (".png",))
     fonts = [font for font in _listed(os.path.join(folder, "fonts"), (".png",)) if "_sample" not in font]
     title = html.escape(name)
     page = [
@@ -63,9 +64,12 @@ def write_index(folder: str, name: str) -> str:
         f"<title>{title}</title><style>{_STYLE}</style></head><body>",
         f"<h1>{title}</h1>",
         f"<p>{len(pictures)} pictures, {len(sounds)} sounds, {len(songs)} songs"
+        + (f", {len(moving)} animations" if moving else "")
         + (f", {len(fonts)} fonts" if fonts else "")
         + ".</p>",
-        '<nav><a href="#pictures">Pictures</a> · <a href="#sounds">Sounds</a>'
+        '<nav><a href="#pictures">Pictures</a>'
+        + (' · <a href="#animations">Animations</a>' if moving else "")
+        + ' · <a href="#sounds">Sounds</a>'
         ' · <a href="#music">Music</a>' + (' · <a href="#fonts">Fonts</a>' if fonts else "") + "</nav>",
         '<h2 id="pictures">Pictures</h2>',
     ]
@@ -83,6 +87,16 @@ def write_index(folder: str, name: str) -> str:
                 f'<figure><img loading="lazy" src="pictures/{html.escape(picture)}"'
                 f' width="{width}" height="{height}" alt="{html.escape(file)} picture {number}">'
                 f"<figcaption>{number} · {width} by {height}</figcaption></figure>"
+            )
+        page.append("</div>")
+    if moving:
+        page.append('<h2 id="animations">Animations</h2><div class="grid">')
+        for animation in moving:
+            shown = html.escape(animation)
+            width, height = _size(os.path.join(folder, "animations", animation))
+            page.append(
+                f'<figure><img loading="lazy" src="animations/{shown}" width="{width}" height="{height}"'
+                f' alt="{shown}"><figcaption>{html.escape(animation[:-4].upper())}</figcaption></figure>'
             )
         page.append("</div>")
     page.append('<h2 id="sounds">Sounds</h2><table>')
