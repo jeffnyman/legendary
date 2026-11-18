@@ -55,6 +55,15 @@ from .program import Program
 _RECORD = re.compile(rb"\x8d\x87(..)\xba(..)\x52\x50\xff\x76\x08\xff\x76\x06\x0e\xe8", re.DOTALL)
 
 
+# Gateway II's, from a later compiler, which hands no record on but reads its fields where
+# they are. mov ax,6 / mul [bp-n] / mov bx,ax / mov es,[segment variable] /
+# cmp word es:[bx+table],0: a row of the second table, six bytes each
+_SECOND_NEAR = re.compile(rb"\xb8\x06\x00\xf7\x66.\x8b\xd8\x8e\x06(..)\x26\x83\xbf(..)\x00", re.DOTALL)
+# mov ax,10 / mul [bp-n] / mov bx,ax / mov ax,[bp-n] / cmp es:[bx+table+2],ax: a form's
+# preposition, two bytes into its row of ten
+_FORM_NEAR = re.compile(rb"\xb8\x0a\x00\xf7\x66.\x8b\xd8\x8b\x46.\x26\x39\x87(..)", re.DOTALL)
+
+
 @dataclass(frozen=True)
 class Second:
     """A way a form goes on to a second object."""
@@ -114,10 +123,31 @@ def _tables(program: Program) -> tuple[bytes, int, int, int]:
         start, end = overlay.load_segment * 16, overlay.end_segment * 16
         found = _records(program.image(overlay.number).memory[start:end])
     if len(found) < 2:
+        found = _records_near(program)
+    if len(found) < 2:
         raise ValueError("the code that searches the grammar wasn't found")
     # the forms come first, and the second table follows them
     (segment, first), (_, second) = sorted(found)[:2]
     return memory, segment, first, second
+
+
+def _records_near(program: Program) -> set[tuple[int, int]]:
+    """The two tables where the later compiler's code reads them, in the root or an overlay."""
+    memory = program.image().memory
+    notice = memory.find(b"MS Run-Time Library")
+    areas = [memory[: program.root_size]]
+    for overlay in program.overlays:
+        start, end = overlay.load_segment * 16, overlay.end_segment * 16
+        areas.append(program.image(overlay.number).memory[start:end])
+    second = next((found for code in areas if (found := _SECOND_NEAR.search(code))), None)
+    form = next((found for code in areas if (found := _FORM_NEAR.search(code))), None)
+    if notice < 0 or second is None or form is None:
+        return set()
+    segment = int.from_bytes(memory[notice - 8 + int.from_bytes(second[1], "little") :][:2], "little")
+    return {
+        (segment, int.from_bytes(form[1], "little") - 2),
+        (segment, int.from_bytes(second[2], "little")),
+    }
 
 
 def _records(code: bytes) -> set[tuple[int, int]]:

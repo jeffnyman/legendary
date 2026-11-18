@@ -94,7 +94,11 @@ TIMER_NAMES = {
 
 # mov es,[segment variable] / call far es:[bx-4], with BX four times a timer's number: its
 # routine, called from the table of them
-_BY_NUMBER = re.compile(rb"\x8e\x06(..)\x26\xff(?:\x9f\xfc\xff|\x5f\xfc)", re.DOTALL)
+# In Gateway II, from a later compiler, BX is made between the two: mov bx,[bp+6] /
+# add bx,bx / add bx,bx
+_BY_NUMBER = re.compile(
+    rb"\x8e\x06(..)(?:\x8b\x5e.\x03\xdb\x03\xdb)?\x26\xff(?:\x9f\xfc\xff|\x5f\xfc)", re.DOTALL
+)
 # mov es,[segment variable] / cmp word es:[bx+count],-1: is the timer one that runs every
 # turn? The routine that runs the timers asks it first
 _EVERY_TURN = re.compile(rb"\x8e\x06..\x26\x83\xbf..\xff", re.DOTALL)
@@ -110,6 +114,8 @@ _FRAMELESS = b"\x33\xc0\x9a"
 # mov ax,40h / push ax / sub ax,ax / push ax: how it starts where the compiler was told to
 # leave out the check of the stack, with the size of the table to clear
 _FRAMELESS_UNCHECKED = b"\xb8\x40\x00\x50\x2b\xc0\x50"
+# and the same from the later compiler, which clears a register with xor
+_FRAMELESS_UNCHECKED_LATER = b"\xb8\x40\x00\x50\x33\xc0\x50"
 _NOTICE = b"MS Run-Time Library"
 
 
@@ -170,8 +176,9 @@ def find_timers(program: Program) -> Timers:
         if match.start() >= segment * 16
     ]
     empties = root.find(_FRAMELESS, segment * 16, starts[0] if starts else runs)
-    if empties < 0:
-        empties = root.find(_FRAMELESS_UNCHECKED, segment * 16, starts[0] if starts else runs)
+    for other in (_FRAMELESS_UNCHECKED, _FRAMELESS_UNCHECKED_LATER):
+        if empties < 0:
+            empties = root.find(other, segment * 16, starts[0] if starts else runs)
     # the one that gives a timer's count came later: Timequest has the three before it
     if len(starts) not in (len(_KINDS) - 1, len(_KINDS)) or empties < 0:
         raise ValueError("the routines that keep the timers aren't the ones that are known")
