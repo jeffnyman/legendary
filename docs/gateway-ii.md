@@ -150,33 +150,80 @@ Set beside *Eric the Unready*'s, 1,177 of the root's first 2,600 instructions ar
 but for their addresses, where that game and *Spellcasting 301* had 2,519. The routine that
 performs an action is at `0000:0184`, where it was at `01A4` in the three games before.
 
-## The objects, so far
+## The objects
 
 The table is found, and it is kept as before: six bytes an object, its type and a far
-pointer to its record, in segment `27D7` from `00BE`. There are 521 objects.
+pointer to its record, in segment `27D7` from `00BE`. There are 521 objects, with names
+from `OBJECT.DAT`: object 1 is `you`, in the Living Room.
 
 **The records are a new design.** There are seven types, where there were eight, and
 their sizes are none of the earlier games':
 
-| Type | How many | Bytes | Places | Lists |
+| Type | What it is here | How many | Bytes | Bytes of flags |
 |---|---|---|---|---|
-| 1 | 123 | 22 | 0 | 1 |
-| 2 | 210 | 28 | 1 | 1 |
-| 3 | 79 | 32 | 1 | 2 |
-| 4 | 5 | 12 | 0 | 0 |
-| 5 | 7 | 18 | 0 | 2 |
-| 6 | 73 | 18 | 0 | 1 |
-| 7 | 24 | 34 | 1 | 3 |
+| 1 | A room | 123 | 22 | 2 |
+| 2 | A thing | 210 | 28 | 6 |
+| 3 | A thing with two lists: a ship, a cockpit, a pit, a dome | 79 | 32 | 6 |
+| 4 | A name with nothing to it: `yes`, `love` | 5 | 12 | 2 |
+| 5 | What is everywhere: the sky, a wall, a number | 7 | 18 | 2 |
+| 6 | Scenery: stairs, mountains, cables | 73 | 18 | 6 |
+| 7 | A person or a creature | 24 | 34 | 6 |
 
-A record still starts with its two names, as places in `OBJECT.DAT`, and its flags. After
-that the fields are in another order: by the records themselves, the number of an object's
-routine and where its nouns and adjectives start come last in most types, where the words
-came straight after the flags. Type 1 is the rooms, 123 of them, and type 7 has the
-player, who is object 1.
+What each type is for is said from the objects that are of it, and not from the code.
 
-What each field is, for each type, hasn't been worked out, so the tools find the table and
-can't yet list the objects. The grammar and the timers are found by code of the same old
-kind, and aren't found yet either.
+A record starts as before, with its two names as places in `OBJECT.DAT` and then its
+flags. After that the fields are in another order. The number of the object's routine and
+where its nouns and its adjectives start are last in most types, where the words came
+straight after the flags:
+
+| Field | 1 | 2 | 3 | 4 | 5 | 6 | 7 |
+|---|---|---|---|---|---|---|---|
+| The object it is in | | `0A` | `0A` | | | | `0A` |
+| Which of that one's lists it is on, a byte | | `0C` | `0C` | | | | `0C` |
+| The next on that list | | `0E` | `0E` | | | | `0E` |
+| Its own lists | `06` | `10` | `10`, `12` | | `0A`, `0C` | `0A` | `10`, `12`, `14` |
+| Its routine's number | `0A` | `16` | `1A` | `0A` | `10` | `0C` | `1C` |
+| Its nouns, and after them its adjectives | `10` | `18` | `1C` | `06` | `06` | `0E` | `1E` |
+| A room's exits: how many, and the first | `0C`, `0E` | | | | | | |
+| A room's row of what is also there | `14` | | | | | | |
+
+The first four rows are from the routines that read and write each, which pick the place
+by the object's type, as in every game before. The routine's number and the words have no
+such routine that was found, and are from the records: the number counts up through the
+objects, 505 of them, and the words' places count up beside it.
+
+They are right by what they give. Every object on a list says it is in the object whose
+list it is, all 261 of them; and every room's exits start where the room before's end, 404 exits
+in all.
+
+Three fields the routines read aren't known: a word at `12`, `14` and `16` of types 2, 3
+and 7; another at `08`, `14` and `18` of types 1, 2 and 3; and one at `16` and `0E` of
+types 3 and 5, which is two words at `18` in type 7. The player's are 100, and 500 and
+1,000.
+
+### The flags
+
+There are 42, kept as from *Spellcasting 201*: a table says for each which bit it is and
+which types have it. It is where it has always been, after the types' table, which is
+seven entries of three bytes here and so ends on an odd byte: the flags start a byte on,
+at `27D7:0016`. No code names it the old way, and the tools take it from there. Eight
+flags are every type's, and the highest bit is 38, which is why four of the types have six
+bytes of flags.
+
+The flags have no names yet.
+
+### What isn't read yet
+
+The tools list the objects, each with its flags, where it is and what is in it. Four
+things of an object they don't yet say, each because the code that finds its table is of
+the later compiler's kind and hasn't been found:
+
+- its words, by the list of all nouns and the list of all adjectives;
+- a room's exits, and what is also there;
+- its routine, by the table of routines.
+
+The grammar and the timers are found by code of the same old kind, and aren't found yet
+either.
 
 ## Still to do
 
