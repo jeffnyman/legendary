@@ -761,6 +761,21 @@ _TIMER_ROWS = re.compile(rb"\x26\xff\x36(..)\xb8(..)\x50\xb8..\xba..\x52\x50\x0e
 _TIMERS = re.compile(rb"\xb8\x02\x00\x50\xb8(..)\xba(..)\x52\x50\x0e\xe8", re.DOTALL)
 
 
+# Gateway II's, from a later compiler: the same loop with BX, push es:[bx+size] /
+# push es:[bx+segment] / push es:[bx+offset]
+_SAVED_NEAR = re.compile(rb"\x8e\x06(..)\x26\xff\xb7(..)\x26\xff\xb7(..)\x26\xff\xb7(..)", re.DOTALL)
+# and the loop's end, with the count where DS reaches it: mov ax,[count] / cmp [bp-n],ax / jb
+_LOOP_END_DS = re.compile(rb"\xa1(..)\x39\x46.\x72", re.DOTALL)
+# a word written from the data segment by way of CX and DX: mov ax,1 / push ax / mov cx,2 /
+# push cx / mov dx,<offset> / push ds / push dx / push cs / call
+_WORD_NEAR = re.compile(rb"\xb8\x01\x00\x50\xb9\x02\x00\x51\xba..\x1e\x52\x0e\xe8", re.DOTALL)
+# the count of timers, written as a word: mov ax,1 / push ax / mov ax,2 / push ax /
+# mov ax,<offset> / push ds / push ax / push cs / call
+_TIMERS_NEAR = re.compile(rb"\xb8\x01\x00\x50\xb8\x02\x00\x50\xb8(..)\x1e\x50\x0e\xe8", re.DOTALL)
+# and the timers themselves: push [count] / mov ax,<size> / push ax
+_TIMER_ROWS_NEAR = re.compile(rb"\xff\x36(..)\xb8(..)\x50", re.DOTALL)
+
+
 @dataclass(frozen=True)
 class SavedVariable:
     """A piece of the program's data that is saved with the objects."""
@@ -794,6 +809,8 @@ class SavedState:
             start, end = overlay.load_segment * 16, overlay.end_segment * 16
             root = program.image(overlay.number).memory[start:end]
             saved = _SAVED.search(root)
+        if not saved and self._near(program, objects):
+            return
         timers = _TIMERS.search(root)
         if not saved or not timers:
             raise ValueError("the code that saves the game wasn't found")
@@ -836,6 +853,44 @@ class SavedState:
         ]
         self.objects_size = sum(len(found.record) for found in objects.objects)
         self.variables_size = sum(variable.size for variable in self.variables)
+
+    def _near(self, program: Program, objects: ObjectTable) -> bool:
+        """The same, from the code a later compiler made; whether it was found."""
+        memory = objects.image.memory
+
+        def word(code: bytes) -> int:
+            return int.from_bytes(code, "little")
+
+        for overlay in [None, *program.overlays]:
+            if overlay is None:
+                code = memory[: program.root_size]
+            else:
+                start, end = overlay.load_segment * 16, overlay.end_segment * 16
+                code = program.image(overlay.number).memory[start:end]
+            saved = _SAVED_NEAR.search(code)
+            count = _LOOP_END_DS.search(code, saved.end(), saved.end() + 64) if saved else None
+            timers = _TIMERS_NEAR.search(code, saved.end()) if saved else None
+            if saved and count and timers:
+                break
+        else:
+            return False
+        table_segment = objects.image.word(objects.data_segment * 16 + word(saved[1]))
+        table = table_segment * 16 + word(saved[4])
+        variables = objects.image.word(objects.data_segment * 16 + word(count[1]))
+        header = list(_HEADER.finditer(code, max(0, saved.start() - 256), saved.start()))
+        self.header_size = word(header[-1][1]) if header else 4
+        # the words written between the variables and the count of timers
+        self.extra_size = 2 * len(_WORD_NEAR.findall(code, saved.end(), timers.start()))
+        self.timer_count_offset = word(timers[1])
+        rows = _TIMER_ROWS_NEAR.search(code, timers.end(), timers.end() + 32)
+        self.timer_size = word(rows[2]) if rows and word(rows[1]) == self.timer_count_offset else 6
+        self.variables = [
+            SavedVariable(segment, offset, size)
+            for offset, segment, size in struct.iter_unpack("<HHH", memory[table : table + 6 * variables])
+        ]
+        self.objects_size = sum(len(found.record) for found in objects.objects)
+        self.variables_size = sum(variable.size for variable in self.variables)
+        return True
 
     def size(self, timers: int) -> int:
         """The size of a saved state with that many timers."""
