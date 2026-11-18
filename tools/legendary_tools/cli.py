@@ -13,6 +13,7 @@ import sys
 
 from . import data
 from .flags import GAME_201, GAME_301, GAME_GATEWAY, GAME_TIMEQUEST, describe_flag, flag_name, flag_uses
+from .gallery import write_index
 from .game import GameFolder
 from .grammar import NO_TURN, Form, action_flags, describe_flags, read_grammar
 from .handlers import action_routines, keyed_routines, object_routines
@@ -775,7 +776,9 @@ def pictures(args: argparse.Namespace) -> None:
             folder.read(path), ega=name.rstrip("0123456789").endswith("e"), later=later, imploded=imploded
         )
         found = file.pictures()
-        print(f"{os.path.basename(path)}: {len(found)} pictures, for the {'EGA' if file.ega else 'CGA'}")
+        # the later games' files say the display in each picture, and not in the file's name
+        display = "" if imploded else f", for the {'EGA' if file.ega else 'CGA'}"
+        print(f"{os.path.basename(path)}: {len(found)} pictures{display}")
         for entry in found:
             if args.out:
                 try:
@@ -886,7 +889,8 @@ def _games_in(path: str) -> list[tuple[str, str]]:
     for name in sorted(os.listdir(path)) if os.path.isdir(path) else []:
         for folder in (os.path.join(path, name), os.path.join(path, name, "game")):
             if has_media(folder):
-                found.append((name, folder))
+                # a game's own folder given, with its files in the `game` inside it
+                found.append((os.path.basename(path) if name.lower() == "game" else name, folder))
                 break
     return found
 
@@ -917,7 +921,13 @@ def extract(args: argparse.Namespace) -> None:
                 f"{written} {what}{'' if written == 1 else 's'}"
                 + (f" and {missed[1]} more not read" if missed else "")
             )
-        print(f"{name}: {', '.join(counts)}, in {os.path.join(out, name)}")
+        # a page to look through them, when there is anything to look through
+        folders = [os.path.join(out, name, kind) for kind in ("pictures", "sounds", "music")]
+        if any(os.path.isdir(kind) and os.listdir(kind) for kind in folders):
+            page = write_index(os.path.join(out, name), name)
+            print(f"{name}: {', '.join(counts)}; to look through them, open {page}")
+        else:
+            print(f"{name}: {', '.join(counts)}")
 
 
 def strings(args: argparse.Namespace) -> None:
