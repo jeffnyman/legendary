@@ -31,7 +31,7 @@ import re
 import struct
 from dataclasses import dataclass, field
 
-from .data import Word
+from .data import StringFile, Word
 from .program import Image, Program
 
 # mov es,[segment variable] / mov al,es:[si+n]: an object's type, with SI six times its number,
@@ -71,7 +71,10 @@ _EXIT_TEXTS = re.compile(
 
 # mov cl,3 / shl si,cl / mov es,[segment variable] / mov bx,es:[si+rows+2] / cmp byte [bx],0:
 # the variable that says if an exit is open, which the room it leads to is two before
-_EXIT_VARIABLES = re.compile(rb"\xb1\x03\xd3\xe6\x8e\x06(..)\x26\x8b\x9c(..)\x80\x3f\x00", re.DOTALL)
+# and then je <shut> / mov ax,es:[si+rows]: the room, which is where a row starts
+_EXIT_VARIABLES = re.compile(
+    rb"\xb1\x03\xd3\xe6\x8e\x06(..)\x26\x8b\x9c(..)\x80\x3f\x00\x74.\x26\x8b\x84(..)", re.DOTALL
+)
 
 # mov cl,2 / shl si,cl / mov es,[segment variable] / mov ax,es:[si+rows] / and ah,7Fh: a row
 # of a room's list in Spellcasting 301, where the last of a room's rows has its top bit set
@@ -79,6 +82,8 @@ _ROOM_ROW_MARKED = re.compile(rb"\xb1\x02\xd3\xe6\x8e\x06(..)\x26\x8b\x84(..)\x8
 
 # Microsoft C's notice is 8 bytes into the segment DS has
 _NOTICE = b"MS Run-Time Library"
+# the segment of a far pointer that is a string's number and not a place in memory
+_STRING_SEGMENT = 0xF000
 
 
 @dataclass(frozen=True)
@@ -162,6 +167,31 @@ LAYOUTS_301 = {
     6: Layout(24, names=4, places=0x0A, lists=0x0E, routine=0x16),
     7: Layout(30, names=4, places=0x0A, relation=0x0C, next=0x0E, lists=0x10, routine=0x1C),
     8: Layout(20, names=4, places=0x0A, relation=0x0C, next=0x0E, routine=0x12),
+}
+
+
+# Gateway's: Spellcasting 301's with four bytes of flags, as Timequest has, for a room, a
+# person and the two kinds of scenery that had two; and a thing without the four bytes that
+# game added
+LAYOUTS_GATEWAY = {
+    1: Layout(
+        26,
+        flag_bytes=4,
+        names=4,
+        lists=0x0C,
+        also_here=0x12,
+        seen_from=0x14,
+        exit_count=0x16,
+        exit_start=0x18,
+        routine=0x10,
+    ),
+    2: Layout(36, flag_bytes=6, names=4, places=0x0E, relation=0x10, next=0x12, lists=0x14, routine=0x22),
+    3: Layout(12, names=4, routine=0x0A),
+    4: Layout(20, names=4, lists=0x0A, routine=0x12),
+    5: Layout(22, flag_bytes=4, names=4, lists=0x0C, routine=0x14),
+    6: Layout(24, names=4, places=0x0A, lists=0x0E, routine=0x16),
+    7: Layout(32, flag_bytes=4, names=4, places=0x0C, relation=0x0E, next=0x10, lists=0x12, routine=0x1E),
+    8: Layout(24, flag_bytes=4, names=4, places=0x0C, relation=0x0E, next=0x10, routine=0x16),
 }
 
 
@@ -252,6 +282,8 @@ class ObjectTable:
 
     def __init__(self, program: Program, words: list[Word] | None = None, names: bytes | None = None):
         self.words = words
+        # the game's file of text, for the strings its tables name by number: given after
+        self.strings: StringFile | None = None
         # OBJECT.DAT's text: its size in a word, then each name and a zero
         self._names = names[2 : 2 + struct.unpack_from("<H", names)[0]] if names else b""
         self.image = program.image()
@@ -316,7 +348,7 @@ class ObjectTable:
         self._layouts: dict[int, Layout] = next(
             (
                 layouts
-                for layouts in (LAYOUTS, LAYOUTS_TIMEQUEST, LAYOUTS_201, LAYOUTS_301)
+                for layouts in (LAYOUTS, LAYOUTS_TIMEQUEST, LAYOUTS_201, LAYOUTS_301, LAYOUTS_GATEWAY)
                 if all(
                     kind in layouts and layouts[kind].size == entry.size for kind, entry in self.types.items()
                 )
@@ -333,6 +365,8 @@ class ObjectTable:
             if self._layouts is LAYOUTS_201
             else "Spellcasting 301"
             if self._layouts is LAYOUTS_301
+            else "Gateway"
+            if self._layouts is LAYOUTS_GATEWAY
             else None
         )
         self.objects: list[GameObject] = []
@@ -357,11 +391,17 @@ class ObjectTable:
             self._exit_rows = self._data_word(int.from_bytes(nearest[1], "little")) * 16
             self._exit_rows += int.from_bytes(nearest[2], "little")
         self._exit_texts = self._exit_variables = None
+        self._exit_variable_at = 2
         if self._exit_rows is not None:
             if texts := self._pairs(_EXIT_TEXTS, root):
                 self._exit_texts = self._data_word(texts[0][0]) * 16 + texts[0][1]
-            if variables := self._pairs(_EXIT_VARIABLES, root):
-                self._exit_variables = self._data_word(variables[0][0]) * 16 + variables[0][1] - 2
+            if opened := _EXIT_VARIABLES.search(root):
+                segment = self._data_word(int.from_bytes(opened[1], "little")) * 16
+                self._exit_variables = segment + int.from_bytes(opened[3], "little")
+                # how far into a row the variable is: 2 in Timequest, with the text's far
+                # pointer after it, and 4 in Gateway, with the number of a text after it
+                rows, variable = int.from_bytes(opened[3], "little"), int.from_bytes(opened[2], "little")
+                self._exit_variable_at = variable - rows
 
     @staticmethod
     def _pairs(pattern: re.Pattern[bytes], code: bytes) -> list[tuple[int, int]]:
@@ -394,6 +434,12 @@ class ObjectTable:
             return None
         return self.image.word(self._doors + 4 * row), self.image.word(self._doors + 4 * row + 2)
 
+    def string_named(self, block: int, string: int) -> str:
+        """A string of the game's file of text, when it has been given to look in."""
+        if self.strings and block < len(self.strings.blocks) and string < self.strings.blocks[block].strings:
+            return self.strings.strings(self.strings.blocks[block])[string]
+        return f"(string {block}.{string})"
+
     def exit_text(self, row: int) -> str | None:
         """What an exit that only says something says."""
         if self._exit_texts is None:
@@ -405,10 +451,13 @@ class ObjectTable:
         """An exit a variable opens: the room it leads to, the variable, and what it says shut."""
         if self._exit_variables is None:
             return None
-        room, variable, offset, segment = struct.unpack_from(
-            "<HHHH", self.image.memory, self._exit_variables + 8 * row
-        )
-        return room, variable, self._text(segment, offset)
+        row_at = self._exit_variables + 8 * row
+        if self._exit_variable_at == 2:
+            room, variable, offset, segment = struct.unpack_from("<HHHH", self.image.memory, row_at)
+            return room, variable, self._text(segment, offset)
+        # the room, a word not understood, the variable, and which of the exits' texts, from 1
+        room, _, variable, text = struct.unpack_from("<HHHH", self.image.memory, row_at)
+        return room, variable, self.exit_text(text - 1) if text else None
 
     @staticmethod
     def _signed(word: int) -> int:
@@ -430,6 +479,10 @@ class ObjectTable:
     def _text(self, segment: int, offset: int) -> str | None:
         if segment == 0 and offset == 0:
             return None
+        if segment == _STRING_SEGMENT:
+            # not a pointer but a string's number, as Spellcasting 301 and after name them:
+            # the block above ten bits, and the string's place in it
+            return self.string_named(offset >> 10, offset & 0x3FF)
         memory = self.image.memory
         start = segment * 16 + offset
         return memory[start : memory.index(b"\0", start)].decode("latin-1")

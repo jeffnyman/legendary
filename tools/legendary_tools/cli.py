@@ -401,7 +401,10 @@ def loads(args: argparse.Namespace) -> None:
 def _object_table(folder: GameFolder, program: Program, words: list[data.Word] | None = None) -> ObjectTable:
     """The game's objects, with their names from OBJECT.DAT when the game has one."""
     names = folder.find("object.dat")
-    return ObjectTable(program, words, folder.read(names) if names else None)
+    table = ObjectTable(program, words, folder.read(names) if names else None)
+    with contextlib.suppress(ValueError):
+        table.strings = data.StringFile(folder.read(folder.one("str.dat")))
+    return table
 
 
 def _named(table: ObjectTable, number: int) -> str:

@@ -58,6 +58,13 @@ _BY_OBJECT = re.compile(
     rb"\x8e\x06(..)\x26\x39\x84(..)\x75.((?:\xff\x76.)+)\x26\xff\x9c",
     re.DOTALL,
 )
+# the same test, and then the number is taken apart: mov ax,[bp-2] / mov cl,9 / shr ax,cl,
+# for which part of the table, each part 512 routines in a segment of its own
+_BY_NUMBER_SPLIT = re.compile(rb"\x3d(..)\x77.\xff\x4e\xfe\x8b\x46\xfe\xb1\x09\xd3\xe8", re.DOTALL)
+# shl bx,1 / shl bx,1 / mov es,[segment variable] / mov ax,es:[bx+table]: a routine taken
+# from one part
+_TABLE_PART = re.compile(rb"\xd1\xe3\xd1\xe3\x8e\x06(..)\x26\x8b\x87(..)", re.DOTALL)
+_PART = 512
 _NOTICE = b"MS Run-Time Library"
 # mov al,es:[<the action>] / sub ah,ah / push ax / call far: the action handed to a routine
 _BY_ACTION = re.compile(rb"\x26\xa0..\x2a\xe4\x50\x9a(..)(..)", re.DOTALL)
@@ -178,20 +185,37 @@ def object_routines(program: Program) -> dict[int, Routine]:
 
 def _numbered_routines(code: _Code) -> dict[int, Routine] | None:
     """The same, where a record has the number of its object's routine and a table has the routines."""
-    match = _BY_NUMBER.search(code.root)
     notice = code.memory.find(_NOTICE)
-    if not match or notice < 0:
+    if notice < 0:
         return None
-    count = int.from_bytes(match[1], "little")
-    table = code.word(notice - 8 + int.from_bytes(match[2], "little")) * 16
-    table += int.from_bytes(match[3], "little")
+
+    def at(variable: bytes, offset: bytes) -> int:
+        return code.word(notice - 8 + int.from_bytes(variable, "little")) * 16 + int.from_bytes(
+            offset, "little"
+        )
+
+    match = _BY_NUMBER.search(code.root)
+    if match:
+        count = int.from_bytes(match[1], "little")
+        tables = [at(match[2], match[3])]
+    else:
+        # or the table is in parts, 512 routines to a part, each in a segment of its own
+        split = _BY_NUMBER_SPLIT.search(code.root)
+        if not split:
+            return None
+        count = int.from_bytes(split[1], "little")
+        parts = _TABLE_PART.finditer(code.root, split.end(), split.end() + 128)
+        tables = [at(part[1], part[2]) for part in parts]
+        if len(tables) * _PART < count:
+            return None
     # the objects are read for the numbers, by a module that needs this one's routines
     from .objects import ObjectTable  # noqa: PLC0415
 
     found = {}
     for thing in ObjectTable(code.program).objects:
         if 1 <= thing.routine <= count:
-            offset, segment = struct.unpack_from("<HH", code.memory, table + 4 * (thing.routine - 1))
+            part, place = divmod(thing.routine - 1, _PART)
+            offset, segment = struct.unpack_from("<HH", code.memory, tables[part] + 4 * place)
             thunk = code.program.thunk_at(segment, offset)
             found[thing.number] = (
                 Routine(thunk.overlay, thunk.target_segment, thunk.target_offset)
