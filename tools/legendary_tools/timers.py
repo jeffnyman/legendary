@@ -698,8 +698,9 @@ def _named(before: bytes, kind: str, timers: Timers) -> tuple[tuple[int, int] | 
         if before[4] == 0xB8 and before[7] == 0xBA and before[10:] == b"\x52\x50":
             offset, segment = struct.unpack_from("<HxH", before, 5)
             timer = (segment, offset)
-    elif before[8] == 0xB8 and before[11] == 0x50:
-        # mov ax,<number> / push ax: the number, pushed last
+    elif (before[8], before[11]) in ((0xB8, 0x50), (0xB9, 0x51)):
+        # mov ax,<number> / push ax: the number, pushed last; or by CX, as a later compiler
+        # does it after the count's AX
         (number,) = struct.unpack_from("<H", before, 9)
         if not 1 <= number <= len(timers.numbered):
             return None, None, None

@@ -311,6 +311,13 @@ _TESTS_LOOKED_UP = bytes.fromhex("c45efc 268a07 2ae4 8a4efa d3e8 250100")
 _SETS_LOOKED_UP = bytes.fromhex("c45efc b001 8a4efa d2e0 260807")
 # the same / not al / and es:[bx],al
 _CLEARS_LOOKED_UP = bytes.fromhex("c45efc b001 8a4efa d2e0 f6d0 262007")
+# Gateway II's, from a later compiler, the same three with the bit taken first:
+# les bx,[bp-6] / mov cl,[bp-2] / mov al,es:[bx] / shr al,cl / and ax,1
+_TESTS_LATER = bytes.fromhex("c45efa 8a4efe 268a07 d2e8 250100")
+# les bx,[bp-6] / mov cl,[bp-2] / mov al,1 / shl al,cl / or al,es:[bx] / mov es:[bx],al
+_SETS_LATER = bytes.fromhex("c45efa 8a4efe b001 d2e0 260a07 268807")
+# the same / not al / and al,es:[bx] / mov es:[bx],al
+_CLEARS_LATER = bytes.fromhex("c45efa 8a4efe b001 d2e0 f6d0 262207 268807")
 _PROLOGUE = b"\x55\x8b\xec"
 # the words the game keeps that a call can take its object from. Spellcasting 101's: in the
 # action's segment, where it keeps what it is performing, and in the data's
@@ -321,6 +328,7 @@ _DATA_WORDS = {0x42: "the room", 0x44: "the actor"}
 _ENDINGS = (
     ((_TESTS, _SETS, _CLEARS), _ACTION_WORDS, _DATA_WORDS),
     ((_TESTS_LOOKED_UP, _SETS_LOOKED_UP, _CLEARS_LOOKED_UP), {0x2A06: "the room"}, {}),
+    ((_TESTS_LATER, _SETS_LATER, _CLEARS_LATER), {}, {}),
 )
 
 
@@ -424,6 +432,8 @@ class CodeReader:
             ),
             # mov ax,<object> / push ax
             (4, lambda c: c[0] == 0xB8 and c[3] == 0x50, lambda c: numbered(c[1] | c[2] << 8)),
+            # mov cx,<object> / push cx, as a later compiler does it after the flag's AX
+            (4, lambda c: c[0] == 0xB9 and c[3] == 0x51, lambda c: numbered(c[1] | c[2] << 8)),
             # push [bp+n]
             (
                 3,
