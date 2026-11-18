@@ -143,9 +143,25 @@ With the routines named, the tools find the timers and every use of a flag:
   started, stopped or asked about by number, in 594 calls.
 - **The flags**: 42, in the game's table, with 1,300 calls about one read.
 
+## How the program names a string
+
+As [*Spellcasting 301* does](spellcasting-301.md#how-the-program-names-a-string): as a far
+pointer with `F000` for its segment and, for its offset, the block times 1,024 and the
+string's place in it. The routine that prints is at `189C:1069`.
+
+| How | Places |
+|---|---|
+| Handed at once to the routine that prints | 4,468 |
+| Made in code for something else | 324 |
+| Kept as data | 1,389 |
+
+That is 6,181 places, and 5,948 of the file's 6,013 strings. Far more of them are kept as
+data than in that game, which had 231; what the tables of them are for hasn't been looked at.
+
+The first look had this wrong. With the overlays not yet read, only the root's code was
+searched, and it found 140 strings and took the game to name the rest some other way.
+
 ## Still to do
 
 - The flags and the timers have no names.
-- **How the program names a string.** Only 140 of the 6,013 strings are named as
-  *Spellcasting 301* names them, and 30 of the 56 blocks aren't named at all.
 - The game hasn't been run on the PC.
