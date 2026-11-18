@@ -143,6 +143,27 @@ compass and its pieces, and `LEGEND ENTERTAINMENT COMPANY presents`, which is 71
 So it is for a screen wider than 640, in 16 colors. That would be the Super VGA's 800 by
 600, which hasn't been confirmed from the program.
 
+## How a string is named
+
+As [*Spellcasting 301*](spellcasting-301.md) and *Gateway* name theirs, with nothing
+changed: by a far pointer that is no pointer, whose segment is `F000` and whose offset is
+the string's block times 1,024 and its place in the block. The routine most are handed
+to, which prints, is at `1C8A:10F7`. The tools' `loads` finds them as it is.
+
+| What | How many |
+|---|---|
+| Places that name a string | 4,984: 164 in the root and 4,820 in the overlays |
+| Handed to the routine that prints | 3,445 |
+| Handed to another routine | 159 |
+| Kept in data, as an object's text is | 1,380 |
+| Strings named, of the file's 4,923 | 4,870 |
+
+Of the 53 no place names, 25 are all of block 22, which is the help: the keys and what
+the mouse does, shown a screen at a time, so by its block and not string by string. The
+other 28 are 17 in block 17 and a few in six others. *Spellcasting 301* has strings named
+by a number worked out as the game runs, and these may be the same; they haven't been
+looked at.
+
 ## The timers
 
 There are 71, numbered, and found as in *Gateway*: the tools list each with the routine it
@@ -163,7 +184,7 @@ runs and the places that start it. They have no names yet.
 ## Still to do
 
 - Which screen display 4 is.
-- How the program names a string, which *Spellcasting 301* and *Gateway* do by a number.
+- The 28 strings no place names, outside the help.
 - The flags' names and the timers'.
 - Where a command is parsed and performed, for the player's `--watch`.
 - The game hasn't been run on the PC.
