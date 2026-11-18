@@ -30,6 +30,16 @@ internal sealed partial class DosServices
     /// <summary>Puts a CD image in drive D:.</summary>
     public void InsertCd(IsoImage image) => _cd = image;
 
+    // a directory of the CD whose files are in C:'s root: a game that came on a CD and was
+    // copied whole to its folder still asks for them on D:
+    private string? _cdFolderOnC;
+
+    /// <summary>
+    /// Makes a directory of drive D: the root of C:, so that a game whose CD's files are in
+    /// its own folder finds them where it looks, with no CD.
+    /// </summary>
+    public void ServeCdFolderFromC(string directory) => _cdFolderOnC = directory.Trim('\\', '/').ToUpperInvariant();
+
     /// <summary>The CD's image, if there is one.</summary>
     internal IsoImage? Cd => _cd;
 
@@ -42,6 +52,15 @@ internal sealed partial class DosServices
         name = name.Trim();
         bool lettered = name.Length >= 2 && name[1] == ':';
         int number = lettered ? char.ToUpperInvariant(name[0]) - 'A' : _currentDrive;
+        if (number == DriveD && _cd is null && _cdFolderOnC is not null)
+        {
+            // D:\GW2\FILE is C:\FILE, and nothing else is on the drive
+            return DosDrive.Resolve(lettered ? name[2..] : name, "") is [var first, .. var rest]
+                && first.Equals(_cdFolderOnC, StringComparison.OrdinalIgnoreCase)
+                ? new Location(false, rest)
+                : null;
+        }
+
         if (number == DriveD && _cd is not null)
         {
             return DosDrive.Resolve(lettered ? name[2..] : name, _cdDirectory) is { } parts ? new Location(true, parts) : null;
@@ -62,7 +81,7 @@ internal sealed partial class DosServices
 
     /// <summary>Whether a drive, numbered from 0 for A:, is one of the machine's: A: when there are floppy disks for it.</summary>
     private bool DriveExists(int number)
-        => number == DriveC || (number == DriveD && _cd is not null) || (number == DriveA && machine.Floppies > 0);
+        => number == DriveC || (number == DriveD && (_cd is not null || _cdFolderOnC is not null)) || (number == DriveA && machine.Floppies > 0);
 
     /// <summary>A drive as the calls that number from 1 for A: give it, with 0 for the current drive, numbered from 0.</summary>
     private int DriveIn(byte number) => number == 0 ? _currentDrive : number - 1;

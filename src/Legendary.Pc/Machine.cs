@@ -267,6 +267,14 @@ public sealed partial class Machine : ICpuBus
     }
 
     /// <summary>
+    /// Makes a directory of drive D: the game's own folder, for a game that came on a CD and
+    /// has the CD's files beside its own: <c>D:\GW2\HOME_301.PIC</c> is then the folder's
+    /// <c>HOME_301.PIC</c>. There is no CD in the drive, and nothing else on it.
+    /// </summary>
+    /// <param name="directory">The directory's name on the CD, as <c>GW2</c>.</param>
+    public void ServeCdFolder(string directory) => _dos.ServeCdFolderFromC(directory);
+
+    /// <summary>
     /// Loads a program from drive C: as DOS would, with a command tail, and readies the
     /// processor to run it. A batch file (<c>.BAT</c>) is run as COMMAND.COM would, program
     /// after program, and the machine runs on until the batch file ends.
