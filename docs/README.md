@@ -32,6 +32,9 @@ hold.
   number of its routine, the actions' routines in a table too, and 65 numbered timers. Its text is 4,777
   strings in a file that says each one's length. Its pictures are
   packed by PKWARE's implode, in 16 colors and in 256.
+- [Gateway](gateway.md): 1992. A first look: built as *Spellcasting 301* is, with 58
+  overlays and 1,284 thunks, and its words, text, grammar, pictures and saved game read by
+  what reads that game. Its objects are laid out another way, and aren't read yet.
 - [Spellcasting 201: The Sorcerer's Appliance](spellcasting-201.md): 1991. The same system,
   linked by .RTLink/Plus in place of PLINK86: a program DOS can't load by itself, kept as
   records of its segments with their fixups, which the linker's own startup code puts in

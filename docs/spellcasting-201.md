@@ -177,7 +177,7 @@ segment, and the number comes after the jump, not before it.
 *Spellcasting 301* and *Gateway* have `01F6` for the linker's version, and *Gateway II* has
 `0262`: by the same reading, 5.02 and 6.10. A 5.02 program is kept exactly as this one is, and
 [*Spellcasting 301*](spellcasting-301.md#how-the-program-is-built) is read; only its overlay
-manager differs. *Gateway*'s program is read too, and its manager's table isn't found yet.
+manager differs. [*Gateway*](gateway.md#the-overlay-manager) is read too.
 6.10 hasn't been looked at, and the tools say so and stop.
 
 ## The vocabulary
