@@ -151,7 +151,8 @@ internal static class Games
         new("sc301", "Spellcasting 301: Spring Break", 1992, ["S301MAIN.EXE"], "S301.EXE", At,
             "starts and plays, with its pictures and music; not yet played through",
             World: Legendary.Core.Worlds.WorldMap.Spellcasting301),
-        new("ericun", "Eric the Unready", 1993, ["ERICMAIN.EXE"], "ERIC.EXE", Fast, Untried),
+        new("ericun", "Eric the Unready", 1993, ["ERICMAIN.EXE"], "ERIC.EXE", Fast,
+            "starts and runs on into the game, and takes commands; not yet played", World: Legendary.Core.Worlds.WorldMap.EricTheUnready),
         new("gateway2", "Gateway II: Homeworld", 1993, ["HOMEMAIN.EXE"], "HOME.EXE", Fast, Untried),
         new("mcritic", "Mission Critical", 1995, ["MISSION.EXE"], "MISSION.EXE", Fast, Untried),
     ];
