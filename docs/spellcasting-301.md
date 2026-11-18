@@ -500,6 +500,30 @@ right: a chapter's title in 256 colors, a room in 16 with its pieces in its colo
 
 The `.FNT` files beside them are, by their names, the game's fonts, and aren't read.
 
+## A saved game
+
+`RESTART.DAT` is the game's state as it starts, 15,866 bytes, and a saved game is the same
+thing. It is [*Spellcasting 201*'s](spellcasting-201.md#a-saved-game) with one part more:
+
+| Bytes | What |
+|---|---|
+| 34 | what starts it, all zeros in `RESTART.DAT` |
+| 15,200 | every object's record, in the table's order |
+| 622 | 165 saved variables, each a stretch of the program's data |
+| 8 | four words more |
+| 2 | how many timers are going: none, in `RESTART.DAT` |
+| 4 for each | the timers |
+
+The parts add up to the file exactly.
+
+The saved variables are listed in a table at `284D:022C`, six bytes each, where a variable
+is and how long, with their count at `4934:392E`. The four words are at `3E77:4BFA` to
+`4C00`, beside the parser's own variables; what they are isn't known. For two of the kinds
+of saving the routine can be asked for, it fills them from four words of the data first.
+
+The routine that saves is in overlay 4, at `350B:042C`, where the earlier games had it in
+the root, which is all that kept the tools from finding it.
+
 ## Where a command is parsed and performed
 
 The steps are the earlier games', and the places the player watches are these:
@@ -557,7 +581,7 @@ packed text, and this game's world.
 
 - What display 4 is, and what the `40` in a picture's kind says.
 - The fonts.
-- The saved game's layout: the code that saves isn't found.
+- What starts a saved game, and the four words before its timers.
 - Twelve flags aren't named, and timers 37 to 42 are named only by whose they are.
 - The four bytes a thing's record has more than *Spellcasting 201*'s.
 
