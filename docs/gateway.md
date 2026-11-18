@@ -4,8 +4,9 @@ Legend Entertainment, 1992. Frederik Pohl's *Gateway*, made a game by Glen Dahlg
 Verdu, on the system of [*Spellcasting 301*](spellcasting-301.md), which came out the same
 year.
 
-This is the first look, and so far it is how the program is built, its objects, and what
-of it the tools already read. What is known for certain is said plainly; what is inferred says so. Addresses
+This is what the first look found: how the program is built, its objects, flags and
+timers, how it names its text, where a command is parsed and performed, and what of it the
+tools already read. What is known for certain is said plainly; what is inferred says so. Addresses
 are `segment:offset` in hex, with segments relative to where the program loads. Every one of
 them can be looked at with the [tools](../tools/README.md).
 
@@ -289,7 +290,63 @@ data than in that game, which had 231; what the tables of them are for hasn't be
 The first look had this wrong. With the overlays not yet read, only the root's code was
 searched, and it found 140 strings and took the game to name the rest some other way.
 
+## Where a command is parsed and performed
+
+| What | Where |
+|---|---|
+| The routine that performs an action | `0000:01A4` |
+| How many are being performed, one inside another | `4C0B:38AE` |
+| The action, a byte, and the direction after it | `3DA4:E658`, `E659` |
+| Its object and its second object | `3DA4:055A`, `3DA4:0558` |
+| The room, and the actor | `4C0B:38D8`, `38DA` |
+| The clock, in minutes of the day, and the days | `4C0B:38E0`, `38E2` |
+| Where the main loop's `setjmp` returns | `0000:07B8` |
+| A token taken: the next, after a full stop, after `and` | `366B:06FB`, `078C`, `080A`, in overlay 2 |
+| The word a token is | `3DA4:6CA4` |
+| The form found, which one, and the action it makes | `0000:0CF0`, `3DA4:8D0A`, `3DA4:02DC` |
+| The objects found for a lot of phrases | `3569:0295`, in overlay 2 |
+| The two lots, twelve bytes each, and how many | `3DA4:02C4`, `3DA4:02BE` |
+
+The routine that performs an action is *Spellcasting 301*'s to the byte of where its calls
+are: the ten places a routine has answered are the same ten offsets. Going somewhere is
+action 152.
+
+Three things differ:
+
+- **The game counts no turns.** It has a clock, in minutes, and a count of days, which the
+  routine at `031A:044C` moves on by what an action took: a minute for most, and thirty for
+  `wait`. Whether a timer's count goes down by turns or by
+  minutes hasn't been checked.
+- **The call that finds a phrase's objects is in an overlay**, with the routine that
+  gathers the tokens, where the earlier games had it in the root. The player takes the place
+  to be that call's return only while the call is what's before it.
+- **What is found is kept another way**: four bytes a phrase, a count and where the objects
+  are in the stack's segment, where it was six with a far pointer.
+
+## The game as it runs
+
+The game starts on [the PC](the-pc.md) and takes commands, and the player's `--watch` and
+`--panel` follow it:
+
+```
+world: 12:00 pm, day 1, in Your Quarters (238)
+world:   words: open [verb or adjective] door [adjective or noun] then
+world:   form 205: open OBJECT, which is action 113
+world:   object "door", looked for anywhere near: room door (427)
+world:   action 113: open room door (427)
+world:     answered by the action's own routine: 1
+world: 12:01 pm, day 1, in Your Quarters (238)
+world:   words: out [verb or preposition]
+world:   form 209: out, which is action 152
+world:   action 152: go out
+world:   you (211) moved: from Your Quarters (238) to Heecheetown (241)
+```
+
+It is run here without a screen: its pictures and sound haven't been looked at or heard.
+What an exit says is given by the player as a string's number, since `Legendary.Core`
+doesn't read the file of text for it.
+
 ## Still to do
 
 - Six flags have no names, and some timers are named only from what they move.
-- The game hasn't been run on the PC.
+- A word of the game's state that might count something, at `4C0B:38DE`, and the others near it.
