@@ -28,7 +28,17 @@ from .loads import (
 )
 from .mz import MzExecutable
 from .objects import DIRECTIONS, Exit, GameObject, ObjectTable, SavedState, is_pointer
-from .pictures import HUFFMAN, LZW, RAW_PLANE, RAW_PLANES, PictureFile, is_known, is_later
+from .pictures import (
+    HUFFMAN,
+    IMPLODED,
+    LZW,
+    RAW_PLANE,
+    RAW_PLANES,
+    PictureFile,
+    is_imploded,
+    is_known,
+    is_later,
+)
 from .plink86 import Plink86Program
 from .program import Image, Program
 from .regions import read_regions
@@ -714,7 +724,13 @@ def sentence(args: argparse.Namespace) -> None:
         print()
 
 
-_PACKINGS = {RAW_PLANE: "as it is", RAW_PLANES: "as it is, in planes", HUFFMAN: "Huffman", LZW: "LZW"}
+_PACKINGS = {
+    RAW_PLANE: "as it is",
+    RAW_PLANES: "as it is, in planes",
+    HUFFMAN: "Huffman",
+    LZW: "LZW",
+    IMPLODED: "imploded",
+}
 
 
 def pictures(args: argparse.Namespace) -> None:
@@ -724,11 +740,14 @@ def pictures(args: argparse.Namespace) -> None:
     # which game's kind the files are, which one file of them can't always say
     files = [folder.read(path) for path in folder.ending(".pic")]
     later = is_later(files)
+    imploded = is_imploded(files)
     known = is_known(files)
     for path in folder.ending(".pic"):
         name = os.path.splitext(os.path.basename(path))[0].lower()
         # the letter before the file's number says which display it's for
-        file = PictureFile(folder.read(path), ega=name.rstrip("0123456789").endswith("e"), later=later)
+        file = PictureFile(
+            folder.read(path), ega=name.rstrip("0123456789").endswith("e"), later=later, imploded=imploded
+        )
         found = file.pictures()
         print(f"{os.path.basename(path)}: {len(found)} pictures, for the {'EGA' if file.ega else 'CGA'}")
         for entry in found:
