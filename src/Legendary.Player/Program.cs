@@ -1,7 +1,9 @@
 using System.Globalization;
 using System.Reflection;
+using Legendary.Core.Sound;
 using Legendary.Core.Text;
 using Legendary.Pc;
+using Legendary.Pc.Sound;
 using Legendary.Player.Sdl;
 
 namespace Legendary.Player;
@@ -67,6 +69,9 @@ internal static class Program
 
         // the game's documents to show rather than play it: 0 for the list, -1 for all of them
         int? documents = null;
+
+        // a folder to write the game's songs for the AdLib to, as sound, rather than play it
+        string? songs = null;
 
         // the options a profile can keep, as given here: they win over the profile for this run
         var given = new Profile();
@@ -186,6 +191,9 @@ internal static class Program
                     panel = true;
                     break;
                 }
+                case "--songs":
+                    songs = i + 1 < args.Length ? args[++i] : throw new UsageException("--songs needs a folder to write to");
+                    break;
                 case "--documents":
                     // a number, or all, may follow; anything else is the game's name or an option
                     documents = 0;
@@ -321,6 +329,11 @@ internal static class Program
         if (documents is { } which)
         {
             return ShowDocuments(game, which);
+        }
+
+        if (songs is not null)
+        {
+            return WriteSongs(game, songs);
         }
 
         bool sound = profile.Sound ?? true;
@@ -512,6 +525,78 @@ internal static class Program
     }
 
     /// <summary>
+    /// A game's songs for the AdLib card, each written to the folder as a WAV file of how the
+    /// card plays it: played through Ad Lib's driver as the game plays them, and the FM chip.
+    /// </summary>
+    private static int WriteSongs(Game game, string folder)
+    {
+        const int Rate = 44_100;
+        string[] files = [.. Directory.EnumerateFiles(game.Folder).Order(StringComparer.OrdinalIgnoreCase)];
+        var bank = files.FirstOrDefault(file => file.EndsWith(".bnk", StringComparison.OrdinalIgnoreCase)) is { } found
+            ? new InstrumentBank(File.ReadAllBytes(found))
+            : null;
+        Directory.CreateDirectory(folder);
+        int written = 0;
+        double seconds = 0;
+        foreach (string file in files.Where(file => file.EndsWith(".mus", StringComparison.OrdinalIgnoreCase)))
+        {
+            foreach (var song in new MusicFile(File.ReadAllBytes(file)).Songs.Where(song => !song.IsMidi))
+            {
+                IReadOnlyList<FmWrite> writes;
+                try
+                {
+                    writes = song.IsAdLibMidi ? AdLibSong.PlayMidi(song.Data.Span)
+                        : bank is not null ? AdLibSong.PlayRol(song.Data.Span, bank)
+                        : throw new InvalidDataException("the game has no bank of instruments to play it with");
+                }
+                catch (Exception error) when (error is InvalidDataException or ArgumentException or IndexOutOfRangeException)
+                {
+                    Console.WriteLine($"{Path.GetFileName(file)} song {song.Number}: not written ({error.Message})");
+                    continue;
+                }
+
+                // a song with no note in it is a silence the game uses to stop the music
+                if (!writes.Any(write => write.Register is >= 0xB0 and <= 0xB8 && (write.Value & 0x20) != 0)
+                    && !writes.Any(write => write.Register == 0xBD && (write.Value & 0x1F) != 0))
+                {
+                    continue;
+                }
+
+                short[] samples = FmRecording.Render(writes.Select(write => (write.Seconds, write.Register, write.Value)), Rate);
+                string name = $"{Path.GetFileNameWithoutExtension(file).ToLowerInvariant()}_{song.Number:00}.wav";
+                File.WriteAllBytes(Path.Combine(folder, name), Wave(samples, Rate));
+                written++;
+                seconds += (double)samples.Length / Rate;
+            }
+        }
+
+        Console.WriteLine($"{game.Title}: {written} songs for the AdLib, {seconds / 60:0} minutes, written to {folder}");
+        return Done;
+    }
+
+    // a WAV file of 16-bit samples, one channel
+    private static byte[] Wave(short[] samples, int rate)
+    {
+        using var stream = new MemoryStream();
+        using var writer = new BinaryWriter(stream);
+        writer.Write("RIFF"u8);
+        writer.Write(36 + (samples.Length * 2));
+        writer.Write("WAVEfmt "u8);
+        writer.Write(16);
+        writer.Write((short)1);
+        writer.Write((short)1);
+        writer.Write(rate);
+        writer.Write(rate * 2);
+        writer.Write((short)2);
+        writer.Write((short)16);
+        writer.Write("data"u8);
+        writer.Write(samples.Length * 2);
+        writer.Write(System.Runtime.InteropServices.MemoryMarshal.AsBytes(samples.AsSpan()));
+        writer.Flush();
+        return stream.ToArray();
+    }
+
+    /// <summary>
     /// A game's documents, read from its folder: a list of them (0), one by its number, or all of
     /// them (-1).
     /// </summary>
@@ -636,6 +721,8 @@ internal static class Program
               --panel-text <n>   the panel, with its text n times its size, from 1 to 4, as in
                                  1.5 (its size is 8 pixels, doubled on a tall window); the
                                  size last used is kept for the next run with a panel
+              --songs <folder>   write the game's songs for the AdLib card to the folder, rather
+                                 than play it: a WAV file of each, as the card plays it
               --documents [n]    list the documents a game keeps, rather than play it, or show the
                                  one numbered n, or all of them (no game here keeps any yet)
 
