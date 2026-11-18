@@ -12,7 +12,7 @@ import struct
 import sys
 
 from . import data
-from .flags import GAME_201, GAME_301, GAME_TIMEQUEST, describe_flag, flag_name, flag_uses
+from .flags import GAME_201, GAME_301, GAME_GATEWAY, GAME_TIMEQUEST, describe_flag, flag_name, flag_uses
 from .game import GameFolder
 from .grammar import NO_TURN, Form, action_flags, describe_flags, read_grammar
 from .handlers import action_routines, keyed_routines, object_routines
@@ -50,6 +50,7 @@ from .timers import (
     TIMER_NAMES,
     TIMER_NAMES_201,
     TIMER_NAMES_301,
+    TIMER_NAMES_GATEWAY,
     TIMER_NAMES_TIMEQUEST,
     timer_calls,
     timer_code,
@@ -671,6 +672,7 @@ def timers(args: argparse.Namespace) -> None:
         GAME_201: TIMER_NAMES_201,
         GAME_TIMEQUEST: TIMER_NAMES_TIMEQUEST,
         GAME_301: TIMER_NAMES_301,
+        GAME_GATEWAY: TIMER_NAMES_GATEWAY,
     }.get(table.game or "", {})
     found = sorted({(call.number or 0, call.timer) for call in calls if call.timer})
     for number, timer in found:
