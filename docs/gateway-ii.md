@@ -102,16 +102,11 @@ The records, the other fixups, the manager's table and the thunks are read by wh
 | The objects | 521, [in records of a new design](#the-objects) |
 | The grammar | 383 forms, making 179 actions |
 | The timers | 58 |
+| The saved game | [by its parts](#a-saved-game), which add up to the file |
 | The pictures | 1,130, once [copied from the CD](#the-pictures), and 17 animations |
 | The music | 82 songs in one file, 41 of them for the AdLib |
 | The fonts | 17 |
 | The regions | 9 files |
-
-And what they don't yet:
-
-- **The saved game.** The code the tools look for isn't as it is in the games before:
-  [the engine was built again](#the-engine-was-built-again). The objects, the grammar, the
-  timers and the flags' routines were the same, and are read now.
 
 ## The text
 
@@ -420,10 +415,27 @@ unnamed flag 9. Flag 2 is tested once and on nothing; 31 is on the giant robot a
 green blob; 40 is on a container, a belt and a case, and `examine` and `open` test it; and
 nothing has or uses 30.
 
-### What isn't read yet
+## A saved game
 
-One thing found by code of the old kind still isn't: the code that saves a game, which
-says how `RESTART.DAT` is laid out.
+`RESTART.DAT` is 15,839 bytes, and is laid out as *Spellcasting 301*'s is:
+
+| Bytes | What |
+|---|---|
+| 34 | That start it, from `4B4C:81DE` |
+| 13,430 | The records of the 521 objects |
+| 2,365 | 295 saved variables |
+| 8 | Four words more |
+| 2 | A count of timers, 0 as the game starts, and four bytes for each |
+
+The parts add up to the file, to the byte. The routine that writes them is in overlay 4,
+from `3246:0444`, and is the one the games before have, compiled again: the table of
+saved variables, six bytes each, where one is, its segment and its size, is at
+`23C5:037C`, and how many there are is a word of the data segment, at `4B4C:31AE`. There
+are 295, where *Eric the Unready* has 84 and *Gateway* 261.
+
+The four words are copied from elsewhere in the data segment as a game is saved, and
+written from `908C`, `908E`, `9088` and `908A`. What they are isn't known, as it isn't in
+*Spellcasting 301*.
 
 ## The pictures
 
@@ -470,7 +482,7 @@ PNG, which a browser plays. The frames looked at are right: the title's letters,
 
 ## Still to do
 
-- The saved game.
+- What starts a saved game, and the four words before its timers.
 - Flags 2, 14, 30, 31 and 40, and what the timers that print nothing do.
 - The three fields of a record that aren't known.
 - The game hasn't been run on the PC, which will need the disc as a drive for its pictures.
