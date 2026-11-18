@@ -40,6 +40,9 @@ class StringFile:
     strings it has and its size, with no size unpacked. After the table is a word for every
     string in the file, how many bytes it is packed into, so a string starts on a byte again
     and can be found without unpacking the ones before it. The tree is the second form's.
+
+    Gateway II's is the third with a block's size four bytes and not two, so an entry is six:
+    its blocks could be more than 65,535 bytes, though none is.
     """
 
     def __init__(self, data: bytes):
@@ -53,16 +56,18 @@ class StringFile:
                     return
             except (struct.error, UnicodeDecodeError):
                 continue
-        try:
-            # the third form: four bytes a block, and then every string's length
-            short = [struct.unpack_from("<HH", data, 2 + 4 * number) for number in range(count)]
-            self._table = [(0, size, strings) for strings, size in short]
-            total = sum(strings for strings, _ in short)
-            self._lengths = struct.unpack_from(f"<{total}H", data, 2 + 4 * count)
-            if self._read(2 + 4 * count + 2 * total, packed=True):
-                return
-        except (struct.error, UnicodeDecodeError):
-            pass
+        # the third form: four bytes a block, and then every string's length; or the same
+        # with six bytes a block, for a size of four bytes
+        for entry, size in (("<HH", 4), ("<HI", 6)):
+            try:
+                short = [struct.unpack_from(entry, data, 2 + size * number) for number in range(count)]
+                self._table = [(0, packed_size, strings) for strings, packed_size in short]
+                total = sum(strings for strings, _ in short)
+                self._lengths = struct.unpack_from(f"<{total}H", data, 2 + size * count)
+                if self._read(2 + size * count + 2 * total, packed=True):
+                    return
+            except (struct.error, UnicodeDecodeError):
+                continue
         raise ValueError("the string blocks don't end where the file does")
 
     def _read(self, at: int, packed: bool) -> bool:
