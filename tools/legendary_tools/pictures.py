@@ -33,12 +33,13 @@ palette and no size is a palette alone.
 
 *Spellcasting 301* and *Gateway* keep theirs a third way, for more displays. The byte at 5
 is two things: its low four bits are the display the picture is for, 1 the EGA, 2 the VGA
-in 16 colors, 3 the VGA in 256, and its high four are bits, 10 for a palette and 20 or 40
-for the pixels, which are packed one way now, by PKWARE's implode. A palette is 16 of the
-EGA's colors by number for the EGA, and for the VGA three bytes a color, red, green and blue
-from 0 to 63: 16 colors or 256. The pixels, unpacked, are a byte each in 256 colors; two to a
-byte in 16, the left one in the byte's low half; and eight to a byte in two colors. A row
-starts on a byte.
+in 16 colors, 3 the VGA in 256, 4 a screen of 16 colors wider than the VGA's, and 5, which
+Eric the Unready has, the Super VGA's 640 by 480 in 256; and its high four are bits, 10 for
+a palette and 20 or 40 for the pixels, which are packed one way now, by PKWARE's implode.
+A palette is 16 of the EGA's colors by number for the EGA, and for the VGA three bytes a
+color, red, green and blue from 0 to 63: 16 colors, or 256 for displays 3 and 5. The
+pixels, unpacked, are a byte each in 256 colors; two to a byte in 16, the left one in the
+byte's low half; and eight to a byte in two colors. A row starts on a byte.
 
 Imploded data starts with two bytes, 0 for bytes as they are and the size of the window as
 a power of two, 4 to 6 for 1,024 to 4,096. Then bits, from each byte's low bit up. A 0 bit is
@@ -278,6 +279,9 @@ _LENGTH_BASE = (3, 2, 4, 5, 6, 7, 8, 9, 10, 12, 16, 24, 40, 72, 136, 264)
 _LENGTH_EXTRA = (0, 0, 0, 0, 0, 0, 0, 0, 1, 2, 3, 4, 5, 6, 7, 8)
 _END = 519
 
+# the displays of 256 colors: the VGA's, and the bigger screen's that Eric the Unready has
+_IN_256 = (3, 5)
+
 
 def explode(data: bytes, at: int) -> bytes:
     """Bytes packed by PKWARE's implode, unpacked, from where they start in a file."""
@@ -422,7 +426,7 @@ class PictureFile:
         if source.display == 1:
             return self.data[start : start + 16], None
         # the VGA's colors go from 0 to 63
-        size = 3 * (256 if source.display == 3 else 16)
+        size = 3 * (256 if source.display in _IN_256 else 16)
         return None, bytes(value * 255 // 63 for value in self.data[start : start + size])
 
     def _read_imploded(self, entry: Entry) -> Picture:
@@ -436,12 +440,12 @@ class PictureFile:
         palette, rgb = self._colors_of(entry)
         at += 4 * entry.places
         if entry.has_palette:
-            at += 16 if entry.display == 1 else 768 if entry.display == 3 else 48
+            at += 16 if entry.display == 1 else 768 if entry.display in _IN_256 else 48
 
         unpacked = explode(self.data, at)
         width, height = entry.width, entry.height
         # how many pixels are in a byte is told by how many bytes there are
-        if len(unpacked) == width * height and entry.display == 3:
+        if len(unpacked) == width * height and entry.display in _IN_256:
             pixels = unpacked
             # with no palette to be had, shades of gray show what's there
             rgb = rgb or bytes(shade for shade in range(256) for _ in range(3))
