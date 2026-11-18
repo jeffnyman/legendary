@@ -49,6 +49,15 @@ _BY_NUMBER = re.compile(
 _ACTION_TABLE = re.compile(
     rb"\x80\x7e\x06(.)\x77.\xb0\x06\xf6\x66\x06\x8b\xd8\x8e\x06(..)\x26\xff\x9f(..)", re.DOTALL
 )
+# cmp [bp-2],<how many> / jge <none> / mov ax,6 / imul [bp-2] / mov si,ax / mov ax,[bp+6] /
+# mov es,[segment variable] / cmp es:[si+table],ax / jne <next> / push each argument /
+# call far es:[si+table+2]: a routine looked for by an object's number, in a table of six
+# bytes each, the object and a far pointer
+_BY_OBJECT = re.compile(
+    rb"(?:\x83\x7e\xfe(.)|\x81\x7e\xfe(..))\x7d.\xb8\x06\x00\xf7\x6e\xfe\x8b\xf0\x8b\x46\x06"
+    rb"\x8e\x06(..)\x26\x39\x84(..)\x75.((?:\xff\x76.)+)\x26\xff\x9c",
+    re.DOTALL,
+)
 _NOTICE = b"MS Run-Time Library"
 # mov al,es:[<the action>] / sub ah,ah / push ax / call far: the action handed to a routine
 _BY_ACTION = re.compile(rb"\x26\xa0..\x2a\xe4\x50\x9a(..)(..)", re.DOTALL)
@@ -208,6 +217,40 @@ def action_routines(program: Program) -> tuple[dict[int, Routine], dict[int, Rou
     if tabled is not None:
         return tabled
     raise ValueError("the code that calls an action's routine wasn't found")
+
+
+def keyed_routines(program: Program) -> tuple[dict[int, list[Routine]], dict[int, Routine]]:
+    """
+    Two kinds of routine an object can have beside its own, where they are kept in tables an
+    object's number is looked for in: those that say which object a phrase means, when it
+    could be this one or others, and the one that gives the object's own text, its name or
+    its line in a room's description. An object can have more than one of the first kind.
+    Both are empty for a game that doesn't keep them so.
+    """
+    code = _Code(program)
+    notice = code.memory.find(_NOTICE)
+    choosing: dict[int, list[Routine]] = {}
+    text: dict[int, Routine] = {}
+    for match in _BY_OBJECT.finditer(code.root):
+        count = int.from_bytes(match[1] or match[2], "little")
+        table = code.word(notice - 8 + int.from_bytes(match[3], "little")) * 16
+        table += int.from_bytes(match[4], "little")
+        # the one that gives text is handed what kind is wanted, and the other the phrase
+        # and what was found for it, two far pointers
+        chooses = len(match[5]) // 3 > 1
+        for index in range(count):
+            thing, offset, segment = struct.unpack_from("<HHH", code.memory, table + 6 * index)
+            thunk = code.program.thunk_at(segment, offset)
+            routine = (
+                Routine(thunk.overlay, thunk.target_segment, thunk.target_offset)
+                if thunk
+                else Routine(None, segment, offset)
+            )
+            if chooses:
+                choosing.setdefault(thing, []).append(routine)
+            else:
+                text[thing] = routine
+    return choosing, text
 
 
 def tabled_action_flags(program: Program) -> bytes | None:

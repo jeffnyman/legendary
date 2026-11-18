@@ -15,7 +15,7 @@ from . import data
 from .flags import GAME_201, GAME_301, GAME_TIMEQUEST, describe_flag, flag_name, flag_uses
 from .game import GameFolder
 from .grammar import NO_TURN, Form, action_flags, describe_flags, read_grammar
-from .handlers import action_routines, object_routines
+from .handlers import action_routines, keyed_routines, object_routines
 from .loads import (
     POINTER_SEGMENT,
     StringNames,
@@ -449,6 +449,16 @@ def _routine_of(program: Program, number: int) -> str:
         return f"not known ({error})"
 
 
+def _show_routines(program: Program, number: int) -> None:
+    """An object's routine, and the two other kinds it can have where a game keeps them in tables."""
+    print(f"  routine: {_routine_of(program, number)}")
+    choosing, text = keyed_routines(program)
+    if number in text:
+        print(f"  its name or its line in a room is given by: {text[number]}")
+    for routine in choosing.get(number, []):
+        print(f"  whether a phrase means it, when it could mean others, is said by: {routine}")
+
+
 def _show_object(program: Program, table: ObjectTable, found: GameObject) -> None:
     entry = table.types[found.type]
     print(f"object {found.number}: {found.name}" + (f" ({found.second_name})" if found.second_name else ""))
@@ -467,7 +477,7 @@ def _show_object(program: Program, table: ObjectTable, found: GameObject) -> Non
         for label, numbers in (("nouns", found.nouns), ("adjectives", found.adjectives)):
             if numbers:
                 print(f"  {label}: " + ", ".join(table.words[number - 1].text for number in numbers))
-    print(f"  routine: {_routine_of(program, found.number)}")
+    _show_routines(program, found.number)
     for place in found.places:
         print(
             f"  in {_named(table, place)}"
