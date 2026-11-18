@@ -101,7 +101,8 @@ python -m legendary_tools dis ../../legend/sc101/game 3670:054e
   *Spellcasting 101* and, with its names from `OBJECT.DAT` and its other differences,
   [*Spellcasting 201*](../docs/spellcasting-201.md#the-objects); each game's flags have their own names. It reads
   [*Spellcasting 301*'s](../docs/spellcasting-301.md#the-objects), whose lists end another
-  way and whose records name their routines by number. It reads [*Timequest*](../docs/timequest.md#the-objects) too, whose records are
+  way and whose records name their routines by number, and says of an object which routine
+  [gives its text and which says whether a phrase means it](../docs/spellcasting-301.md#two-more-kinds-of-routine). It reads [*Timequest*](../docs/timequest.md#the-objects) too, whose records are
   between the two, with a [kind of exit](../docs/timequest.md#the-exits) of its own.
 
 - **`grammar`** lists the forms a command can take, from the program's tables: for each verb

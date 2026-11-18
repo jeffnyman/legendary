@@ -232,9 +232,37 @@ So every routine is named: 249 actions, 61 of them with one of the 20 that come 
 [507 objects](#the-objects). All but one of the actions' routines are in overlays 6 to 9.
 
 The routine that performs an action is at `0000:01A4`, and asks them in the order the
-earlier games do. Segment `067E` has two more tables it reads the same way, each a word and
-a far pointer: 139 entries at `2E2A:228A` and 46 at `2E2A:25CC`. What they are isn't known
-yet.
+earlier games do.
+
+### Two more kinds of routine
+
+An object can have two routines beside its own. Each kind is in a table of six bytes an
+entry, an object's number and a far pointer, which a routine in segment `067E` goes down
+looking for the object.
+
+**Its own text**, 46 objects, at `2E2A:25CC`. `067E:00B0` is given the object and what is
+wanted, and the object's routine answers with a far pointer to the text, or nothing:
+
+| Asked for | What |
+|---|---|
+| 16 | its name |
+| 17 | its second name |
+| 18 | its line in a room's description |
+| 19 | its line there before it has been touched |
+
+The routines that print an object's name ask first, and use the name in its record when
+they get nothing; so an object whose name changes has no name there at all, and six of the
+46 have none. The routine that describes a room asks for 19 when the object doesn't have
+the flag for touched, and then for 18. The beer keg answers 19 with `Here's the keg you
+threw off the flying carpet!`, and 18 only in one room. They are Infocom's first description
+and long description, as routines.
+
+**Which object is meant**, 139 entries for 138 objects, in 42 routines, at `2E2A:228A`.
+When the words of a phrase fit more than one object, the routine that finds them, in overlay
+2, calls `067E:0065` with each object found, the phrase, and the list of what was found. An
+object's routine can answer with the object the phrase is to mean, and the list is cut to
+that one. The coin's looks for another coin in the list and picks between them by the
+action being performed. It is Infocom's `GENERIC`.
 
 With the routines named, the tool that finds every test of a flag works: 1,243 calls about
 a flag are read, and 146 more aren't.
@@ -531,7 +559,6 @@ packed text, and this game's world.
 - The fonts.
 - The saved game's layout: the code that saves isn't found.
 - Twelve flags aren't named, and timers 37 to 42 are named only by whose they are.
-- Two tables the code that calls routines reads, of 139 and 46 entries.
 - The four bytes a thing's record has more than *Spellcasting 201*'s.
 
 The parser's own grammar is read, and is the first game's 46 ways. The music and the sounds
