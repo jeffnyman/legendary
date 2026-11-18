@@ -498,7 +498,37 @@ need, and so do all 1,504 of *Gateway*'s, which are kept the same way. Those loo
 right: a chapter's title in 256 colors, a room in 16 with its pieces in its colors, and
 *Gateway*'s titles for the EGA and the VGA.
 
-The `.FNT` files beside them are, by their names, the game's fonts, and aren't read.
+## The fonts
+
+The `.FNT` files are the game's fonts, nineteen of them, and *Gateway* has twenty-one kept
+the same way. A file is ten bytes and then its letters:
+
+| At | What |
+|---|---|
+| 0 | Two bytes, both 1 |
+| 2 | How many bytes a row of a letter is |
+| 3 | The first character it has, and at 4 the last: `21` and `7F` in every file |
+| 5 | In a font whose letters differ in width, a small number, taken to be the gap left between letters; else 0 |
+| 6 | How many rows a letter is |
+| 7 | In a font whose letters are all one width, the width, a word; else `FFFF` |
+| 9 | Zero |
+
+A font whose letters differ in width then has two tables of 128 bytes, one for each
+character's code from 0: its width in pixels, and a byte whose two halves are 0 or 1 in
+nearly every font, which isn't understood. A font of one width has neither table. Then come
+each character's rows, a bit a pixel from each byte's top bit, the first character first.
+
+Every file in the two games, and in *Gateway II*, is exactly as long as that makes it. The
+fonts looked at are right: letters from 7 rows high to 26, drawn as the game's text is.
+Byte 5 is read as the gap because a line set with it looks right and a font of one width
+has 0 there; the program's own use of it hasn't been read.
+
+Not every one is of letters. Some of the fonts of one width, as *Gateway*'s `GATE_106.FNT`,
+are the pieces of the map: each character is a square with lines out of it in some of the
+eight directions.
+
+The tools' `fonts` command lists them, and with `--out` writes each as two PNG files: all
+its characters, and a line set in it.
 
 ## A saved game
 
@@ -580,7 +610,7 @@ packed text, and this game's world.
 ## Still to do
 
 - What display 4 is, and what the `40` in a picture's kind says.
-- The fonts.
+- The second table of a font, and which font the game uses for what.
 - What starts a saved game, and the four words before its timers.
 - Twelve flags aren't named, and timers 37 to 42 are named only by whose they are.
 - The four bytes a thing's record has more than *Spellcasting 201*'s.
