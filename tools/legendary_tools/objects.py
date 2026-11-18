@@ -555,7 +555,7 @@ _LOOP_END_NEAR = re.compile(rb"\x8e\x06(..)\x26\xa1(..)\x39\x46", re.DOTALL)
 # mov ax,1 / push ax / mov ax,<size> / push ax / mov ax,<offset> / mov dx,<segment> / push dx /
 # push ax / push cs / call: one thing of a size written, which before the objects is what
 # starts the file
-_HEADER = re.compile(rb"\xb8\x01\x00\x50\xb8(..)\x50\xb8..\xba..\x52\x50\x0e\xe8", re.DOTALL)
+_HEADER = re.compile(rb"\xb8\x01\x00\x50\xb8(..)\x50\xb8..(?:\xba..\x52|\x1e)\x50\x0e\xe8", re.DOTALL)
 # push es:[count] / mov ax,<size> / push ax / mov ax,<offset> / mov dx,<segment> / push dx /
 # push ax / push cs / call: the timers written, a count of them and the size of one
 _TIMER_ROWS = re.compile(rb"\x26\xff\x36(..)\xb8(..)\x50\xb8..\xba..\x52\x50\x0e\xe8", re.DOTALL)
@@ -578,17 +578,25 @@ class SavedState:
     What the program saves, which is what RESTART.DAT has: some bytes that start it, every
     object's record in the table's order, each saved variable, a count, and some bytes for
     each it counts, which are the timers. Spellcasting 101 starts with four bytes and has six
-    for a timer; Spellcasting 201 starts with 34 and has four.
+    for a timer; Spellcasting 201 starts with 34 and has four. Spellcasting 301 is as that
+    is, with four words more before the count, and the code that saves it is in an overlay.
     """
 
     def __init__(self, program: Program, objects: ObjectTable):
         memory = objects.image.memory
-        root = memory[: program.root_size]
 
         def word(code: bytes) -> int:
             return int.from_bytes(code, "little")
 
+        # the code that saves is in the root, or in an overlay
+        root = memory[: program.root_size]
         saved = _SAVED.search(root)
+        for overlay in program.overlays:
+            if saved:
+                break
+            start, end = overlay.load_segment * 16, overlay.end_segment * 16
+            root = program.image(overlay.number).memory[start:end]
+            saved = _SAVED.search(root)
         timers = _TIMERS.search(root)
         if not saved or not timers:
             raise ValueError("the code that saves the game wasn't found")
@@ -599,6 +607,14 @@ class SavedState:
         header = list(_HEADER.finditer(root, max(0, saved.start() - 256), saved.start()))
         self.header_size = word(header[-1][1]) if header else 4
         rows = _TIMER_ROWS.search(root, saved.end())
+        # words written between the variables and the timers: the last is the timers' count,
+        # and any before it are more of the game's state
+        self.extra_size = 0
+        if rows:
+            words = list(_TIMERS.finditer(root, saved.end(), rows.start()))
+            if words and word(rows[1]) == word(words[-1][1]):
+                self.timer_count_offset = word(rows[1])
+                self.extra_size = 2 * (len(words) - 1)
         self.timer_size = word(rows[2]) if rows and word(rows[1]) == self.timer_count_offset else 6
 
         # the loop that isn't the objects' or the timers' is the saved variables': the one
@@ -626,8 +642,10 @@ class SavedState:
 
     def size(self, timers: int) -> int:
         """The size of a saved state with that many timers."""
-        return self.header_size + self.objects_size + self.variables_size + 2 + self.timer_size * timers
+        fixed = self.header_size + self.objects_size + self.variables_size + self.extra_size
+        return fixed + 2 + self.timer_size * timers
 
     def timers_in(self, file: bytes) -> int:
         """The count of timers in a saved state, which is the word after the variables."""
-        return struct.unpack_from("<H", file, self.header_size + self.objects_size + self.variables_size)[0]
+        at = self.header_size + self.objects_size + self.variables_size + self.extra_size
+        return struct.unpack_from("<H", file, at)[0]

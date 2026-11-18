@@ -547,6 +547,8 @@ def objects(args: argparse.Namespace) -> None:
         print(f"{state.header_size:6}  bytes that start it")
         print(f"{state.objects_size:6}  in the records of {table.count} objects")
         print(f"{state.variables_size:6}  in {len(state.variables)} saved variables")
+        if state.extra_size:
+            print(f"{state.extra_size:6}  in {state.extra_size // 2} words more")
         each = {4: "four", 6: "six"}.get(state.timer_size, str(state.timer_size))
         print(f"{2 + state.timer_size * timers:6}  in a count, {timers}, and {each} bytes for each it counts")
         print(f"{state.size(timers):6}  in all; RESTART.DAT is {len(file)}")
