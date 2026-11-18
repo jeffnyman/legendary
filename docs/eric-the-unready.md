@@ -114,8 +114,6 @@ whose list it is, for all 537; a room's exits start where the room before's end;
 The exits are of three of the five kinds *Gateway* has: 88 to a room, 6 through a door, and
 103 that are a routine's to decide, more than half, where *Gateway* had under half.
 
-The flags have no names yet.
-
 ## The pictures
 
 There are 1,309 entries in 39 files, 24 of them a palette alone and 1,285 with a picture,
@@ -142,6 +140,66 @@ at are right: the title, filling the screen, and a man in a green tunic.
 compass and its pieces, and `LEGEND ENTERTAINMENT COMPANY presents`, which is 713 across.
 So it is for a screen wider than 640, in 16 colors. That would be the Super VGA's 800 by
 600, which hasn't been confirmed from the program.
+
+## The flags
+
+There are 40, kept as *Gateway* keeps them: a table says, for each flag, which bit it is
+and which types have it. They are *Gateway*'s flags under other numbers, and 36 have names:
+
+| Flag | What it says | Has it at the start | By what |
+|---|---|---|---|
+| 1 | takes `some`, and is still `it` | 21 | rum, milk, water, sand |
+| 2 | its name takes `an` | 12 | an umbrella, an eyepatch, an egg |
+| 3 | not known | 1 |  |
+| 4 | its name takes no article | 32 | Giovanni, Lilliput, you |
+| 5 | touched, or for a place visited | 0 | taking a thing sets it, and going into a room |
+| 6 | a mark its own routine keeps, of something that has happened | 0 | tested 163 times and set 72, nearly all by an object's own routine |
+| 7 | plural: `some`, and `they` | 67 | gnolls, manacles, knights |
+| 8 | seen by the player | 16 | set 328 times, nearly all by objects' routines |
+| 9 | not known | 131 |  |
+| 10 | can be taken, and hasn't been: taking it can be special | 163 | taking a thing clears it; with it, a thing worn says `You'll have to take off` first |
+| 11 | not listed among a room's contents | 350 | taking a thing clears it |
+| 12 | alive: a person or an animal | 68 | `attack`, `bite`, `feed`, `greet` and `kick` test it |
+| 13 | lit, or for a place has light | 76 | every room, and the torch |
+| 14 | open | 52 | `close`, `empty` and `examine` test it |
+| 15 | can be opened and closed | 12 | a window, a lid, a mailbox |
+| 16 | things can be on it | 72 | tables, beds, counters |
+| 17 | what's dropped in it lands outside it | 5 | `drop` tests it: a chair, a tree's branch, a bench |
+| 18 | female | 10 | the witch, Lorealle, the goddess |
+| 19 | can be eaten or drunk | 14 | `eat` and `bite` test it |
+| 20 | a door | 4 | the four doors |
+| 21 | a liquid | 7 | rum, water, the duck pond |
+| 22 | a container | 60 | `empty`, `pour`, `look in` and `open` test it |
+| 23 | burns | 7 | `burn` tests it: kindling, a newspaper |
+| 24 | cuts | 3 | `cut` tests it of what is cut with: a pickaxe |
+| 25 | can't answer: asleep, or dead | 0 | `greet` says it `isn't exactly in the best condition to exchange pleasantries` |
+| 26 | can be taken | 69 | taking a thing sets it |
+| 27 | cuts | 0 | `cut` tests it beside 24; nothing starts with it |
+| 28 | can be read | 36 | `examine` tests it: notes, books, signs |
+| 29 | locked | 9 | `open`, `close` and `unlock` test it |
+| 30 | not known | 0 |  |
+| 31 | a key | 4 | the four keys |
+| 32 | got out of before you go anywhere | 2 | going says `[Getting out of it first]`: the raft, the captain's chair |
+| 33 | can be seen through | 7 | cases, a cage, the hourglass |
+| 34 | outdoors | 35 | 35 rooms: islands, the village green, the forest |
+| 35 | turned on, or alight | 0 | `activate` sets it and `extinguish` clears it |
+| 36 | can be turned on and off, or lit | 0 | `light`, `extinguish` and `activate` test it |
+| 37 | can be got in or on | 9 | `climb in` and `sit` test it |
+| 38 | not known | 1 |  |
+| 39 | can be worn | 17 | a cloak, earmuffs, gloves |
+| 40 | can be spoken to | 54 | `greet` tests it first: 54 of the 58 people and creatures |
+
+Each name is from the objects that have the flag as the game starts and from the actions
+that test it, with what those actions say when they do. Three were settled by the code.
+The root's routine for taking a thing, at `05E3:0EC2`, clears 11 and 10 of it and sets 5,
+26 and 8: no longer left out of a room's list, no longer untaken, touched, takeable and
+seen. And a routine that runs before three of the actions says `You'll have to take off` of a
+thing worn that has 10 or lacks 26.
+
+Four aren't named. Flag 9 is on 70 of the 74 rooms and on scenery, and is set and cleared
+by routines as things come and go: the dragon's parts, a sign, a bean in a cloak. Flag 3
+is on the berries alone, 38 on the nectar machine alone, and 30 on nothing as the game
+starts, tested 11 times by objects' routines in two overlays.
 
 ## How a string is named
 
@@ -185,6 +243,6 @@ runs and the places that start it. They have no names yet.
 
 - Which screen display 4 is.
 - The 28 strings no place names, outside the help.
-- The flags' names and the timers'.
+- Flags 3, 9, 30 and 38, and the timers' names.
 - Where a command is parsed and performed, for the player's `--watch`.
 - The game hasn't been run on the PC.
