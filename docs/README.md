@@ -42,8 +42,8 @@ hold.
   before don't have.
 - [Gateway II: Homeworld](gateway-ii.md): 1993. The start of a first look: a copy whose
   pictures are only on its CD, and a program linked by .RTLink 6.10, whose file is the
-  older one's with a second table of symbols. Its text is read, and its objects, whose records are a new design of seven types; its
-  grammar isn't yet.
+  older one's with a second table of symbols. Its text is read, and its objects, whose records are a new design of seven types, its
+  grammar and its timers, each found again in code a later compiler made.
 - [Spellcasting 201: The Sorcerer's Appliance](spellcasting-201.md): 1991. The same system,
   linked by .RTLink/Plus in place of PLINK86: a program DOS can't load by itself, kept as
   records of its segments with their fixups, which the linker's own startup code puts in

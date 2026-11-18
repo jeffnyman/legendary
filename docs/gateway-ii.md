@@ -99,15 +99,17 @@ The records, the other fixups, the manager's table and the thunks are read by wh
 | The vocabulary | 2,028 words |
 | The text | 4,875 strings, [with one change](#the-text) |
 | The objects | 521, [in records of a new design](#the-objects) |
+| The grammar | 383 forms, making 179 actions |
+| The timers | 58 |
 | The music | 82 songs in one file, 41 of them for the AdLib |
 | The fonts | 17 |
 | The regions | 9 files |
 
 And what they don't yet:
 
-- **The grammar and the timers.** The code the tools look for, to find each table, isn't
-  as it is in the games before: [the engine was built again](#the-engine-was-built-again).
-  The objects were the same, and [are read now](#the-objects).
+- **The flags' routines and the saved game.** The code the tools look for isn't as it is
+  in the games before: [the engine was built again](#the-engine-was-built-again). The
+  objects, the grammar and the timers were the same, and are read now.
 - **The pictures**, which are on the disc, and whose files are named another way:
   `EP_LAND.PIC` and `HT_DOCK4.PIC`, where the earlier games had `GATE_301.PIC`.
 
@@ -253,14 +255,65 @@ exit north, kind 3: says: You wander towards the ice structures, but find them t
 the routine at `0525:00EE`: 516 objects have one, and all but one are in the overlays, in
 19 of the 34.
 
+## The grammar
+
+The two tables are in segment `2B9A`, with what is also in a room after them: the forms
+at `045E`, 383 of ten bytes each, and the ways a form goes on to a second object at
+`1354`, six bytes each. Before the forms is the table of actions, as from *Spellcasting
+301*: eleven far pointers, the routines that run before an action, and then six bytes an
+action, its flags and its routine.
+
+A form is kept as before, and the tools read it with nothing changed once the tables are
+found:
+
+```
+383 forms
+activate OBJECT: action 1  (the object held, carried, here, in things here)
+aim OBJECT at OBJECT: action 2  (the object held, carried; must be had, the second here, in things here)
+ask OBJECT about OBJECT: action 4  (the object here, the second anywhere)
+```
+
+They make 179 actions, and each action's routine is found, with its overlay. The parser's
+own grammar, which `sentence` prints, is read as it was too.
+
+What changed is how the code reads them. The games before handed a row's address to a
+routine that compared it; this one reads a row's fields where they are, with the row's
+number times ten or six in `BX`. The tools find the two tables by those.
+
+## The timers
+
+There are 58, numbered, and kept as from *Spellcasting 201*: a table of the ones that are
+going, four bytes each, a timer's number and its count.
+
+| What | Where |
+|---|---|
+| The table of timers going | `3C73:9010` |
+| How many are going, and which is being run | `4B4C:3136`, `3138` |
+| The routines: empty the table, start, stop, ask about, ask the count, run | `0234:0008`, `0026`, `0096`, `00F8`, `0130`, `016C` |
+| The routine that calls a timer's routine by its number | `0611:000A` |
+
+The tools list 55 of them, each with its routine and the places that start it, stop it
+and ask about it:
+
+```
+timer 2, 1f61:3491, which calls 372d:2750 in overlay 27
+    372d:007d in overlay 23: object 16 Landing Site starts it with a count of 7
+    372d:01ed in overlay 23: object 16 Landing Site asks about it
+```
+
+Of the 261 calls to those routines, 44 aren't read: the later compiler makes a call's
+arguments in ways the tools don't take yet, and the three timers no call is found for are
+likely among them. The timers have no names yet.
+
 ### What isn't read yet
 
-The grammar and the timers are found by code of the old kind, and aren't found yet. The
-routine at `0261:0132` reads the row of what is also in a room; a second table is read the
-way the exits are, at `3C73:9010`, and by the games before is likely the timers'.
+Two things found by code of the old kind still aren't: the routines that test and change
+a flag, which `flags` needs to say where each flag is used, and the code that saves a
+game, which says how `RESTART.DAT` is laid out.
 
 ## Still to do
 
-- The grammar and the timers, and the pictures.
+- The routines that test and change a flag, the saved game, and the pictures.
+- The 44 calls about a timer that aren't read, and the timers' names.
 - The flags' names, and the three fields of a record that aren't known.
 - The game hasn't been run on the PC, which will need the disc as a drive for its pictures.
