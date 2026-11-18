@@ -131,6 +131,49 @@ internal static class Games
 
     private const string Untried = "not yet tried";
 
+    /// <summary>
+    /// Where a game that came on a CD finds the files it reads from the disc. Its LEGEND.INI
+    /// says where it looks, as <c>GAMEDATA=D:\GW2\</c>. When the game's folder has its
+    /// pictures the files have been copied in, and the folder serves; otherwise an image of
+    /// the CD beside the game does, in the folder or in a <c>cd</c> inside it. Null for a
+    /// game that reads nothing from a CD, or when neither is there.
+    /// </summary>
+    public static (string Directory, string? Image)? CdOf(string folder)
+    {
+        static string? In(string folder, Func<string, bool> wanted) =>
+            Directory.Exists(folder) ? Directory.EnumerateFiles(folder).Order(StringComparer.OrdinalIgnoreCase).FirstOrDefault(wanted) : null;
+
+        static bool Named(string file, string name) => Path.GetFileName(file).Equals(name, StringComparison.OrdinalIgnoreCase);
+
+        if (In(folder, file => Named(file, "LEGEND.INI")) is not { } settings)
+        {
+            return null;
+        }
+
+        foreach (string line in File.ReadLines(settings))
+        {
+            string[] parts = line.Split('=', 2);
+            if (parts.Length != 2 || !parts[0].Trim().Equals("GAMEDATA", StringComparison.OrdinalIgnoreCase)
+                || !parts[1].Trim().StartsWith("D:", StringComparison.OrdinalIgnoreCase))
+            {
+                continue;
+            }
+
+            string directory = parts[1].Trim()[2..].Trim('\\', '/');
+            if (In(folder, file => file.EndsWith(".PIC", StringComparison.OrdinalIgnoreCase)) is not null)
+            {
+                return (directory, null);
+            }
+
+            string? image = new[] { folder, Path.Combine(folder, "cd"), Path.Combine(folder, "CD") }
+                .Select(place => In(place, file => file.EndsWith(".iso", StringComparison.OrdinalIgnoreCase)))
+                .FirstOrDefault(found => found is not null);
+            return image is null ? null : (directory, image);
+        }
+
+        return null;
+    }
+
     /// <summary>Every game the player knows, in the order the menu shows them: by year.</summary>
     public static readonly KnownGame[] Known =
     [
@@ -155,7 +198,11 @@ internal static class Games
         // counts on the machine being no faster than an AT, and the game then has no music
         new("ericun", "Eric the Unready", 1993, ["ERICMAIN.EXE"], "ERIC.EXE", At,
             "starts and plays, with its pictures, music and sounds; not yet played through", World: Legendary.Core.Worlds.WorldMap.EricTheUnready),
-        new("gateway2", "Gateway II: Homeworld", 1993, ["HOMEMAIN.EXE"], "HOME.EXE", Fast, Untried),
+        // at an AT's speed, as the others: Eric the Unready, of the same year, loses its music on
+        // a faster machine, and this one hasn't been tried on one
+        new("gateway2", "Gateway II: Homeworld", 1993, ["HOMEMAIN.EXE"], "HOME.EXE", At,
+            "starts and runs on into the game, with its pictures from its own folder or its CD, and takes commands; not yet played",
+            World: Legendary.Core.Worlds.WorldMap.Gateway2),
         new("mcritic", "Mission Critical", 1995, ["MISSION.EXE"], "MISSION.EXE", Fast, Untried),
     ];
 

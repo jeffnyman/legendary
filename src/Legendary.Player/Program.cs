@@ -353,6 +353,21 @@ internal static class Program
             Composite = profile.Composite ?? false,
         };
 
+        if (Games.CdOf(game.Folder) is { } cd)
+        {
+            // a game that reads some of its files from its CD: from the game's folder, when
+            // they have been copied there, or else from an image of the CD beside it
+            if (cd.Image is null)
+            {
+                machine.ServeCdFolder(cd.Directory);
+                Console.Error.WriteLine($"legendary: D:\\{cd.Directory} is the game's own folder");
+            }
+            else
+            {
+                Console.Error.WriteLine($"legendary: the CD {machine.InsertCd(cd.Image)} is in drive D:, from {cd.Image}");
+            }
+        }
+
         if (game.Disks is { Length: > 0 } disks)
         {
             // the game's floppies by drive A:, disk 1 in it, with the protection the images lost
