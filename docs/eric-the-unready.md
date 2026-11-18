@@ -341,9 +341,23 @@ world:   you (284) moved: from Farmyard (259) to Barn (260)
 ```
 
 Run with no arguments, as here, it picks the VGA in 256 colors, and its opening shows: a
-castle on a hill, and `And it came to pass that Sir Eric rode out`. It was run without
-sound checked and without a window, and with `XGA` it hasn't been run at all: whether the
-PC here has the Super VGA's screen for it isn't known.
+castle on a hill, and `And it came to pass that Sir Eric rode out`. Its pictures are seen,
+and its music and sounds heard.
+
+**Its music needs a PC no faster than it expects.** The launcher looks for an AdLib card
+as it starts, and the test is a loop that counts on how fast the machine is. At 3,000
+instructions a millisecond, an AT, and at 6,000, it finds the card, opens `ERIC_001.MUS`
+and plays: 4,956 writes to the FM chip in the first minute. At 12,000 and above it doesn't
+find it, never opens the file, and the game is silent but for its sounds; told `ADLIB`
+there, it stops as it starts. So the player runs this game at an AT's speed, as it runs
+the others. DOSBox runs the same copy at 12,500 with music, so something here differs
+from DOSBox. The likely cause is that reading a port takes no more time on this PC than any
+other instruction, where on a real one it takes about a millionth of a second however
+fast the processor; that hasn't been confirmed, or changed.
+
+**With `XGA` it stops at once**: the game asks the video BIOS for function `6F`, which is
+a Super VGA card's own and which the PC here doesn't have. So the 640 by 480 pictures in
+256 colors can be [read](#the-pictures) and not yet shown.
 
 ## A saved game
 
@@ -363,5 +377,6 @@ PC here has the Super VGA's screen for it isn't known.
 - The 28 strings no place names, outside the help.
 - Flags 3, 9, 30 and 38.
 - What timers 3, 50, 65 and 70 do, which their names only point at.
-- The game with `XGA`, and its music and sounds, on the PC.
+- The Super VGA's screen on the PC, which the game with `XGA` asks for and doesn't get.
+- Why the AdLib isn't found on a faster PC here, when DOSBox's is.
 - What the word at `495D:38D8` is, 2 as the game starts, and the one at `38DE`, 1.
