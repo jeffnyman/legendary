@@ -182,14 +182,54 @@ FLAG_NAMES_301 = {
     47: "someone other than you",
     48: "female",
 }
+# Gateway's, the same way: the things Timequest's flags are, numbered anew by the game's table
+FLAG_NAMES_GATEWAY = {
+    1: "takes `some`, and is still `it`",
+    2: "touched, or for a place visited",
+    4: "its name takes no article",
+    5: "its name takes `an`",
+    6: "plural: `some`, and `they`",
+    7: "seen by the player",
+    8: "not listed among a room's contents",
+    10: "can be taken, and hasn't been: taking it can be special",
+    12: "open",
+    13: "a liquid",
+    14: "can be opened and closed",
+    15: "a door",
+    16: "opened for you as you go through it",
+    17: "what's dropped in it lands outside it",
+    18: "can be eaten",
+    19: "a container",
+    21: "alive: an animal or a plant",
+    22: "lit, or for a place has light",
+    23: "can be worn",
+    24: "cuts",
+    26: "can be read",
+    27: "cuts",
+    28: "things can be on it",
+    29: "can be taken",
+    30: "a key",
+    31: "can be seen through",
+    33: "turned on",
+    34: "can be got in or on",
+    35: "locked",
+    36: "can be turned on and off",
+    37: "playing cards",
+    38: "can be sat on",
+    39: "outdoors",
+    40: "female",
+    41: "a person, and not you or a monster",
+    42: "can't answer: asleep, or dead",
+}
 GAME_101, GAME_TIMEQUEST, GAME_201 = "Spellcasting 101", "Timequest", "Spellcasting 201"
-GAME_301 = "Spellcasting 301"
+GAME_301, GAME_GATEWAY = "Spellcasting 301", "Gateway"
 # each game's names: for any object, and what a place's and a person's are instead
 _NAMES = {
     GAME_101: (FLAG_NAMES, PLACE_FLAG_NAMES, PERSON_FLAG_NAMES),
     GAME_TIMEQUEST: (FLAG_NAMES_TIMEQUEST, PLACE_FLAG_NAMES_TIMEQUEST, PERSON_FLAG_NAMES_TIMEQUEST),
     GAME_201: (FLAG_NAMES_201, {}, {}),
     GAME_301: (FLAG_NAMES_301, {}, {}),
+    GAME_GATEWAY: (FLAG_NAMES_GATEWAY, {}, {}),
 }
 
 
