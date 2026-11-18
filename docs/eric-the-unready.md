@@ -65,13 +65,9 @@ With nothing changed for this game:
 | The sounds | 53, RealSound |
 | The fonts | 20 |
 | The regions | 6 files |
-| The pictures | 938 of 1,285 |
+| The pictures | 938 of 1,285, and all of them [with one change](#the-pictures) |
 
-The 347 pictures not read are all of a display the earlier games don't have, numbered 5,
-in the files `ERIC_5nn.PIC`: by the `XGA` the game is run with, the pictures for a bigger
-screen. What stops them is where the reader takes their pixels to start, and not a new way
-of packing; that hasn't been worked out yet. There are 24 pictures of display 4 too, which
-*Spellcasting 301* had and which read here.
+The pictures took one change, [below](#the-pictures).
 
 ## The objects
 
@@ -120,6 +116,33 @@ The exits are of three of the five kinds *Gateway* has: 88 to a room, 6 through 
 
 The flags have no names yet.
 
+## The pictures
+
+There are 1,309 entries in 39 files, 24 of them a palette alone and 1,285 with a picture,
+kept as [*Spellcasting 301*'s](spellcasting-301.md) are:
+packed by PKWARE's implode, each saying the display it is for. The file's number says it
+too, `ERIC_1nn.PIC` for display 1 and so on.
+
+| Display | What | Entries | The biggest |
+|---|---|---|---|
+| 1 | The EGA | 28 | |
+| 2 | The VGA, 16 colors | 481 | |
+| 3 | The VGA, 256 colors | 429 | |
+| 4 | A screen of 16 colors wider than the VGA's | 24 | 713 by 108 |
+| 5 | The Super VGA, 256 colors | 347 | 640 by 480 |
+
+**Display 5 is new**, and is what the `XGA` the game is run with asks for: 640 by 480 in
+256 colors. The title's picture for it says so in its own letters, `256 Color Super VGA`.
+It is kept as display 3 is, a palette of 256 colors, three bytes each, and a byte a pixel.
+The reader took its palette for one of 16, and so started unpacking in the middle of the
+colors; told it is 256, all 347 unpack to exactly the bytes their sizes need. Those looked
+at are right: the title, filling the screen, and a man in a green tunic.
+
+**Display 4** is in *Spellcasting 301* and *Gateway* too, the same 24 pictures in each: the
+compass and its pieces, and `LEGEND ENTERTAINMENT COMPANY presents`, which is 713 across.
+So it is for a screen wider than 640, in 16 colors. That would be the Super VGA's 800 by
+600, which hasn't been confirmed from the program.
+
 ## The timers
 
 There are 71, numbered, and found as in *Gateway*: the tools list each with the routine it
@@ -139,7 +162,7 @@ runs and the places that start it. They have no names yet.
 
 ## Still to do
 
-- The pictures of display 5.
+- Which screen display 4 is.
 - How the program names a string, which *Spellcasting 301* and *Gateway* do by a number.
 - The flags' names and the timers'.
 - Where a command is parsed and performed, for the player's `--watch`.

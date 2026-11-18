@@ -38,7 +38,8 @@ hold.
   flags and five kinds of exit, and their 696 routines are in a table of two parts.
 - [Eric the Unready](eric-the-unready.md): 1993. A first look: built as *Gateway* is, and
   read by what reads that game, but for its 537 objects, whose records differ in three
-  types, and the pictures for its bigger screen, which aren't read yet.
+  types, and its pictures for the Super VGA, 640 by 480 in 256 colors, which the games
+  before don't have.
 - [Spellcasting 201: The Sorcerer's Appliance](spellcasting-201.md): 1991. The same system,
   linked by .RTLink/Plus in place of PLINK86: a program DOS can't load by itself, kept as
   records of its segments with their fixups, which the linker's own startup code puts in

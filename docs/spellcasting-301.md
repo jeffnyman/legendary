@@ -444,7 +444,7 @@ is read anew, and the pixels are packed by a method none of the earlier games us
 
 | Bits | What |
 |---|---|
-| The low four | the display the picture is for: 1 the EGA, 2 the VGA in 16 colors, 3 the VGA in 256, 4 not known |
+| The low four | the display the picture is for: 1 the EGA, 2 the VGA in 16 colors, 3 the VGA in 256, 4 a screen of 16 colors wider than the VGA's |
 | `10` | it starts with a palette |
 | `20` or `40` | its pixels follow, imploded |
 
@@ -609,7 +609,10 @@ packed text, and this game's world.
 
 ## Still to do
 
-- What display 4 is, and what the `40` in a picture's kind says.
+- Which screen display 4 is, and what the `40` in a picture's kind says. Its pictures are 24, the
+  same in each game that has them, and one is 713 across, so it is no screen of 640: by
+  that, the Super VGA's 800 by 600 in 16 colors, which hasn't been confirmed from the
+  program.
 - The second table of a font, and which font the game uses for what.
 - What starts a saved game, and the four words before its timers.
 - Twelve flags aren't named, and timers 37 to 42 are named only by whose they are.
