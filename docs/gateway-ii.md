@@ -4,7 +4,8 @@ Legend Entertainment, 1993. The second game from Frederik Pohl's books, by Glen 
 and Mike Verdu.
 
 This is the start of the first look: where the game's files are, how its program is
-built, its text, and how its engine differs from the games' before. What is known for certain is said plainly; what is inferred says so. Addresses are
+built, its text, its objects, grammar and timers, how its engine differs from the games' before,
+and its pictures and animations. What is known for certain is said plainly; what is inferred says so. Addresses are
 `segment:offset` in hex, with segments relative to where the program loads. Every one of
 them can be looked at with the [tools](../tools/README.md).
 
@@ -101,6 +102,7 @@ The records, the other fixups, the manager's table and the thunks are read by wh
 | The objects | 521, [in records of a new design](#the-objects) |
 | The grammar | 383 forms, making 179 actions |
 | The timers | 58 |
+| The pictures | 1,130, once [copied from the CD](#the-pictures), and 17 animations |
 | The music | 82 songs in one file, 41 of them for the AdLib |
 | The fonts | 17 |
 | The regions | 9 files |
@@ -110,8 +112,6 @@ And what they don't yet:
 - **The saved game.** The code the tools look for isn't as it is in the games before:
   [the engine was built again](#the-engine-was-built-again). The objects, the grammar, the
   timers and the flags' routines were the same, and are read now.
-- **The pictures**, which are on the disc, and whose files are named another way:
-  `EP_LAND.PIC` and `HT_DOCK4.PIC`, where the earlier games had `GATE_301.PIC`.
 
 ## The text
 
@@ -330,9 +330,52 @@ That is what naming the flags needs, and they have no names yet.
 One thing found by code of the old kind still isn't: the code that saves a game, which
 says how `RESTART.DAT` is laid out.
 
+## The pictures
+
+The game's own folder has none. They are on the CD, in the folder `LEGEND.INI` names, and
+the tools' `disc` command lists what a game's CD has that its folder hasn't and, with
+`--copy`, copies it in: 39 files here, 38 of them named `.PIC`. With them the folder is
+whole, and nothing reads the CD's image again.
+
+The 38 are two kinds of file under one name.
+
+**Twenty-one are picture files**, `HOME_101.PIC` to `HOME_401.PIC`, kept as
+[*Spellcasting 301*'s](spellcasting-301.md) are and read with nothing changed: 1,144
+entries, 1,130 of them with a picture. They are for three displays, by the file's number:
+517 for the VGA in 16 colors, 604 for the VGA in 256, and 23 for the wider screen of 16
+colors. There are none for the EGA, which every game before had, and none for the Super
+VGA, which *Eric the Unready* has.
+
+**Seventeen are animations**, and nothing of Legend's: they are `.FLI` files as Autodesk
+Animator wrote them, 320 by 200 in 256 colors, named `.PIC`. They are the title,
+`GW2_LOGO.PIC` and `LEGEND.PIC`, and the scenes between the game's parts: a ship over a
+planet in `EP_LAND.PIC`, and `HT_DOCK4.PIC`, `HH_EXPLO.PIC` and the rest. Together they are
+2,760 frames, just under three minutes.
+
+A `.FLI` file is 128 bytes and then its frames:
+
+| At | What |
+|---|---|
+| 0 | The file's size, four bytes |
+| 4 | `AF11` |
+| 6 | How many frames |
+| 8 | The width, and at 10 the height |
+| 12 | 8, the bits a pixel |
+| 16 | How long a frame is shown, in seventieths of a second: 5 in most |
+
+A frame is its size, `F1FA`, a count of chunks, and the chunks, each its size, a kind, and
+what the kind says: 11 sets colors, 12 changes some lines of the picture before, 13 makes
+it black, 15 is a whole picture packed a line at a time, and 16 a whole picture as it is.
+The format is Autodesk's and well known; what is here is that these files are that, and
+every one of the seventeen reads to its last frame with only those five kinds.
+
+The tools' `animations` command lists them, and with `--out` writes each as an animated
+PNG, which a browser plays. The frames looked at are right: the title's letters, `GATEWAY
+2 HOMEWORLD`, and the ship over its planet.
+
 ## Still to do
 
-- The saved game, and the pictures.
+- The saved game.
 - The flags' names and the timers'.
 - The flags' names, and the three fields of a record that aren't known.
 - The game hasn't been run on the PC, which will need the disc as a drive for its pictures.

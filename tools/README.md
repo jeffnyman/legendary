@@ -175,8 +175,8 @@ python -m legendary_tools vocab <the game's folder>
 
 - **`extract`** writes a game's pictures, sounds, music and fonts out to be looked at and
   listened to, in a folder for each: `media/sc101/pictures`, `sounds`, `music` and, for a
-  game that has them, `fonts`. It is `pictures`, `sounds`, `music` and `fonts` with `--out`,
-  all at once. Given a folder of games, as `../legend`, it
+  game that has them, `fonts` and `animations`. It is `pictures`, `animations`, `sounds`,
+  `music` and `fonts` with `--out`, all at once. Given a folder of games, as `../legend`, it
   does each game in it, and says for each how much it wrote. A game's files may be in its
   folder, in a `game` inside it, or a folder deeper, as *Eric the Unready*'s are. The `media` folder is beside
   `tools`, and the repository ignores it: what's in it is the games' own, and no more the
@@ -191,6 +191,15 @@ python -m legendary_tools vocab <the game's folder>
   which plays each song through Ad Lib's driver as the game does and records the chip, a WAV
   file beside each `.rol` or `.mdi`. That needs `dotnet`, and takes some minutes a game;
   `--no-wav` leaves it out, and without `dotnet` it is left out and said so.
+- **`disc`** is for a game that came on a CD and reads some of its files from the disc, as
+  [*Gateway II*](../docs/gateway-ii.md#the-pictures) reads its pictures. With an image of
+  the CD beside the game, in its folder or in a `cd` inside it, it lists what the game's
+  folder on the disc has that the game's own folder hasn't; `LEGEND.INI` says which folder
+  that is. With `--copy` it copies those files into the game's folder, which is then whole:
+  nothing else here reads the image, and a game's folder can be kept without it.
+- **`animations`** lists the animations among a game's `.PIC` files, which *Gateway II*
+  has: Autodesk Animator's `.FLI` files, each with its frames, size and length. With
+  `--out`, it writes each to the folder as an animated PNG file, which a browser plays.
 - **`fonts`** lists the fonts in each `.FNT` file, which the games from *Spellcasting 301*
   have: how high each is, how many characters, and how wide. With `--out`, it writes each to
   the folder as two PNG files, all its characters and a line set in it. The format is in
@@ -260,6 +269,8 @@ python -m legendary_tools vocab <the game's folder>
 - **`pictures.py`**: the directory of a picture file, the five ways its pixels are packed,
   and a picture as a PNG file. `src/Legendary.Core/Pictures` is the same in C#, without the
   PNG, and reads the first game's alone.
+- **`animations.py`**: a `.FLI` animation's frames, and an animated PNG of them.
+- **`iso.py`**: a CD's image, read far enough to list a folder and take a file out.
 - **`fonts.py`**: a font file's header, its widths and its letters, and a picture of them.
 - **`gallery.py`**: the page `extract` writes to look through a game's pictures, sounds,
   songs and fonts.
