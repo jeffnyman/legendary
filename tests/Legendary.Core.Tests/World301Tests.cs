@@ -77,6 +77,40 @@ public sealed class World301Tests
     }
 
     /// <summary>
+    /// <i>Eric the Unready</i>'s world, in its own image: <i>Gateway</i>'s records with three
+    /// types changed, and exits of three kinds.
+    /// </summary>
+    [Fact]
+    public void Eric_the_Unreadys_world_is_read_from_its_image()
+    {
+        if (TestData.Game("ericun/game/ERIC") is not { } folder || TestData.File(folder, "ericmain.exe") is not { } path
+            || TestData.File(folder, "object.dat") is not { } names)
+        {
+            return;
+        }
+
+        var program = RtlinkProgram.Load(path);
+        Assert.Equal((29, 990), (program.Overlays.Count, program.Thunks.Count));
+        byte[] memory = program.Image().Memory.ToArray();
+        var world = World.Find(at => at < memory.Length ? memory[at] : (byte)0, memory.Length, WorldMap.EricTheUnready, File.ReadAllBytes(names));
+        Assert.NotNull(world);
+        Assert.Equal((259, 284, "turn 0"), (world.Room, world.Actor, world.Progress));
+        Assert.Equal(("Farmyard", "you", "farmer"), (world.Object(259).Name, world.Object(284).Name, world.Object(263).Name));
+        Assert.Equal([259], world.Object(284).Places);
+
+        // the trap door: a door, of the type that is in two rooms, which can be opened and closed
+        Assert.Equal((6, "trap door"), (world.Object(123).Type, world.Object(123).Name));
+        Assert.True(world.State(123).Has(15) && world.State(123).Has(20));
+
+        var all = Enumerable.Range(1, world.Map.ObjectCount).SelectMany(world.Exits).ToList();
+        Assert.Equal((88, 6, 103), (all.Count(exit => exit.Kind == 1), all.Count(exit => exit.Kind == 2), all.Count(exit => exit.Kind == 4)));
+        for (int number = 1; number <= world.Map.ObjectCount; number++)
+        {
+            Assert.All(world.Contents(number), inside => Assert.Contains(number, world.Object(inside).Places));
+        }
+    }
+
+    /// <summary>
     /// <i>Gateway</i>'s world, in its own image: this game's records with wider flags, the
     /// five kinds of exit, and a clock in minutes with a count of days.
     /// </summary>
