@@ -77,6 +77,30 @@ public sealed class World301Tests
     }
 
     /// <summary>
+    /// <i>Gateway II</i> is linked by .RTLink 6.10, whose file has a second table of symbols
+    /// that one fixup of the library names: the program loads, and every thunk goes into the
+    /// overlay it names.
+    /// </summary>
+    [Fact]
+    public void Gateway_II_is_loaded_from_the_newest_linkers_file()
+    {
+        if (TestData.Game("gateway2/game") is not { } folder || TestData.File(folder, "homemain.exe") is not { } path)
+        {
+            return;
+        }
+
+        var program = RtlinkProgram.Load(path);
+        Assert.Equal(0x0262, program.LinkerVersion);
+        Assert.Equal((34, 1003), (program.Overlays.Count, program.Thunks.Count));
+        Assert.Equal((0x1F61, 0x0835), (program.StartSegment, program.StartOffset));
+        Assert.All(program.Thunks, thunk =>
+        {
+            var overlay = program.Overlays.First(found => found.Number == thunk.Overlay);
+            Assert.InRange(thunk.TargetSegment, overlay.LoadSegment, overlay.EndSegment);
+        });
+    }
+
+    /// <summary>
     /// <i>Eric the Unready</i>'s world, in its own image: <i>Gateway</i>'s records with three
     /// types changed, and exits of three kinds.
     /// </summary>

@@ -42,8 +42,9 @@ public sealed class RtlinkProgram : OverlaidProgram
 
     // the one version whose flags are read here, the library's first word, and the sizes of
     // an overlay's entry in the manager's table and of a thunk
-    // the versions read here, 4.10 and 5.02: their files are the same, and their managers differ
-    private const int Version = 0x019A, LaterVersion = 0x01F6, LibraryMagic = 0x37BA, EntrySize = 18, ThunkSize = 10;
+    // the versions read here, 4.10, 5.02 and 6.10: the first two's files are the same, and
+    // their managers differ; the third's has a second table of symbols
+    private const int Version = 0x019A, LaterVersion = 0x01F6, LatestVersion = 0x0262, LibraryMagic = 0x37BA, EntrySize = 18, ThunkSize = 10;
 
     // a list of fixups' flags: named; the value counted from the frame and not from the
     // place; what is put there; a number to add comes with the places; what the target's
@@ -53,12 +54,13 @@ public sealed class RtlinkProgram : OverlaidProgram
     private const int TargetKind = 0x01C0, FrameKind = 0x0E00, Many = 0x1000, Shifted = 0x4000;
 
     // what a frame's or a target's number is of
-    private const int OfSegment = 0, OfGroup = 1, OfSymbol = 2, Absolute = 3;
+    private const int OfSegment = 0, OfGroup = 1, OfSymbol = 2, Absolute = 3, OfSecondSymbol = 4;
 
     private readonly byte[] _memory;
     private readonly HashSet<int> _relocations = [];
     private readonly int[] _segments;
     private readonly int[] _groups;
+    private readonly int _moreSymbols, _moreSymbolCount;
     private readonly int _symbols;
     private readonly int _symbolCount;
 
@@ -77,7 +79,7 @@ public sealed class RtlinkProgram : OverlaidProgram
 
         var image = Mz.Image.Span;
         LinkerVersion = Word(image, 0x34);
-        if (LinkerVersion is not (Version or LaterVersion))
+        if (LinkerVersion is not (Version or LaterVersion or LatestVersion))
         {
             throw new InvalidDataException($"Linked by a version of .RTLink that isn't known here: {LinkerVersion:X4}.");
         }
@@ -89,6 +91,9 @@ public sealed class RtlinkProgram : OverlaidProgram
         _groups = Addresses(image, Word(image, 0x0C), Word(image, 0x0E));
         _symbols = Word(image, 0x10);
         _symbolCount = Word(image, 0x12);
+
+        // 6.10 has a second table of symbols, after the first
+        (_moreSymbols, _moreSymbolCount) = LinkerVersion >= LatestVersion ? (Word(image, 0x4A), Word(image, 0x4C)) : (0, 0);
         MemoryEndSegment = (ushort)(stackSegment + (stackOffset + 15) / 16);
         _memory = new byte[MemoryEndSegment * 16];
 
@@ -297,7 +302,8 @@ public sealed class RtlinkProgram : OverlaidProgram
             case Absolute:
                 return (number * 16, 0);
             case OfSymbol when number >= 1 && number <= _symbolCount:
-                var symbol = Mz.Image.Span.Slice(_symbols + 8 * (number - 1), 8);
+            case OfSecondSymbol when number >= 1 && number <= _moreSymbolCount:
+                var symbol = Mz.Image.Span.Slice((kind == OfSymbol ? _symbols : _moreSymbols) + 8 * (number - 1), 8);
                 if (symbol[0] != (byte)'R')
                 {
                     break;
