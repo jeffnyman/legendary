@@ -480,9 +480,77 @@ The tools' `animations` command lists them, and with `--out` writes each as an a
 PNG, which a browser plays. The frames looked at are right: the title's letters, `GATEWAY
 2 HOMEWORLD`, and the ship over its planet.
 
+## Where a command is parsed and performed
+
+The routines are the ones *Eric the Unready* has, compiled again, and were found by
+setting the two games' code side by side, as that game's were found from *Spellcasting
+301*'s. Less of it lines up, 1,177 of the root's first 2,600 instructions where that pair
+had 2,519, but the routines come in the same order and do the same things.
+
+| What | Where |
+|---|---|
+| The routine that performs an action | `0000:0184` |
+| How many are being performed, one inside another | `4B4C:3120` |
+| The action, a byte, and the direction after it | `4B4C:9132`, `9133` |
+| Its object and its second object | `4B4C:9084`, `9082` |
+| The room, and the actor | `4B4C:314E`, `3150` |
+| The turns taken, and the clock, in minutes of the day | `4B4C:3154`, `3156` |
+| Where the main loop's `setjmp` returns | `0000:0750` |
+| A token taken: the next, after a full stop, after `and` | `3246:20F9`, `218A`, `2208`, in overlay 2 |
+| The word a token is | `4B4C:9086` |
+| The form found, which one, and the action it makes | `0000:0C5C`, `4B4C:9092`, `3C73:3AE6` |
+| The objects found for a lot of phrases | `0135:0A2B` |
+| The two lots, twelve bytes each, and how many | `3C73:3ACE`, `3C73:3AC8` |
+
+**The action and its objects are in the data segment.** Every game before kept them in
+a far segment with the lots of phrases, and read them through `ES`. Here the action, its
+direction, its two objects, the word a token is and the form found are plain variables of
+the data segment, and only the lots and the timers are where they were, in `3C73`.
+
+The routine that performs an action makes the same ten calls in the same order, to an
+object's routine, the routine before an action, and the action's own, and tests what each
+answers; they are closer together, the routine being shorter. Going somewhere is action
+134.
+
+The game counts turns and minutes both, as *Eric the Unready* does: it starts at eight in
+the morning on turn 0, and a command takes a minute and a turn.
+
+## The game as it runs
+
+The game starts on [the PC](the-pc.md) and takes commands, and the player's `--watch` and
+`--panel` follow it:
+
+```
+world: 8:00 am, turn 0, in Living Room (288)
+world:   exits: southwest to Bedroom (289); southeast to Foyer (290)
+world:   timer 50 (the PV goes dormant) started: 10 turns to go
+world:   words: examine [verb] sofa [noun]
+world:   form 68: examine OBJECT, which is action 46
+world:   object "sofa", looked for anywhere near: white sofa (306)
+world:   action 46: examine white sofa (306)
+world:     answered by white sofa (306), asked as the object: 1
+world: 8:02 am, turn 2, in Living Room (288)
+world:   words: southeast [verb, adjective or noun]
+world:   form 282: southeast, which is action 134
+world:   action 134: go southeast
+world:   you (1) moved: from Living Room (288) to Foyer (290)
+```
+
+**It asks for its pictures on drive D:**, at `D:\GW2\`, as `LEGEND.INI` tells it. The
+player gives it one of two things. When the game's folder has the pictures, copied from
+the CD by the tools' `disc`, the PC makes `D:\GW2` the game's own folder, with no CD in
+the drive. Otherwise, when an image of the CD is beside the game, it puts that in the
+drive. With the first, the game opens `LEGEND.PIC`, `GW2_LOGO.PIC` and `CD_ROM.PIC`, plays
+its title, and goes on into the story: the Artifact, six kilometers long, among the stars.
+The second hasn't been tried.
+
+It was run without a window, at an AT's speed, and opens its music file; its sound hasn't
+been heard.
+
 ## Still to do
 
 - What starts a saved game, and the four words before its timers.
+- The game with an image of its CD in the drive, and its animations and music heard and seen.
+- The words at `4B4C:3152` and `3158`, 1 as the game starts.
 - Flags 2, 14, 30, 31 and 40, and what the timers that print nothing do.
 - The three fields of a record that aren't known.
-- The game hasn't been run on the PC, which will need the disc as a drive for its pictures.
