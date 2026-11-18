@@ -4,8 +4,8 @@ Legend Entertainment, 1992. Frederik Pohl's *Gateway*, made a game by Glen Dahlg
 Verdu, on the system of [*Spellcasting 301*](spellcasting-301.md), which came out the same
 year.
 
-This is the first look, and so far it is how the program is built and what of it the tools
-already read. What is known for certain is said plainly; what is inferred says so. Addresses
+This is the first look, and so far it is how the program is built, its objects, and what
+of it the tools already read. What is known for certain is said plainly; what is inferred says so. Addresses
 are `segment:offset` in hex, with segments relative to where the program loads. Every one of
 them can be looked at with the [tools](../tools/README.md).
 
@@ -79,12 +79,73 @@ These are kept as *Spellcasting 301* keeps them, and are read by what reads that
   exactly. It has no four words before the count, as *Spellcasting 301*'s has.
 - **The music, the sounds, and the pictures' regions.**
 
+## The objects
+
+734 of them, in the eight types: 110 rooms, 241 things, 46 people, 15 doors, and the rest
+scenery and words. They are kept as *Spellcasting 301*'s are, with their names in
+`OBJECT.DAT`, their flags by a table, lists that end at a word with its top bit set, and
+each record with the number of its routine.
+
+| What | Where |
+|---|---|
+| The table of types, three bytes each | `27E4:0000` |
+| The table of flags, four bytes each: 42 flags | `27E4:0018` |
+| The table of objects, six bytes each | `27E4:00C0` |
+| How many objects | `4C0B:3BEE` |
+| The nouns, and the adjectives | `27E4:11F4`, `27E4:29AE` |
+| What's also in a room, and what's seen from it | `27E4:6418`, `4C0B:3C08` |
+| The exits, four bytes each: 518 rows | `27E4:417E` |
+| The doors an exit goes by | `27E4:4996` |
+| What an exit says, and the exits a variable opens | `27E4:4AD2`, `4C0B:3BF0` |
+
+The records are that game's with the flags of [*Timequest*](timequest.md#the-objects): four
+bytes of them, where that game had two, for a room, a person and two kinds of scenery.
+
+| Type | Bytes | Bytes of flags | Its routine's number |
+|---|---|---|---|
+| 1, a room | 26 | 4 | `10` |
+| 2, a thing | 36 | 6 | `22` |
+| 3 | 12 | 2 | `0A` |
+| 4 | 20 | 2 | `12` |
+| 5 | 22 | 4 | `14` |
+| 6, a door | 24 | 2 | `16` |
+| 7, a person | 32 | 4 | `1E` |
+| 8 | 24 | 4 | `16` |
+
+A thing's record is four bytes shorter than *Spellcasting 301*'s: it doesn't have the four
+that game added. The other fields follow the flags and the two lists of words in the order
+they have there.
+
+So do the exits. A room's are rows of the one table, and they are of *Timequest*'s five
+kinds, which the *Spellcasting* games had cut to three: 232 to a room, 35 by a door, 13 that
+only say something, 236 a numbered routine decides, and 2 a variable opens. What an exit
+says is named as a string of the file is, by a far pointer with `F000` for its segment. An
+exit a variable opens has its row another way than *Timequest*'s: the room, a word that
+isn't understood, the variable, and the number of one of the exits' texts for what it says
+while it's shut, where that game had a far pointer to the text. From Below Cave, up leads to
+the Entry Chamber once a byte is set, and until then says there doesn't seem to be any way
+to climb the cliff.
+
+### The routines
+
+709 of the 734 objects have a routine, and there are 696 routines. That is more than a
+table of far pointers in one segment was made to hold, so the table is in two parts of 512,
+at `2F10:0000` and `2F90:0000`. The routine that calls an object's, at `0476:00F8`, takes the
+number's top bits for the part and its low nine for the place in it.
+
+The two other kinds of routine [*Spellcasting 301* keeps in
+tables](spellcasting-301.md#two-more-kinds-of-routine) are here too: 44 objects have one that
+gives their own text, and 209 one that says which object a phrase means.
+
+With the routines named, the tools find the timers and every use of a flag:
+
+- **The timers**: 108, numbered, kept by the same six routines, in segment `02E3`. 106 are
+  started, stopped or asked about by number, in 594 calls.
+- **The flags**: 42, in the game's table, with 1,300 calls about one read.
+
 ## Still to do
 
-- **The objects.** The table is found, 734 objects in eight types, and the records' sizes are
-  no known game's: a room's is 26 bytes and a person's 32.
-- **The objects' routines**, and the flags and timers, which are told by whose routine a call
-  is in: the code that calls an object's routine isn't found.
+- The flags and the timers have no names.
 - **How the program names a string.** Only 140 of the 6,013 strings are named as
   *Spellcasting 301* names them, and 30 of the 56 blocks aren't named at all.
 - The game hasn't been run on the PC.
