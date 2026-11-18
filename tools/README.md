@@ -175,7 +175,10 @@ python -m legendary_tools vocab <the game's folder>
   does each game in it, and says for each how much it wrote. The `media` folder is beside
   `tools`, and the repository ignores it: what's in it is the games' own, and no more the
   repository's to hold than the games are. `--out` puts it somewhere else. It says how many
-  pictures it couldn't read, of any that are kept a way that isn't known.
+  pictures it couldn't read, of any that are kept a way that isn't known. Beside the three
+  folders it writes `index.html`, one page to look through them all in a browser: every
+  picture, a file of the game's at a time, each under its number and size; every sound, to
+  be played there; and the songs, as links.
 - **`music`** lists the songs in each `.MUS` file: each one's size and which of its two
   formats it's in, with a MIDI file's track names. With `--out`, it writes each to the folder
   as it is, a `.mid` file for the MT-32 and, for the AdLib, a `.rol` file in *Spellcasting
@@ -241,6 +244,8 @@ python -m legendary_tools vocab <the game's folder>
 - **`pictures.py`**: the directory of a picture file, the five ways its pixels are packed,
   and a picture as a PNG file. `src/Legendary.Core/Pictures` is the same in C#, without the
   PNG, and reads the first game's alone.
+- **`gallery.py`**: the page `extract` writes to look through a game's pictures, sounds and
+  songs.
 - **`sound.py`**: the songs of a music file, and a RealSound file as a WAV file.
   `src/Legendary.Core/Sound` has both in C#, without the WAV.
 - **`regions.py`**: the regions of a region file. `src/Legendary.Core/Pictures` has it in C#.
