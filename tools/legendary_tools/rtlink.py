@@ -13,7 +13,8 @@ the linker's own. The image starts with a header:
          and an offset
     +14  where the records start, and at +16 how many
     +1C  a run-time library: 1, its name, and at +26 a stamp its file has to have too
-    +34  the linker's version: 019A for 4.10, 01F6 for 5.02
+    +34  the linker's version: 019A for 4.10, 01F6 for 5.02, 0262 for 6.10
+    +4A  in 6.10, a second table of symbols, and at +4C how many: it comes after the first
     +4E  the library's extension, RTL
 
 The program isn't kept as it sits in memory. It is kept as records, one for each stretch of
@@ -65,8 +66,10 @@ from .program import Overlay, Program, Thunk
 
 # how the stub begins: call <find the startup code> / jmp far cs:[4]
 _ENTRY = bytes.fromhex("e805002eff2e0400")
-# the versions read here, 4.10 and 5.02: their files are the same, and their managers differ
-_VERSIONS = (0x19A, 0x1F6)
+# the versions read here, 4.10, 5.02 and 6.10: the first two's files are the same, and their
+# managers differ; the third's has a second table of symbols
+_VERSIONS = (0x19A, 0x1F6, 0x262)
+_SECOND_SYMBOLS = 0x262  # the version that first has a second table of symbols
 _LIBRARY_MAGIC = 0x37BA
 _ENTRY_SIZE = 18  # of an overlay's entry in the manager's table
 _THUNK_SIZE = 10
@@ -77,10 +80,12 @@ _FROM_FRAME = 0x0002  # the value is counted from the frame, not from the place 
 _KIND = 0x001C  # what is put there: 0 a byte, 1 an offset, 2 a segment, 3 both, 4 a high byte
 _ADDEND = 0x0020  # a number to add comes before the places
 _TARGET = 0x01C0  # what the target's number is of
-_FRAME = 0x0E00  # and the frame's: 0 a segment, 1 a group, 2 a symbol, 3 a segment's value
+_FRAME = 0x0E00  # and the frame's: 0 a segment, 1 a group, 2 a symbol, 3 a segment's value, 4 a
+# symbol of the second table
 _MANY = 0x1000  # a count of places follows, and not one place
 _SHIFTED = 0x4000  # the word there is shifted up twelve bits before the segment is added
 _ABSOLUTE = 3
+_SECOND_SYMBOL = 4  # a number in the second table of symbols
 
 
 class _Reader:
@@ -225,6 +230,11 @@ class RtlinkProgram(Program):
         self._symbols = [
             image[symbols + 8 * index : symbols + 8 * index + 8] for index in range(symbol_count)
         ]
+        # 6.10 has a second table of symbols, after the first
+        more, more_count = (
+            struct.unpack_from("<HH", image, 0x4A) if self.version >= _SECOND_SYMBOLS else (0, 0)
+        )
+        self._more_symbols = [image[more + 8 * index : more + 8 * index + 8] for index in range(more_count)]
         self.memory_end_segment = self.stack_segment + (self.stack_offset + 15) // 16
         self.exe_name = ""
 
@@ -275,8 +285,9 @@ class RtlinkProgram(Program):
             return self.groups[number - 1], 0
         if kind == _ABSOLUTE:
             return number * 16, 0
-        if kind == 2 and self._symbols[number - 1][:1] == b"R":
-            group, segment, offset = struct.unpack_from("<HHH", self._symbols[number - 1], 1)
+        symbols = self._symbols if kind == 2 else self._more_symbols if kind == _SECOND_SYMBOL else []
+        if 1 <= number <= len(symbols) and symbols[number - 1][:1] == b"R":
+            group, segment, offset = struct.unpack_from("<HHH", symbols[number - 1], 1)
             where = self._segment(segment) + offset
             base = self.groups[group - 1] if group else self._segment(segment)
             return base, where - base
