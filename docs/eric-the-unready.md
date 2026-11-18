@@ -4,7 +4,7 @@ Legend Entertainment, 1993. Bob Bates's comedy of a knight who is not up to it, 
 system of [*Gateway*](gateway.md) and [*Spellcasting 301*](spellcasting-301.md).
 
 This is what the first look found: how the program is built, what of it the tools already
-read, and its objects. What is known for certain is said plainly; what is inferred says so.
+read, its objects, flags and timers, and where a command is parsed and performed. What is known for certain is said plainly; what is inferred says so.
 Addresses are `segment:offset` in hex, with segments relative to where the program loads.
 Every one of them can be looked at with the [tools](../tools/README.md).
 
@@ -282,6 +282,69 @@ it runs a small voice says the clock has struck noon and the quest is over. The 
 routine starts four others, so it looks to be what begins a part of the game; that
 hasn't been confirmed.
 
+## Where a command is parsed and performed
+
+The routines are *Spellcasting 301*'s, nearly instruction for instruction, and not
+*Gateway*'s where the two differ: the call that finds a phrase's objects is in the root
+again, and what is found is kept that game's way. So the addresses were found by setting
+this game's code beside that one's, a routine at a time, and reading across: of the first
+2,600 instructions of the root, 2,519 are the same but for the addresses in them.
+
+| What | Where |
+|---|---|
+| The routine that performs an action | `0000:01A4` |
+| How many are being performed, one inside another | `495D:38AC` |
+| The action, a byte, and the direction after it | `3C53:D080`, `D081` |
+| Its object and its second object | `3C53:401A`, `3C53:4018` |
+| The room, and the actor | `495D:38D4`, `38D6` |
+| The turns taken, and the clock, in minutes of the day | `495D:38DA`, `38DC` |
+| Where the main loop's `setjmp` returns | `0000:0891` |
+| A token taken: the next, after a full stop, after `and` | `31DF:236F`, `2400`, `247E`, in overlay 2 |
+| The word a token is | `3C53:81DA` |
+| The form found, which one, and the action it makes | `0000:0E27`, `3C53:81E6`, `3C53:3DBA` |
+| The objects found for a lot of phrases | `016C:0B44` |
+| The two lots, twelve bytes each, and how many | `3C53:3DA2`, `3C53:3D9C` |
+| The timers' table, how many are going, and which is run | `3C53:834A`, `495D:38C2`, `38C4` |
+| The timers' routines: start, stop, and the call that runs one | `028D:002A`, `009C`, `0208` |
+
+The ten places a routine has answered are at the same ten offsets as in *Spellcasting
+301* and *Gateway*. Going somewhere is action 159.
+
+**The game counts turns and minutes both.** It starts at noon, 720 minutes, on turn 0. A
+command that takes a turn takes a minute and a turn; `wait` takes ten minutes and no turn.
+*Gateway* counted minutes alone and *Spellcasting 301* turns of five minutes.
+
+**A timer's count goes down with the clock**, and not with the turns: after three turns
+and a `wait`, 13 minutes, the farmer's 660 is 647. So the farmer fires you at eleven at
+night.
+
+## The game as it runs
+
+The game starts on [the PC](the-pc.md) and takes commands, and the player's `--watch` and
+`--panel` follow it:
+
+```
+world: 12:00 pm, turn 0, in Farmyard (259)
+world:   exits: west to Barn (260); northeast to Privy (261) by door (277); in: routine 46 decides
+world:   timer 2 (the farmer wants an answer) started: 5 turns to go
+world:   timer 1 (the farmer fires you) started: 660 turns to go
+world:   words: examine [verb] farmer [noun]
+world:   form 88: examine OBJECT, which is action 56
+world:   object "farmer", looked for anywhere near: farmer (263)
+world:   action 56: examine farmer (263)
+world:     answered by farmer (263), asked as the object: 1
+world: 12:02 pm, turn 2, in Farmyard (259)
+world:   words: west [verb, adjective or noun]
+world:   form 435: west, which is action 159
+world:   action 159: go west
+world:   you (284) moved: from Farmyard (259) to Barn (260)
+```
+
+Run with no arguments, as here, it picks the VGA in 256 colors, and its opening shows: a
+castle on a hill, and `And it came to pass that Sir Eric rode out`. It was run without
+sound checked and without a window, and with `XGA` it hasn't been run at all: whether the
+PC here has the Super VGA's screen for it isn't known.
+
 ## A saved game
 
 `RESTART.DAT` is 16,395 bytes, and is laid out as *Spellcasting 301*'s is:
@@ -300,5 +363,5 @@ hasn't been confirmed.
 - The 28 strings no place names, outside the help.
 - Flags 3, 9, 30 and 38.
 - What timers 3, 50, 65 and 70 do, which their names only point at.
-- Where a command is parsed and performed, for the player's `--watch`.
-- The game hasn't been run on the PC.
+- The game with `XGA`, and its music and sounds, on the PC.
+- What the word at `495D:38D8` is, 2 as the game starts, and the one at `38DE`, 1.

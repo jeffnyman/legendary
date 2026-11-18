@@ -21,7 +21,7 @@ question of what a player is stays open until more of the games is understood.
 `--watch` and `--panel` show its world; [notes](docs/spellcasting-201.md) |
 | *Gateway* | 1992 | `gateway` | Plays, with its pictures and music; not yet played through. Built as *Spellcasting 301* is: its program, run-time library and overlays are read, and its vocabulary, objects, flags, grammar, routines, timers, text, pictures, saved game, music and sounds, and `--watch` and `--panel` show its world; [notes](docs/gateway.md) |
 | *Spellcasting 301: Spring Break* | 1992 | `sc301` | Plays, with its pictures and music; not yet played through. Linked with a newer .RTLink: its program, run-time library and overlays are read, and its vocabulary, objects, flags, grammar, routines, timers, text, pictures, music and sounds, and `--watch` and `--panel` show its world; [notes](docs/spellcasting-301.md) |
-| *Eric the Unready* | 1993 | `ericun` | Not yet tried on the PC. Built as *Gateway* is: its program, run-time library and overlays are read, and its vocabulary, objects, grammar, routines, timers, text, saved game, pictures, music, sounds and fonts; [notes](docs/eric-the-unready.md) |
+| *Eric the Unready* | 1993 | `ericun` | Starts on the PC and takes commands; not yet played. Built as *Gateway* is: its program, run-time library and overlays are read, and its vocabulary, objects, flags, grammar, routines, timers, text, saved game, pictures, music, sounds and fonts, and `--watch` and `--panel` show its world; [notes](docs/eric-the-unready.md) |
 | *Gateway II: Homeworld* | 1993 | `gateway2` | Not yet tried |
 | *Mission Critical* | 1995 | `mcritic` | Not yet tried; a 32-bit program, and another kind of game |
 
@@ -147,7 +147,8 @@ you (153) moved: from Bedchamber (1) to Potty
 The cloak is on your second list, which is what you wear. `--watch` and `--panel` can be given
 together, for the panel and the terminal's full record of the play.
 
-*Spellcasting 201*, *Timequest*, *Spellcasting 301* and *Gateway* can be watched the same way, with all of it: the room,
+*Spellcasting 201*, *Timequest*, *Spellcasting 301*, *Gateway* and *Eric the Unready* can be
+watched the same way, with all of it: the room,
 each command's words, form and objects, each action and who answered it, the timers, and
 what changed. For *Timequest* the room comes with the place and the year, as `Rome, 44 BC`.
 
