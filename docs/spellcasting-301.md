@@ -3,8 +3,8 @@
 Legend Entertainment, 1992. The third *Spellcasting*, by Steve Meretzky.
 
 This is what the first look found: how the program is built and loaded, its vocabulary, its
-grammar, its objects and flags, which routine is whose, its timers, its text, and where a
-command is parsed and performed. What is
+grammar, its objects and flags, which routine is whose, its timers, its text, its pictures,
+and where a command is parsed and performed. What is
 known for certain is said plainly; what is inferred says so. Addresses are `segment:offset`
 in hex, with segments relative to where the program loads. Every one of them can be looked
 at with the [tools](../tools/README.md).
@@ -381,6 +381,72 @@ The routine at `1D3A:10C6`, which prints, is handed 2,348 of them at once. The o
 are reached some other way, by a number that is worked out or from tables in the data,
 which the tools don't follow.
 
+## The pictures
+
+649 of them, in 17 files, and kept a third way. The directory is still twelve bytes to a
+picture, with the same things in the same places. The byte that says how a picture is kept
+is read anew, and the pixels are packed by a method none of the earlier games used.
+
+### The byte
+
+| Bits | What |
+|---|---|
+| The low four | the display the picture is for: 1 the EGA, 2 the VGA in 16 colors, 3 the VGA in 256, 4 not known |
+| `10` | it starts with a palette |
+| `20` or `40` | its pixels follow, imploded |
+
+Every picture has `20` or `40`, and both are packed the same way. Most of the `40`s are small
+pieces drawn at a place; what the bit says isn't known.
+
+The files go by display too. `S301_100.PIC` and `101` are the EGA's, `102` to `109` and
+`200` and `201` the VGA's in 16 colors, `300` to `302` the VGA's in 256, and `400` and
+`401` are the fourth display's, in 16 colors.
+
+### The palette
+
+For the EGA it is what the earlier games had, 16 bytes, each one of the EGA's 64 colors by
+number. For the VGA it is three bytes a color, red, green and blue from 0 to 63, as the
+VGA's own registers take them: 48 bytes for 16 colors, 768 for 256.
+
+A picture without one is still a piece of the picture before it that has one, in its
+colors, as in [*Timequest*](timequest.md#the-pictures).
+
+### The pixels
+
+They are packed by **PKWARE's implode**, the method of its Data Compression Library, which
+the game has linked in: the routine that unpacks is at `154A:0CA6`, and takes two routines
+of the game's, one to read more of the file and one to take what's unpacked. The file is
+read 2,048 bytes at a time.
+
+Imploded data starts with two bytes: 0, for bytes kept as they are and not by a code, and
+6, the size of the window as a power of two, 4,096 bytes. Then bits, from each byte's low
+bit up:
+
+- a 0 bit, and a byte as it is;
+- or a 1 bit, a length, and a distance back, for that many bytes copied from that far back
+  in what has been unpacked. The length is a Huffman code and up to eight bits more. The
+  distance is a Huffman code for its high bits, and six bits as they are for its low ones,
+  or two when the length is 2.
+
+A length of 519 ends it. The two Huffman codes are the method's own, the same for every
+file, and aren't kept in it.
+
+Unpacked, the pixels are rows, each starting on a byte:
+
+| Colors | A byte is |
+|---|---|
+| 256 | one pixel |
+| 16 | two, the left one in its low half |
+| 2 | eight, the left one in its top bit |
+
+The tools take which it is from how many bytes there are, since one picture for the EGA has
+a 0 for its display. Every one of the 649 unpacks to exactly the bytes its width and height
+need, and so do all 1,504 of *Gateway*'s, which are kept the same way. Those looked at are
+right: a chapter's title in 256 colors, a room in 16 with its pieces in its colors, and
+*Gateway*'s titles for the EGA and the VGA.
+
+The `.FNT` files beside them are, by their names, the game's fonts, and aren't read.
+
 ## Where a command is parsed and performed
 
 The steps are the earlier games', and the places the player watches are these:
@@ -436,8 +502,8 @@ packed text, and this game's world.
 
 ## Still to do
 
-- The pictures are [a third kind](timequest.md#the-pictures), many of them 320 by 200, and
-  aren't read.
+- What display 4 is, and what the `40` in a picture's kind says.
+- The fonts.
 - The saved game's layout: the code that saves isn't found.
 - The strings that aren't named by a constant: half of them.
 - Twelve flags aren't named, and timers 37 to 42 are named only by whose they are.

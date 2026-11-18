@@ -364,9 +364,9 @@ All but four of the 144 palettes have white for color 0 and black for color 15, 
 of the EGA's own.
 
 The title, read this way, is the game's title, and a room's pieces are in the room's colors.
-*Spellcasting 201* keeps its pictures the same way. *Spellcasting 301* and *Gateway* set
-more bits in the byte, and combinations of them, with pictures of 320 by 200: theirs aren't
-read.
+*Spellcasting 201* keeps its pictures the same way. *Spellcasting 301* and *Gateway* keep
+theirs [a third way](spellcasting-301.md#the-pictures), packed by another method
+altogether.
 
 ## Where a command is parsed and performed
 

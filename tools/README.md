@@ -170,8 +170,7 @@ python -m legendary_tools vocab <the game's folder>
   does each game in it, and says for each how much it wrote. The `media` folder is beside
   `tools`, and the repository ignores it: what's in it is the games' own, and no more the
   repository's to hold than the games are. `--out` puts it somewhere else. It says how many
-  pictures it couldn't read, which is all of them from *Spellcasting 301* on: those games
-  keep theirs a way that isn't worked out yet.
+  pictures it couldn't read, of any that are kept a way that isn't known.
 - **`music`** lists the songs in each `.MUS` file: each one's size and which of its two
   formats it's in, with a MIDI file's track names. With `--out`, it writes each to the folder
   as it is, a `.mid` file for the MT-32 and, for the AdLib, a `.rol` file in *Spellcasting
@@ -183,9 +182,10 @@ python -m legendary_tools vocab <the game's folder>
   `s101_e1_038.png`: the EGA's in their own colors, the CGA's in black and white. How they're
   packed is in [docs/spellcasting-101.md](../docs/spellcasting-101.md#the-pictures). It
   writes *Spellcasting 101*'s, *Timequest*'s and *Spellcasting 201*'s, the last two of which
-  [say how a picture is packed another way](../docs/timequest.md#the-pictures). It lists the
-  later games' and writes none of them: a picture of a kind that isn't known is left out,
-  and counted.
+  [say how a picture is packed another way](../docs/timequest.md#the-pictures), and
+  *Spellcasting 301*'s and *Gateway*'s, which are
+  [imploded](../docs/spellcasting-301.md#the-pictures) and come in 256 colors too. A picture
+  of a kind that isn't known is left out, and counted.
 - **`regions`** lists the regions in each `.RGN` file: for each picture that has them, the
   object the rest of the picture is, and each rectangle, in the EGA's pixels, with the object
   that's there. The objects are named when the program's table of them can be read, which is
@@ -233,7 +233,7 @@ python -m legendary_tools vocab <the game's folder>
   exits, and the parts of a saved state.
 - **`loads.py`**: finding the routine that loads a string block and the calls to it, and from
   them the block behind an array.
-- **`pictures.py`**: the directory of a picture file, the four ways its pixels are packed,
+- **`pictures.py`**: the directory of a picture file, the five ways its pixels are packed,
   and a picture as a PNG file. `src/Legendary.Core/Pictures` is the same in C#, without the
   PNG, and reads the first game's alone.
 - **`sound.py`**: the songs of a music file, and a RealSound file as a WAV file.
