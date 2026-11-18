@@ -3,8 +3,8 @@
 Legend Entertainment, 1993. The second game from Frederik Pohl's books, by Glen Dahlgren
 and Mike Verdu.
 
-This is the start of the first look: where the game's files are, and how its program is
-built. What is known for certain is said plainly; what is inferred says so. Addresses are
+This is the start of the first look: where the game's files are, how its program is
+built, and its text. What is known for certain is said plainly; what is inferred says so. Addresses are
 `segment:offset` in hex, with segments relative to where the program loads. Every one of
 them can be looked at with the [tools](../tools/README.md).
 
@@ -97,18 +97,40 @@ The records, the other fixups, the manager's table and the thunks are read by wh
 |---|---|
 | The program and its overlays | all of it |
 | The vocabulary | 2,028 words |
+| The text | 4,875 strings, [with one change](#the-text) |
 | The music | 82 songs in one file, 41 of them for the AdLib |
 | The fonts | 17 |
 | The regions | 9 files |
 
 And what they don't yet:
 
-- **The text.** `HOMESTR.DAT` starts with a table kept another way: the tools say its
-  blocks don't end where the file does.
 - **The grammar, the objects and the timers.** The code the tools look for, to find each
   table, isn't found as it is in the games before.
 - **The pictures**, which are on the disc, and whose files are named another way:
   `EP_LAND.PIC` and `HT_DOCK4.PIC`, where the earlier games had `GATE_301.PIC`.
+
+## The text
+
+`HOMESTR.DAT` is 32 blocks of 4,875 strings, 628,562 bytes of text packed into 313,989,
+with a tree of 216 nodes and 128 words: the commonest are `After`, `Fogram`, `Gateway`,
+`He`, `Heechee`.
+
+It is kept as [*Spellcasting 301*'s](spellcasting-301.md) is, a word for every string
+saying how many bytes it is packed into, with one thing changed. **A block's size is four
+bytes**, where it was two, so its entry in the table that starts the file is six bytes and
+not four: how many strings, a word, and the size. No block needs it: the biggest is 56,371
+bytes, under the 65,535 a word holds. The game before, *Eric the Unready*, still has two.
+
+Read that way the file comes out whole: each block's strings add up to its size, the
+blocks end where the file does, and all 4,875 strings unpack to plain text.
+
+### How a string is named
+
+As from *Spellcasting 301*: by a far pointer whose segment is `F000`, and whose offset is
+the block times 1,024 and the string's place in it. The routine most are handed to, which
+prints, is at `18A2:11FC`. There are 5,054 places that name a string, and 4,785 of the
+4,875 strings are named by one. Block 1 is named by none: it is the help, the keys and what the mouse
+does, shown by its block as *Eric the Unready*'s is.
 
 ## Still to do
 
