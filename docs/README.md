@@ -44,6 +44,9 @@ hold.
   only on its CD, with animations that are Autodesk's `.FLI` files; a program linked by
   .RTLink 6.10; and the engine built again by a later compiler, so that every table had to
   be found again. Its 521 objects are records of a new design in seven types.
+- [Companions of Xanth](companions-of-xanth.md): 1993. The start of a first look at
+  Legend's first game without a parser: one whole program where the others are a launcher,
+  a game and a library, with part of its memory kept after the image in its file.
 - [Spellcasting 201: The Sorcerer's Appliance](spellcasting-201.md): 1991. The same system,
   linked by .RTLink/Plus in place of PLINK86: a program DOS can't load by itself, kept as
   records of its segments with their fixups, which the linker's own startup code puts in
