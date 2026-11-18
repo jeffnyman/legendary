@@ -37,6 +37,13 @@ from .program import Image, Program
 # mov es,[segment variable] / mov al,es:[si+n]: an object's type, with SI six times its number,
 # so that n is six less than where the table starts
 _TABLE = re.compile(rb"\x8e\x06(..)\x26\x8a\x84(..)", re.DOTALL)
+# Gateway II's, from a later compiler: the entry is found with BX, and into AL, BL or CL
+_TABLE_BX = re.compile(rb"\x8e\x06(..)\x26\x8a[\x87\x8f\x9f](..)", re.DOTALL)
+# and its count is in the data segment, read with no segment loaded: mov ax,[count] /
+# cmp [bp+6],ax
+_COUNT_NEAR = re.compile(rb"\xa1(..)\x39\x46\x06", re.DOTALL)
+# and a type's entry is a byte or two before BX: mov es,[variable] / mov al|cl,es:[bx-3]
+_TYPES_BX = re.compile(rb"\x8e\x06(..)\x26\x8a[\x87\x8f]([\xf0-\xff]\xff)", re.DOTALL)
 # mov es,[segment variable] / mov ax,es:[count] / cmp [bp+6],ax: is the number an object's?
 _COUNT = re.compile(rb"\x8e\x06(..)\x26\xa1(..)\x39\x46\x06", re.DOTALL)
 # mov es,[segment variable] / mov al,es:[bx+entry] / sub ah,ah / cmp ax,[bp...]: a type's entry
@@ -305,12 +312,18 @@ class ObjectTable:
             raise ValueError("the program's data segment wasn't found")
         self.data_segment = (notice - 8) // 16
 
-        table_variable, table_offset = self._commonest(_TABLE, root)
+        # a later compiler's code, as Gateway II has, keeps the count where DS reaches it and
+        # finds the tables' entries by other registers
+        self.near = not _COUNT.search(root) and bool(_COUNT_NEAR.search(root))
+        table_variable, table_offset = self._commonest(_TABLE_BX if self.near else _TABLE, root)
         table_offset = self._signed(table_offset) + 6
-        count_variable, count_offset = self._commonest(_COUNT, root)
+        count_variable, count_offset = (
+            (0, self._commonest(_COUNT_NEAR, root)[0]) if self.near else self._commonest(_COUNT, root)
+        )
         # the entries are read a byte at a time, so the lowest offset read is the table's start
-        entries = collections.Counter(match.groups() for match in _TYPES.finditer(root))
-        types_variable = self._commonest(_TYPES, root)[0]
+        types = _TYPES_BX if self.near else _TYPES
+        entries = collections.Counter(match.groups() for match in types.finditer(root))
+        types_variable = self._commonest(types, root)[0]
         types_offset = min(
             self._signed(int.from_bytes(offset, "little"))
             for variable, offset in entries
@@ -343,7 +356,11 @@ class ObjectTable:
         self._room_rows = [self._data_word(variable) * 16 + offset for variable, offset in rows][:2]
 
         self.table_segment = self._data_word(table_variable)
-        self.count = self._word(self._data_word(count_variable), count_offset)
+        self.count = (
+            self._data_word(count_offset)
+            if self.near
+            else self._word(self._data_word(count_variable), count_offset)
+        )
         types_segment = self._data_word(types_variable)
         table = self.table_segment * 16 + table_offset
         self._find_flags(root, table)
