@@ -143,6 +143,65 @@ With the routines named, the tools find the timers and every use of a flag:
   started, stopped or asked about by number, in 594 calls.
 - **The flags**: 42, in the game's table, with 1,300 calls about one read.
 
+## The flags
+
+42 flags, each with a bit and the types that have it, in the table at `27E4:0018`. Three
+routines in segment `0157` do everything with them: `03A6` tests one, `03E0` sets it and
+`0413` clears it.
+
+They are the things [*Timequest*'s flags](timequest.md#the-flags) are, more than the
+*Spellcasting* games': a thing that can be taken has one flag before it has been and another
+after, and a person can be one who can't answer. The names are from the code that asks
+about each, or from what has it.
+
+| Flag | What it is | From |
+|---|---|---|
+| 1 | takes `some` | what has it |
+| 2 | touched; a place, visited | `get` and `open` set it |
+| 4 | its name takes no article | what has it |
+| 5 | its name takes `an` | what has it |
+| 6 | plural | what has it |
+| 7 | seen by the player | set 191 times |
+| 8 | not listed among a room's contents | `get` clears it |
+| 10 | can be taken, and hasn't been | the routine before `get` asks it, and `get` clears it |
+| 12 | open | `open` sets it, and says `already open` |
+| 13 | a liquid | what has it; `throw` asks |
+| 14 | can be opened and closed | `open` and `close` |
+| 15 | a door | the doors |
+| 16 | opened for you as you go through it | an exit by a door that isn't open says `[Opening it first.]` and opens it, or says it isn't open |
+| 17 | what's dropped in it lands outside it | what has it: a scale; `drop` asks |
+| 18 | can be eaten | `eat` |
+| 19 | a container | `open` says what's found in one; `empty`, `pour` |
+| 21 | alive | what has it; `kill`, `attack`, `greet`, `feed` |
+| 22 | lit; a place, has light | every place has it |
+| 23 | can be worn | `put on`, `remove` |
+| 24 | cuts | `cut` |
+| 26 | can be read | `examine` |
+| 27 | cuts | `cut` |
+| 28 | things can be on it | `climb in`, `empty`, `pour` |
+| 29 | can be taken | the routines before `get`, `drop` and `throw` |
+| 30 | a key | `open` asks it of what's used, and goes on to `unlock` |
+| 31 | can be seen through | `open` doesn't say what's found in one |
+| 33 | turned on | `activate` sets it, `put out` clears it |
+| 34 | can be got in or on | `climb in`, `look in` |
+| 35 | locked | `open` says it appears to be locked |
+| 36 | can be turned on and off | `activate`, `light`, `put out` |
+| 37 | playing cards | what has it; `fold` asks |
+| 38 | can be sat on | `sit` |
+| 39 | outdoors | 53 of the 110 places; `throw`, `look` |
+| 40 | female | what has it |
+| 41 | a person, and not you or a monster | everyone but you, the hydra and the demons |
+| 42 | can't answer | `ask`, `tell`, `attack` |
+
+Flag 16 is new. An exit by a door that isn't open asks it of the door: with it, the game
+says `[Opening the door first.]`, opens it, and lets you through; without, the door isn't
+open and you stay. Six doors have it, the ones to rooms.
+
+Flags 17, 21, 37 and 41 are named from what has them. Not named: 3, which the ripe berries
+alone have; 9, which nothing starts with and the objects' routines test 231 times and set
+119, each for a purpose of its own; 11, which 56 objects of scenery have; 25, which 29 things
+to carry have; and 32. Flag 20 is in the table and nothing has it or asks about it.
+
 ## How the program names a string
 
 As [*Spellcasting 301* does](spellcasting-301.md#how-the-program-names-a-string): as a far
@@ -163,5 +222,5 @@ searched, and it found 140 strings and took the game to name the rest some other
 
 ## Still to do
 
-- The flags and the timers have no names.
+- The timers have no names, and six flags.
 - The game hasn't been run on the PC.

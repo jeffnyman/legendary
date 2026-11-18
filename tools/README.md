@@ -130,9 +130,10 @@ python -m legendary_tools dis ../../legend/sc101/game 3670:054e
   [docs/spellcasting-101.md](../docs/spellcasting-101.md#what-the-flags-are). `objects` with
   a number says each of the object's flags by name. It names *Spellcasting 101*'s flags,
   [*Timequest*'s](../docs/timequest.md#the-flags),
-  [*Spellcasting 201*'s](../docs/spellcasting-201.md#what-the-flags-are) and
-  [*Spellcasting 301*'s](../docs/spellcasting-301.md#what-the-flags-are), and for the last
-  two gives each flag's bit and the types that have it too, from the game's table of flags.
+  [*Spellcasting 201*'s](../docs/spellcasting-201.md#what-the-flags-are),
+  [*Spellcasting 301*'s](../docs/spellcasting-301.md#what-the-flags-are) and
+  [*Gateway*'s](../docs/gateway.md#the-flags), and for the last
+  three gives each flag's bit and the types that have it too, from the game's table of flags.
 
 - **`timers`** lists the game's timers, the routines it puts by to run on a later turn or on
   every turn: each one's routine, the routine in an overlay that it calls, and every call that
