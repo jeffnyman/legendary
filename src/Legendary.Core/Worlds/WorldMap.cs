@@ -223,6 +223,11 @@ public sealed record AnswerPoint(ushort Offset, Asked Asked);
 /// In the data, for a game that counts days and not turns, how many days have passed. With
 /// it, <paramref name="MovesOffset"/> is 0: the game keeps no count of turns.
 /// </param>
+/// <param name="StateSegment">
+/// The segment the action, its direction and its two objects are in, with the word a token
+/// is and the form found, when it isn't <paramref name="ActionSegment"/>: <i>Gateway II</i>
+/// keeps them in its data segment, and the lots and the timers where the action was.
+/// </param>
 /// <param name="FoundSize">
 /// The size of what was found for a phrase: 6, a count and at 2 a far pointer to the objects,
 /// or 4, a count and at 2 where the objects are in the stack's segment.
@@ -261,7 +266,7 @@ public sealed record WorldMap(
     ushort ClocksSegment = 0, ushort ClocksOffset = 0, ushort HomeClockOffset = 0,
     IReadOnlyList<string>? PlaceNames = null, int Times = 0, ushort? FoundSegment = null,
     int ExitVariableAt = 2, ushort FinderSegment = 0, ushort FinderOffset = 0, int FoundSize = 6,
-    ushort DaysOffset = 0)
+    ushort DaysOffset = 0, ushort? StateSegment = null)
 {
     /// <summary>
     /// Whether the places in the program where a command is parsed are known. A map can have
@@ -1282,4 +1287,155 @@ public sealed record WorldMap(
         WideGrammar: true, TimerSize: 4, ClockStep: 1,
         TokenizerSegment: 0x31DF, TokenizerOffset: 0x01F4,
         FoundSegment: 0x016C);
+
+    /// <summary>
+    /// <i>Gateway II: Homeworld</i> (1993): the system built again by a later compiler, with
+    /// records of a new design in seven types, the action and its objects in the data segment
+    /// where the games before kept them far, and no doors among its exits.
+    /// </summary>
+    public static WorldMap Gateway2 { get; } = new(
+        DataSegment: 0x4B4C, TableSegment: 0x27D7, ObjectCount: 521, CountOffset: 0x3336, TypesOffset: 0xFFFD,
+        RoomOffset: 0x314E, ActorOffset: 0x3150, MovesOffset: 0x3154, ClockOffset: 0x3156,
+        ActionSegment: 0x3C73, ActionOffset: 0x9132, ObjectOffset: 0x9084, SecondObjectOffset: 0x9082,
+        PerformSegment: 0x0000, PerformOffset: 0x0184, DepthOffset: 0x3120,
+        Answers:
+        [
+            // the same ten calls, in the same order, closer together
+            new(0x02ED, Asked.Object), new(0x0310, Asked.Object), new(0x033E, Asked.Object), new(0x0355, Asked.Object),
+            new(0x0368, Asked.Before),
+            new(0x0394, Asked.Object), new(0x03AB, Asked.Object), new(0x03D7, Asked.Object), new(0x03EE, Asked.Object),
+            new(0x0401, Asked.Action),
+        ],
+        JumpBackOffset: 0x0750, GoAction: 134, DirectionOffset: 0x9133,
+        Directions: Spellcasting101.Directions,
+        GrammarSegment: 0x2B9A, FormsOffset: 0x045E, SecondsOffset: 0x1354, VocabularyFile: "VOCAB.DAT",
+        ActionNames: new Dictionary<int, string> { [134] = "go" },
+        // the routine that gathers the tokens is in overlay 2, with the one that takes a word off the line
+        TokenSegment: 0x3246, TokenOffset: 0x20F9, AfterStopOffset: 0x218A, AfterAndOffset: 0x2208, TokenWordOffset: 0x9086,
+        WordTokens: Spellcasting101.WordTokens, MarkTokens: Spellcasting101.MarkTokens, EndTokens: Spellcasting101.EndTokens,
+        FormOffset: 0x0C5C, FormIndexOffset: 0x9092, FormActionOffset: 0x3AE6, FoundOffset: 0x0A2B, LotsOffset: 0x3ACE, LotSize: 12, LotCountOffset: 0x3AC8,
+        TimersOffset: 0x9010, TimerCountOffset: 0x3136, TimerIndexOffset: 0x3138,
+        TimerSegment: 0x0234, TimerStartOffset: 0x0026, TimerStopOffset: 0x0096, TimerRunOffset: 0x01F1,
+        TimerNames: new Dictionary<int, string>
+        {
+            [1] = "a question, which yes and no end",
+            [2] = "the pictures fade away",
+            [3] = "nothing",
+            [4] = "nothing",
+            [5] = "the artist's own",
+            [6] = "a diggle crawls by",
+            [7] = "the hypo unit's own, every turn",
+            [8] = "the crystal rod and the portal change color",
+            [9] = "a button pops out",
+            [10] = "a screen goes wild",
+            [11] = "a tentacle grabs the kord",
+            [12] = "the insect creatures attack, turn by turn",
+            [13] = "the creatures enter the specimen cage",
+            [14] = "the creatures leave the specimen cage",
+            [15] = "the creatures in the cage slow and die",
+            [16] = "the creatures scrabble again",
+            [17] = "the green blob, turn by turn",
+            [18] = "the carnivores in the clearing",
+            [19] = "the fruit pod's own",
+            [20] = "the lizard takes the red egg",
+            [21] = "nothing",
+            [22] = "the man with the thermos, turn by turn",
+            [23] = "your Heechee escort hurries you on",
+            [24] = "the lecture hall's light turns green",
+            [25] = "your communicator pings",
+            [26] = "your escort grows impatient",
+            [27] = "the Heechee city's own",
+            [28] = "the students and the hologram",
+            [29] = "the ape men in the Cavern",
+            [30] = "the ape men in the Grasslands",
+            [31] = "the spear at the River Bank",
+            [32] = "the alien robot comes, click-clack",
+            [33] = "the guidething wakes and speaks",
+            [34] = "the ship's computer speaks, turn by turn",
+            [35] = "the Place of Seeing, turn by turn",
+            [36] = "the field generator's own",
+            [37] = "the metal disk seals, and you fall",
+            [38] = "a probe crashes",
+            [39] = "something falls from the sky",
+            [40] = "the technicians flood out of the temple",
+            [41] = "the technicians swarm in",
+            [42] = "the speaker speaks",
+            [43] = "the beams of light shift back",
+            [44] = "the workthing and the case, turn by turn",
+            [45] = "the workthing comes back from the vault",
+            [46] = "the tram, turn by turn",
+            [47] = "the prototype's power runs low",
+            [48] = "the prototype's battery recharges",
+            [49] = "sinking into the slime",
+            [50] = "the PV goes dormant",
+            [51] = "the escort and the red tag",
+            [52] = "a voice in your condominium",
+            [53] = "the terrorists' attack, turn by turn",
+            [54] = "the grenade explodes",
+            [55] = "the match's own",
+            [56] = "the radio's messages, turn by turn",
+            [57] = "the hijacking's own",
+            [58] = "a strange creature emerges",
+        },
+        PlaceType: 1, PersonType: 7,
+        FlagNames: new Dictionary<int, string>
+        {
+            [1] = "takes some",
+            [3] = "its name takes no article",
+            [4] = "plural",
+            [5] = "its name takes an",
+            [6] = "its routine's own mark",
+            [7] = "touched",
+            [8] = "seen",
+            [9] = "can be taken, and hasn't been",
+            [10] = "not listed",
+            [11] = "alive",
+            [12] = "lit",
+            [13] = "can't answer",
+            [15] = "things can be on it",
+            [16] = "a door",
+            [17] = "can be taken",
+            [18] = "can be read",
+            [19] = "can be opened and closed",
+            [20] = "locked",
+            [21] = "open",
+            [22] = "can be turned on and off",
+            [23] = "a liquid",
+            [24] = "a key",
+            [25] = "cuts",
+            [26] = "its routine's other mark",
+            [27] = "can be eaten",
+            [28] = "burns",
+            [29] = "turned on",
+            [32] = "can be got in or on",
+            [33] = "a weapon",
+            [34] = "can be worn",
+            [35] = "a person",
+            [36] = "a container",
+            [37] = "what's dropped in it lands outside",
+            [38] = "female",
+            [39] = "outdoors",
+            [41] = "can be sat on",
+            [42] = "can be folded",
+        },
+        PlaceFlagNames: new Dictionary<int, string> { [7] = "visited", [12] = "has light" },
+        PersonFlagNames: new Dictionary<int, string>(),
+        StateFlags: [12, 20, 21, 29],
+        Layouts: new Dictionary<int, RecordLayout>
+        {
+            [1] = new(22, Lists: 0x06, ExitCount: 0x0C, ExitStart: 0x0E, Names: 4),
+            [2] = new(28, Places: 0x0A, Relation: 0x0C, Next: 0x0E, Lists: 0x10, FlagBytes: 6, Names: 4),
+            [3] = new(32, Places: 0x0A, Relation: 0x0C, Next: 0x0E, Lists: 0x10, FlagBytes: 6, Names: 4),
+            [4] = new(12, Names: 4),
+            [5] = new(18, Lists: 0x0A, Names: 4),
+            [6] = new(18, Lists: 0x0A, FlagBytes: 6, Names: 4),
+            [7] = new(34, Places: 0x0A, Relation: 0x0C, Next: 0x0E, Lists: 0x10, FlagBytes: 6, Names: 4),
+        },
+        TableOffset: 0x00BE, TypesSegment: 0x27D7, NamesFile: "OBJECT.DAT",
+        FlagsSegment: 0x27D7, FlagsOffset: 0x0012, FlagCount: 42,
+        ExitsSegment: 0x27D7, ExitsOffset: 0x346A,
+        WideGrammar: true, TimerSize: 4, ClockStep: 1,
+        TokenizerSegment: 0x3246, TokenizerOffset: 0x01BE,
+        ExitTextsSegment: 0x27D7, ExitTextsOffset: 0x3BAE, ExitVariablesSegment: 0x27D7, ExitVariablesOffset: 0x3BFA,
+        FoundSegment: 0x0135, ExitVariableAt: 4, StateSegment: 0x4B4C);
 }

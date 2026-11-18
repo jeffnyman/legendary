@@ -101,6 +101,39 @@ public sealed class World301Tests
     }
 
     /// <summary>
+    /// <i>Gateway II</i>'s world, in its own image: records of a new design in seven types,
+    /// and exits of four kinds with no doors among them.
+    /// </summary>
+    [Fact]
+    public void Gateway_IIs_world_is_read_from_its_image()
+    {
+        if (TestData.Game("gateway2/game") is not { } folder || TestData.File(folder, "homemain.exe") is not { } path
+            || TestData.File(folder, "object.dat") is not { } names)
+        {
+            return;
+        }
+
+        byte[] memory = RtlinkProgram.Load(path).Image().Memory.ToArray();
+        var world = World.Find(at => at < memory.Length ? memory[at] : (byte)0, memory.Length, WorldMap.Gateway2, File.ReadAllBytes(names));
+        Assert.NotNull(world);
+        Assert.Equal((288, 1), (world.Room, world.Actor));
+        Assert.Equal(("Living Room", "you", "tuning fork"), (world.Object(288).Name, world.Object(1).Name, world.Object(12).Name));
+        Assert.Equal([288], world.Object(1).Places);
+        Assert.Equal((7, 1, 2), (world.Object(1).Type, world.Object(288).Type, world.Object(12).Type));
+
+        // the blue coverall: seen, takeable and not yet taken, worn, and the one thing that folds
+        Assert.Equal([8, 9, 17, 34, 42], Enumerable.Range(1, 42).Where(world.State(15).Has));
+
+        var all = Enumerable.Range(1, world.Map.ObjectCount).SelectMany(world.Exits).ToList();
+        Assert.Equal((225, 0, 14, 160, 5), (all.Count(exit => exit.Kind == 1), all.Count(exit => exit.Kind == 2),
+            all.Count(exit => exit.Kind == 3), all.Count(exit => exit.Kind == 4), all.Count(exit => exit.Kind == 5)));
+        for (int number = 1; number <= world.Map.ObjectCount; number++)
+        {
+            Assert.All(world.Contents(number), inside => Assert.Contains(number, world.Object(inside).Places));
+        }
+    }
+
+    /// <summary>
     /// <i>Eric the Unready</i>'s world, in its own image: <i>Gateway</i>'s records with three
     /// types changed, and exits of three kinds.
     /// </summary>

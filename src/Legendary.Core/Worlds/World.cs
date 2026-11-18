@@ -178,14 +178,17 @@ public sealed class World
         }
     }
 
+    // where the action and what goes with it are: far, with the lots, or in the data
+    private ushort StateSegment => Map.StateSegment ?? Map.ActionSegment;
+
     /// <summary>The number of the action last performed, or being performed.</summary>
-    public int Action => _read(Linear(Map.ActionSegment, Map.ActionOffset));
+    public int Action => _read(Linear(StateSegment, Map.ActionOffset));
 
     /// <summary>That action's object, or 0.</summary>
-    public int ActionObject => Word(Linear(Map.ActionSegment, Map.ObjectOffset));
+    public int ActionObject => Word(Linear(StateSegment, Map.ObjectOffset));
 
     /// <summary>That action's second object, or 0.</summary>
-    public int ActionSecondObject => Word(Linear(Map.ActionSegment, Map.SecondObjectOffset));
+    public int ActionSecondObject => Word(Linear(StateSegment, Map.SecondObjectOffset));
 
     /// <summary>
     /// Where the routine that performs an action starts, a linear address: the program is
@@ -415,7 +418,7 @@ public sealed class World
     }
 
     /// <summary>The direction the action of going is to go in: its number.</summary>
-    public int Direction => _read(Linear(Map.ActionSegment, Map.DirectionOffset));
+    public int Direction => _read(Linear(StateSegment, Map.DirectionOffset));
 
     /// <summary>
     /// What is in an object, on each of its lists in turn: the objects' numbers. An object
@@ -488,7 +491,7 @@ public sealed class World
         || (_read(address - 5) == 0x9A && Word(address - 4) == Map.TokenizerOffset && Word(address - 2) == LoadSegment + Map.TokenizerSegment);
 
     /// <summary>The number of the word the token just taken is, or 0 when it isn't a word.</summary>
-    public int TokenWord => Word(Linear(Map.ActionSegment, Map.TokenWordOffset));
+    public int TokenWord => Word(Linear(StateSegment, Map.TokenWordOffset));
 
     /// <summary>The linear address of the place where the grammar has just been searched for the command's form.</summary>
     public int FormAddress => Linear(Map.PerformSegment, Map.FormOffset);
@@ -501,7 +504,7 @@ public sealed class World
     {
         get
         {
-            int form = Word(Linear(Map.ActionSegment, Map.FormIndexOffset));
+            int form = Word(Linear(StateSegment, Map.FormIndexOffset));
             return (form == 0xFFFF ? -1 : form, _read(Linear(Map.ActionSegment, Map.FormActionOffset)), _read(Linear(Map.ActionSegment, Map.LotCountOffset)));
         }
     }
