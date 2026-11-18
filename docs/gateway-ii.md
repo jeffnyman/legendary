@@ -213,8 +213,6 @@ at `27D7:0016`. No code names it the old way, and the tools take it from there. 
 flags are every type's, and the highest bit is 38, which is why four of the types have six
 bytes of flags.
 
-The flags have no names yet.
-
 ### The tables beside the objects
 
 | What | Where | How it was found |
@@ -302,12 +300,54 @@ timer 2, 1f61:3491, which calls 372d:2750 in overlay 27
 ```
 
 Of the 261 calls to those routines, 17 aren't read, and the two timers no call is found
-for, 21 and 41, are likely among them. The timers have no names yet.
+for, 21 and 41, are likely among them.
 
 **A call's arguments are made another way.** The compiler before put each constant in
 `AX` and pushed it. This one puts the first in `AX` and the next in `CX`, `mov ax,7` /
 `push ax` / `mov cx,198` / `push cx`, so that most calls with two constants, a timer's
 count and its number or a flag and its object, went unread until the tools took that too.
+
+### What each timer does
+
+Each is named from what its routine prints when it runs, and the ones that print nothing
+from whose routines start them:
+
+| Timer | What it does | Timer | What it does |
+|---|---|---|---|
+| 1 | a question, which yes and no end | 30 | the ape men in the Grasslands |
+| 2 | the pictures fade away | 31 | the spear at the River Bank |
+| 3 | nothing | 32 | the alien robot comes, click-clack |
+| 4 | nothing | 33 | the guidething wakes and speaks |
+| 5 | the artist's own | 34 | the ship's computer speaks, turn by turn |
+| 6 | a diggle crawls by | 35 | the Place of Seeing, turn by turn |
+| 7 | the hypo unit's own, every turn | 36 | the field generator's own |
+| 8 | the crystal rod and the portal change color | 37 | the metal disk seals, and you fall |
+| 9 | a button pops out | 38 | a probe crashes |
+| 10 | a screen goes wild | 39 | something falls from the sky |
+| 11 | a tentacle grabs the kord | 40 | the technicians flood out of the temple |
+| 12 | the insect creatures attack, turn by turn | 41 | the technicians swarm in |
+| 13 | the creatures enter the specimen cage | 42 | the speaker speaks |
+| 14 | the creatures leave the specimen cage | 43 | the beams of light shift back |
+| 15 | the creatures in the cage slow and die | 44 | the workthing and the case, turn by turn |
+| 16 | the creatures scrabble again | 45 | the workthing comes back from the vault |
+| 17 | the green blob, turn by turn | 46 | the tram, turn by turn |
+| 18 | the carnivores in the clearing | 47 | the prototype's power runs low |
+| 19 | the fruit pod's own | 48 | the prototype's battery recharges |
+| 20 | the lizard takes the red egg | 49 | sinking into the slime |
+| 21 | nothing | 50 | the PV goes dormant |
+| 22 | the man with the thermos, turn by turn | 51 | the escort and the red tag |
+| 23 | your Heechee escort hurries you on | 52 | a voice in your condominium |
+| 24 | the lecture hall's light turns green | 53 | the terrorists' attack, turn by turn |
+| 25 | your communicator pings | 54 | the grenade explodes |
+| 26 | your escort grows impatient | 55 | the match's own |
+| 27 | the Heechee city's own | 56 | the radio's messages, turn by turn |
+| 28 | the students and the hologram | 57 | the hijacking's own |
+| 29 | the ape men in the Cavern | 58 | a strange creature emerges |
+
+Timers 3, 4 and 21 are routines of three bytes that do nothing. Timer 1 is started by no
+call that is read; `yes` and `no` stop it, and `down` asks whether it is going. Twelve
+print nothing. Seven are named for whose routines start them: 5, 7, 19, 27, 36, 55 and 57.
+Five are named from the objects their routines name: 28 to 31, and 51.
 
 ## Where a flag is used
 
@@ -323,7 +363,62 @@ flag 3: not known (bit 2, for every type)
     tested 4 times, set 1, cleared 1
 ```
 
-That is what naming the flags needs, and they have no names yet.
+### What the flags are
+
+They are the flags of *Gateway* and *Eric the Unready* under other numbers again, and 37
+of the 42 have names, each from the objects that start with it and the actions that test
+it:
+
+| Flag | What it says | Has it at the start | By what |
+|---|---|---|---|
+| 1 | takes `some`, and is still `it` | 15 | ice, dust, water |
+| 2 | not known | 0 |  |
+| 3 | its name takes no article | 9 | you, Diana Tolson, Mission Control |
+| 4 | plural: `some`, and `they` | 84 | stairs, mountains, icicles |
+| 5 | its name takes `an` | 50 | an access panel, an escape ship, an artist |
+| 6 | a mark its own routine keeps, of something that has happened | 4 | tested 103 times and set 41, most by an object's own routine |
+| 7 | touched, or for a place visited | 0 | `get` and `open` set it |
+| 8 | seen by the player | 9 | set 81 times, nearly all by objects' routines |
+| 9 | can be taken, and hasn't been: taking it can be special | 198 | routines before `drop`, `throw` and `put` test it; taking clears it |
+| 10 | not listed among a room's contents | 282 | `get` clears it |
+| 11 | alive: an animal or a plant | 33 | `feed`, `kill`, `scare` and `greet` test it |
+| 12 | lit, or for a place has light | 124 | every room, and one thing |
+| 13 | can't answer: asleep, or dead | 0 | `ask`, `attack`, `show` and `tell` test it; nothing starts with it |
+| 14 | not known | 18 |  |
+| 15 | things can be on it | 38 | `drop on`, `empty` and `climb out` test it: shelves, a bed, a platform |
+| 16 | a door | 4 | the four doors |
+| 17 | can be taken | 54 | routines before `drop`, `throw` and `put` test it |
+| 18 | can be read | 31 | `examine` tests it: screens, books, a plaque |
+| 19 | can be opened and closed | 24 | `open` and `close` test it |
+| 20 | locked | 6 | `open`, `close` and `unlock` test it |
+| 21 | open | 39 | tested 192 times; `empty` and `examine` test it |
+| 22 | can be turned on and off, or lit | 11 | `light`, `extinguish` and `activate` test it |
+| 23 | a liquid | 4 | water, hot springs, ooze |
+| 24 | a key | 1 | `lock` and `unlock` test it: the crystal rod |
+| 25 | cuts | 3 | `cut` tests it: the crystal cutters, a needle |
+| 26 | another mark its own routine keeps | 2 | tested 53 times and set 33, most by an object's own routine |
+| 27 | can be eaten | 0 | `eat` tests it; nothing starts with it |
+| 28 | burns | 11 | a torch, a match, books |
+| 29 | turned on, or alight | 5 | `activate` sets it and `extinguish` clears it |
+| 30 | not known | 0 |  |
+| 31 | not known | 2 |  |
+| 32 | can be got in or on | 18 | `climb in` tests it: chairs, a bed, a tree |
+| 33 | a weapon, which can cut | 7 | `cut` tests it: spears, a laser rifle |
+| 34 | can be worn | 14 | `put on` and `remove` test it |
+| 35 | a person | 18 | `greet`, `tell` and `feed` test it: Diana Tolson, ape men, the Heechee |
+| 36 | a container | 40 | `drop in`, `empty`, `pour` and `look in` test it |
+| 37 | what's dropped in it lands outside it | 0 | `drop` tests it; nothing starts with it |
+| 38 | female | 2 | Diana Tolson, and a dead scientist |
+| 39 | outdoors | 34 | 34 rooms: the Landing Site, the Village |
+| 40 | not known | 3 |  |
+| 41 | can be sat on | 18 | `sit` tests it |
+| 42 | can be folded | 1 | `fold` tests it: the blue coverall |
+
+Five aren't named. Flag 14 is on a glow, a uniform, some rocks and a dome, and one routine
+tests it, the first of overlay 1, which is the routine that tested *Eric the Unready*'s
+unnamed flag 9. Flag 2 is tested once and on nothing; 31 is on the giant robot and the
+green blob; 40 is on a container, a belt and a case, and `examine` and `open` test it; and
+nothing has or uses 30.
 
 ### What isn't read yet
 
@@ -376,6 +471,6 @@ PNG, which a browser plays. The frames looked at are right: the title's letters,
 ## Still to do
 
 - The saved game.
-- The flags' names and the timers'.
-- The flags' names, and the three fields of a record that aren't known.
+- Flags 2, 14, 30, 31 and 40, and what the timers that print nothing do.
+- The three fields of a record that aren't known.
 - The game hasn't been run on the PC, which will need the disc as a drive for its pictures.

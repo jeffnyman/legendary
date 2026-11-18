@@ -135,8 +135,9 @@ python -m legendary_tools dis ../../legend/sc101/game 3670:054e
   [*Spellcasting 201*'s](../docs/spellcasting-201.md#what-the-flags-are),
   [*Spellcasting 301*'s](../docs/spellcasting-301.md#what-the-flags-are),
   [*Gateway*'s](../docs/gateway.md#the-flags) and
-  [*Eric the Unready*'s](../docs/eric-the-unready.md#the-flags), and for the last
-  four gives each flag's bit and the types that have it too, from the game's table of flags.
+  [*Eric the Unready*'s](../docs/eric-the-unready.md#the-flags) and
+  [*Gateway II*'s](../docs/gateway-ii.md#what-the-flags-are), and for the last
+  five gives each flag's bit and the types that have it too, from the game's table of flags.
 
 - **`timers`** lists the game's timers, the routines it puts by to run on a later turn or on
   every turn: each one's routine, the routine in an overlay that it calls, and every call that
@@ -150,7 +151,8 @@ python -m legendary_tools dis ../../legend/sc101/game 3670:054e
   [a name for each](../docs/timequest.md#what-each-timer-does), and
   [*Spellcasting 301*'s](../docs/spellcasting-301.md#what-each-timer-does) 65,
   [*Gateway*'s](../docs/gateway.md#what-each-timer-does) 108 and
-  [*Eric the Unready*'s](../docs/eric-the-unready.md#what-each-timer-does) 72.
+  [*Eric the Unready*'s](../docs/eric-the-unready.md#what-each-timer-does) 72 and
+  [*Gateway II*'s](../docs/gateway-ii.md#what-each-timer-does) 58.
 
 - **`sentence`** prints the grammar the parser matches a command against, rule by rule, with
   the names the program has for the rules: `<noun_phrase> ::= <pe_article>
