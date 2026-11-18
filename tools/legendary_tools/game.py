@@ -36,8 +36,25 @@ class GameFolder:
         return found[0]
 
     def main_program(self) -> str:
-        """The game itself, S101MAIN.EXE or TIMEMAIN.EXE: what the launcher starts."""
-        return self.one("main.exe")
+        """
+        The game itself, S101MAIN.EXE or TIMEMAIN.EXE: what the launcher starts. Companions of
+        Xanth has no launcher, and its program is the one that has overlays beside it.
+        """
+        if self.ending("main.exe"):
+            return self.one("main.exe")
+        beside = [
+            path
+            for path in self.ending(".exe")
+            if self.find(os.path.splitext(os.path.basename(path))[0] + ".ovl")
+        ]
+        if len(beside) != 1:
+            raise ValueError(f"{self.path}: no file ending in main.exe")
+        return beside[0]
+
+    def overlays_file(self) -> str | None:
+        """The file of the game's overlays, where it has one of its own."""
+        program = os.path.basename(self.main_program())
+        return self.find(os.path.splitext(program)[0] + ".ovl")
 
     def read(self, path: str) -> bytes:
         with open(path, "rb") as file:

@@ -71,6 +71,9 @@ _ENTRY = bytes.fromhex("e805002eff2e0400")
 _VERSIONS = (0x19A, 0x1F6, 0x262)
 _SECOND_SYMBOLS = 0x262  # the version that first has a second table of symbols
 _LIBRARY_MAGIC = 0x37BA
+# what the linker's own code says of itself, in a program it left whole
+_RUN_TIME = b".RTLink(R)/Plus run-time code"
+_NOTICE = b"MS Run-Time Library"
 _ENTRY_SIZE = 18  # of an overlay's entry in the manager's table
 _THUNK_SIZE = 10
 
@@ -178,19 +181,22 @@ def read_records(data: bytes, at: int, count: int) -> tuple[list[Record], int]:
 
 
 def is_rtlink(exe: bytes) -> bool:
-    """Whether a program starts in .RTLink's stub."""
+    """Whether a program starts in .RTLink's stub, or has the linker's code in it."""
     try:
         mz = MzExecutable(exe)
     except ValueError:
         return False
     entry = mz.cs * 16 + mz.ip
-    return mz.image[entry : entry + len(_ENTRY)] == _ENTRY
+    return mz.image[entry : entry + len(_ENTRY)] == _ENTRY or _RUN_TIME in mz.image
 
 
 def library_name(exe: bytes) -> str | None:
     """The run-time library a .RTLink program names, or None when it names none."""
-    image = MzExecutable(exe).image
-    if image[0x1C:0x1D] != b"\x01":
+    mz = MzExecutable(exe)
+    image = mz.image
+    entry = mz.cs * 16 + mz.ip
+    # a program the linker left whole has its library in it
+    if image[entry : entry + len(_ENTRY)] != _ENTRY or image[0x1C:0x1D] != b"\x01":
         return None
     name = image[0x1D:0x25].split(b"\0")[0].decode("ascii")
     return f"{name}.{image[0x4E:0x51].decode('ascii')}"
@@ -207,7 +213,10 @@ class RtlinkProgram(Program):
         image = self.mz.image
         entry = self.mz.cs * 16 + self.mz.ip
         if image[entry : entry + len(_ENTRY)] != _ENTRY:
-            raise ValueError("not a .RTLink program: it doesn't start in .RTLink's stub")
+            if _RUN_TIME not in image:
+                raise ValueError("not a .RTLink program: it doesn't start in .RTLink's stub")
+            self._whole()
+            return
         self.version = struct.unpack_from("<H", image, 0x34)[0]
         if self.version not in _VERSIONS:
             raise ValueError(f"linked by a version of .RTLink that isn't known here: {self.version:04x}")
@@ -252,6 +261,52 @@ class RtlinkProgram(Program):
 
         self.loader_segment = self.table_segment = self.start_segment
         self._manager()
+
+    def _whole(self) -> None:
+        """
+        A program the linker left whole, as Companions of Xanth is: an ordinary MZ program,
+        which DOS loads and relocates, with the linker's overlay manager in it and no library
+        beside it. Its memory is its image, and its relocations the header's.
+        """
+        self.version = 0
+        self.start_offset, self.start_segment = self.mz.ip, self.mz.cs
+        self.stack_offset, self.stack_segment = self.mz.sp, self.mz.ss
+        self.segments, self.groups = [], []
+        self._symbols, self._more_symbols = [], []
+        self.memory_end_segment = self.stack_segment + (self.stack_offset + 15) // 16
+        self.exe_name = ""
+        self._memory = bytearray(max(len(self.mz.image), self.memory_end_segment * 16))
+        self._memory[: len(self.mz.image)] = self.mz.image
+        self._relocations = {relocation.linear for relocation in self.mz.relocations}
+        self.records, self.library_records = [], []
+        self.library_name = None
+        self.loader_segment = self.table_segment = self.start_segment
+        self._manager()
+        self._place_rest()
+
+    def _place_rest(self) -> None:
+        """
+        What the file has after the image: the program's memory from past the overlays on,
+        its far data and its data segment, which the linker's code reads in itself. The file
+        leaves out the stretch between, where the overlays load. Where it goes is told by the
+        data segment, which starts eight bytes before Microsoft's notice and is the segment
+        past the overlays that the program's relocations name most.
+        """
+        rest = self.mz.data[self.mz.file_image_end :]
+        notice = rest.find(_NOTICE)
+        past = max((overlay.end_segment for overlay in self.overlays), default=0)
+        named = Counter(
+            segment
+            for relocation in self.mz.relocations
+            if (segment := struct.unpack_from("<H", self.mz.image, relocation.linear)[0]) >= past
+            and segment < self.memory_end_segment
+        )
+        if notice < 8 or not named:
+            return
+        base = named.most_common(1)[0][0] * 16 - (notice - 8)
+        if base < len(self.mz.image) or base + len(rest) > len(self._memory):
+            return
+        self._memory[base : base + len(rest)] = rest
 
     @staticmethod
     def _address(image: bytes, at: int) -> int:
@@ -346,7 +401,8 @@ class RtlinkProgram(Program):
                 for record in self.records
                 if self._segment(record.segment) == base
             ),
-            default=0,
+            # a program left whole has no records to say where the segment ends
+            default=min(0x10000, len(self._memory) - base) if not self.records else 0,
         )
         segment = bytes(self._memory[base : base + length])
         # the manager says where its table is: where the count is, where the entries start,

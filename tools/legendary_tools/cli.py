@@ -79,8 +79,8 @@ from .timers import (
 def _program(folder: GameFolder) -> Program:
     """The game's program, read as the linker that made it left it."""
     exe = folder.read(folder.main_program())
-    found = folder.ending("main.ovl")
-    ovl = folder.read(found[0]) if found else None
+    found = folder.overlays_file()
+    ovl = folder.read(found) if found else None
     try:
         if is_rtlink(exe):
             name = library_name(exe)
