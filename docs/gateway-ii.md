@@ -544,13 +544,20 @@ drive. With the first, the game opens `LEGEND.PIC`, `GW2_LOGO.PIC` and `CD_ROM.P
 its title, and goes on into the story: the Artifact, six kilometers long, among the stars.
 The second hasn't been tried.
 
-It was run without a window, at an AT's speed, and opens its music file; its sound hasn't
-been heard.
+**It writes `RESTART.DAT` as it starts**, in the folder `LEGEND.INI` names for saved
+games, `C:\GATEWAY2\`: the state the game begins from, so that `restart` can go back to
+it. The games before came with that file and only read it. The game's folder is the root
+of drive C: here and has no such directory, and the game said `Unable to open file
+'C:\GATEWAY2\RESTART.DAT'` when the story reached your home. So the player makes that
+directory the game's own folder too: what the game reads there is the game's, and what it
+writes goes with its saved games.
+
+Its title's animations play, and its music, and the game plays on from there.
 
 ## Still to do
 
 - What starts a saved game, and the four words before its timers.
-- The game with an image of its CD in the drive, and its animations and music heard and seen.
+- The game with an image of its CD in the drive.
 - The words at `4B4C:3152` and `3158`, 1 as the game starts.
 - Flags 2, 14, 30, 31 and 40, and what the timers that print nothing do.
 - The three fields of a record that aren't known.

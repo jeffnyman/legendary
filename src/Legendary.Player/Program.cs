@@ -353,6 +353,13 @@ internal static class Program
             Composite = profile.Composite ?? false,
         };
 
+        if (Games.SaveDirectoryOf(game.Folder) is { } saveDirectory)
+        {
+            // where the game was installed to, which it writes RESTART.DAT in as it starts and
+            // saves in: the same folder, read from the game's and written to the saves
+            machine.Mount(saveDirectory, game.Folder);
+        }
+
         if (Games.CdOf(game.Folder) is { } cd)
         {
             // a game that reads some of its files from its CD: from the game's folder, when

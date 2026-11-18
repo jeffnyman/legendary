@@ -174,6 +174,31 @@ internal static class Games
         return null;
     }
 
+    /// <summary>
+    /// The directory of drive C: a game keeps its saved games in, and writes the state it
+    /// starts from as it begins, when its LEGEND.INI names one, as <c>SAVEDATA=C:\GATEWAY2\</c>: the
+    /// directory the installer made for it. The game's folder is the drive's root here, so
+    /// that directory has to be the same folder. Null when the game names none.
+    /// </summary>
+    public static string? SaveDirectoryOf(string folder)
+    {
+        string? settings = Directory.Exists(folder)
+            ? Directory.EnumerateFiles(folder).FirstOrDefault(file => Path.GetFileName(file).Equals("LEGEND.INI", StringComparison.OrdinalIgnoreCase))
+            : null;
+        foreach (string line in settings is null ? [] : File.ReadLines(settings))
+        {
+            string[] parts = line.Split('=', 2);
+            if (parts.Length == 2 && parts[0].Trim().Equals("SAVEDATA", StringComparison.OrdinalIgnoreCase)
+                && parts[1].Trim().StartsWith("C:", StringComparison.OrdinalIgnoreCase)
+                && parts[1].Trim()[2..].Trim('\\', '/') is { Length: > 0 } directory)
+            {
+                return directory;
+            }
+        }
+
+        return null;
+    }
+
     /// <summary>Every game the player knows, in the order the menu shows them: by year.</summary>
     public static readonly KnownGame[] Known =
     [
@@ -201,7 +226,7 @@ internal static class Games
         // at an AT's speed, as the others: Eric the Unready, of the same year, loses its music on
         // a faster machine, and this one hasn't been tried on one
         new("gateway2", "Gateway II: Homeworld", 1993, ["HOMEMAIN.EXE"], "HOME.EXE", At,
-            "starts and runs on into the game, with its pictures from its own folder or its CD, and takes commands; not yet played",
+            "starts and plays, with its pictures, animations and music, from its own folder or its CD; not yet played through",
             World: Legendary.Core.Worlds.WorldMap.Gateway2),
         new("mcritic", "Mission Critical", 1995, ["MISSION.EXE"], "MISSION.EXE", Fast, Untried),
     ];

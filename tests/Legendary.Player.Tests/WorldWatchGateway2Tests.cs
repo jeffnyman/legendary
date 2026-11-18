@@ -58,7 +58,19 @@ public sealed class WorldWatchGateway2Tests : IDisposable
         }
 
         var machine = new Machine(folder, _saves) { InstructionsPerSecond = 3_000_000 };
+        var opened = new List<string>();
+        machine.Log = line =>
+        {
+            if (line.Contains("RESTART.DAT", StringComparison.OrdinalIgnoreCase))
+            {
+                opened.Add(line);
+            }
+        };
+
+        // as the player sets it up, from the game's LEGEND.INI: the CD's folder and the folder
+        // the game was installed to are both the game's own
         machine.ServeCdFolder("GW2");
+        machine.Mount("GATEWAY2", folder);
         machine.Load("HOME.EXE", "");
         var said = new StringWriter { NewLine = "\n" };
         var watch = new WorldWatch(
@@ -99,6 +111,12 @@ public sealed class WorldWatchGateway2Tests : IDisposable
         Type("examine sofa\n");
         Type("take vase\n");
         Type("southeast\n");
+
+        // as it starts the game writes the state it starts from, in the folder its settings
+        // name: with no such folder it says it is unable to open the file
+        Assert.Contains(opened, line => line.Contains("open C:\\GATEWAY2\\RESTART.DAT (write)", StringComparison.OrdinalIgnoreCase));
+        Assert.Contains(opened, line => line.Contains("write 512 bytes", StringComparison.Ordinal));
+        Assert.DoesNotContain(opened, line => line.Contains("not found", StringComparison.Ordinal));
 
         string[] lines = said.ToString().Split('\n', StringSplitOptions.RemoveEmptyEntries);
         Assert.StartsWith("world: the game is in memory, loaded at ", lines[0], StringComparison.Ordinal);
