@@ -40,6 +40,9 @@ hold.
   read by what reads that game, but for its 537 objects, whose records differ in three
   types, and its pictures for the Super VGA, 640 by 480 in 256 colors, which the games
   before don't have.
+- [Gateway II: Homeworld](gateway-ii.md): 1993. The start of a first look: a copy whose
+  pictures are only on its CD, and a program linked by .RTLink 6.10, whose file is the
+  older one's with a second table of symbols. Its text, grammar and objects aren't read yet.
 - [Spellcasting 201: The Sorcerer's Appliance](spellcasting-201.md): 1991. The same system,
   linked by .RTLink/Plus in place of PLINK86: a program DOS can't load by itself, kept as
   records of its segments with their fixups, which the linker's own startup code puts in

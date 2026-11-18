@@ -24,7 +24,8 @@ relative to where the program loads, as the files have them. How the programs ar
 ## The program
 
 These read a program linked by PLINK86, *Spellcasting 101* and *Timequest*, or by
-.RTLink/Plus 4.10, *Spellcasting 201*, or 5.02, *Spellcasting 301* and *Gateway*. All of them read
+.RTLink/Plus 4.10, *Spellcasting 201*, 5.02, *Spellcasting 301*, *Gateway* and *Eric the
+Unready*, or 6.10, [*Gateway II*](../docs/gateway-ii.md#the-linker-is-a-newer-one). All of them read
 *Spellcasting 201*; what each makes of *Timequest* is said with it. Of *Spellcasting 301*,
 the first seven read the program, and `objects`, with `--saved`, `actions`, `flags`, `timers`, `grammar`, `sentence`,
 `loads`, `strings`, `text` and `vocab` read it too; the
