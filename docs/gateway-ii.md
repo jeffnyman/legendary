@@ -98,15 +98,16 @@ The records, the other fixups, the manager's table and the thunks are read by wh
 | The program and its overlays | all of it |
 | The vocabulary | 2,028 words |
 | The text | 4,875 strings, [with one change](#the-text) |
+| The objects | 521, [in records of a new design](#the-objects) |
 | The music | 82 songs in one file, 41 of them for the AdLib |
 | The fonts | 17 |
 | The regions | 9 files |
 
 And what they don't yet:
 
-- **The grammar, the objects and the timers.** The code the tools look for, to find each
-  table, isn't as it is in the games before: [the engine was built
-  again](#the-engine-was-built-again).
+- **The grammar and the timers.** The code the tools look for, to find each table, isn't
+  as it is in the games before: [the engine was built again](#the-engine-was-built-again).
+  The objects were the same, and [are read now](#the-objects).
 - **The pictures**, which are on the disc, and whose files are named another way:
   `EP_LAND.PIC` and `HT_DOCK4.PIC`, where the earlier games had `GATE_301.PIC`.
 
@@ -212,20 +213,54 @@ bytes of flags.
 
 The flags have no names yet.
 
+### The tables beside the objects
+
+| What | Where | How it was found |
+|---|---|---|
+| The nouns of every object, a row each | `27D7:0CF4` | It follows the table of objects |
+| The adjectives | `27D7:1F52` | It follows the nouns' last row |
+| A room's row of what is also there | `2B9A:17AE` | The code that reads a row |
+| The exits, four bytes each | `27D7:346A` | The code that compares a direction; and it follows the adjectives |
+| The exits' routines, 61 far pointers | `27D7:3ABA` | It follows the exits |
+| The exits' texts, 19 of them | `27D7:3BAE` | The code that reads one |
+| The exits a variable opens, 5 rows of eight bytes | `27D7:3BFA` | The code that tests one |
+| The objects' routines, 505 far pointers | `2DA0:0000` | The code that calls one |
+
+The first three tables of the segment are where they have always been: the nouns start
+where the table of objects ends, as in *Spellcasting 301*, and the adjectives where the
+nouns end, a row ending at a word with its top bit set. The tools take those two from
+that, and the others from the code that reads each, which is the later compiler's: an
+index is doubled twice with `add bx,bx`, where the compiler before shifted it.
+
+With them an object's words read, by the vocabulary: the tuning fork is `fork` or
+`artifact`, and `blue`, `tuning`, `heechee` or `metal`. All 521 objects have a noun.
+
+**A room has one row, where it had two.** What is also there is a row of four bytes an
+object, in a segment of its own; the row of where can be seen into from a room, which the
+games before had beside it, has no field in the record that was found.
+
+**The exits are of four kinds**, 404 of them: 225 to a room, 160 that a routine decides,
+14 that only say something, and 5 that a variable opens. There are no doors among them,
+where every game from *Spellcasting 201* had some; a door here may be a routine's to
+decide, which hasn't been looked at.
+What an exit says is a string named by its number, as from *Spellcasting 301*, and reads:
+
+```
+exit north, kind 3: says: You wander towards the ice structures, but find them too ...
+```
+
+**The objects' routines** are called through one table, by the number in the record, from
+the routine at `0525:00EE`: 516 objects have one, and all but one are in the overlays, in
+19 of the 34.
+
 ### What isn't read yet
 
-The tools list the objects, each with its flags, where it is and what is in it. Four
-things of an object they don't yet say, each because the code that finds its table is of
-the later compiler's kind and hasn't been found:
-
-- its words, by the list of all nouns and the list of all adjectives;
-- a room's exits, and what is also there;
-- its routine, by the table of routines.
-
-The grammar and the timers are found by code of the same old kind, and aren't found yet
-either.
+The grammar and the timers are found by code of the old kind, and aren't found yet. The
+routine at `0261:0132` reads the row of what is also in a room; a second table is read the
+way the exits are, at `3C73:9010`, and by the games before is likely the timers'.
 
 ## Still to do
 
-- Each of those.
+- The grammar and the timers, and the pictures.
+- The flags' names, and the three fields of a record that aren't known.
 - The game hasn't been run on the PC, which will need the disc as a drive for its pictures.
