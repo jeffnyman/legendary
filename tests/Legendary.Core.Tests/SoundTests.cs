@@ -57,6 +57,26 @@ public sealed class SoundTests
         Assert.Equal("MThd", Encoding.ASCII.GetString(song.Data.Span));
     }
 
+    /// <summary>
+    /// The later games' table, 120 entries of twelve bytes: the first song starts where it
+    /// ends, which says which table it is. The AdLib's song is a MIDI file there too.
+    /// </summary>
+    [Fact]
+    public void ReadsTheLaterTableOfSongs()
+    {
+        byte[] file = new byte[1441 + 5];
+        byte[] entry = [0xA1, 0x05, 0, 0, 4, 0, 0, 0, 0, 0, 0, 0];
+        entry.CopyTo(file, 12 * 119);
+        file[0] = 0xA1;
+        file[1] = 0x05;
+        file[4] = 4;
+        "MThd"u8.CopyTo(file.AsSpan(1441));
+
+        var songs = new MusicFile(file).Songs;
+        Assert.Equal([0, 119], songs.Select(song => song.Number));
+        Assert.All(songs, song => Assert.True(!song.IsMidi && song.IsAdLibMidi));
+    }
+
     [Fact]
     public void Spellcasting101sSoundOfAChaptersStart()
     {
