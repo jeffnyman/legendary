@@ -107,9 +107,9 @@ The records, the other fixups, the manager's table and the thunks are read by wh
 
 And what they don't yet:
 
-- **The flags' routines and the saved game.** The code the tools look for isn't as it is
-  in the games before: [the engine was built again](#the-engine-was-built-again). The
-  objects, the grammar and the timers were the same, and are read now.
+- **The saved game.** The code the tools look for isn't as it is in the games before:
+  [the engine was built again](#the-engine-was-built-again). The objects, the grammar, the
+  timers and the flags' routines were the same, and are read now.
 - **The pictures**, which are on the disc, and whose files are named another way:
   `EP_LAND.PIC` and `HT_DOCK4.PIC`, where the earlier games had `GATE_301.PIC`.
 
@@ -292,7 +292,7 @@ going, four bytes each, a timer's number and its count.
 | The routines: empty the table, start, stop, ask about, ask the count, run | `0234:0008`, `0026`, `0096`, `00F8`, `0130`, `016C` |
 | The routine that calls a timer's routine by its number | `0611:000A` |
 
-The tools list 55 of them, each with its routine and the places that start it, stop it
+The tools list 56 of them, each with its routine and the places that start it, stop it
 and ask about it:
 
 ```
@@ -301,19 +301,38 @@ timer 2, 1f61:3491, which calls 372d:2750 in overlay 27
     372d:01ed in overlay 23: object 16 Landing Site asks about it
 ```
 
-Of the 261 calls to those routines, 44 aren't read: the later compiler makes a call's
-arguments in ways the tools don't take yet, and the three timers no call is found for are
-likely among them. The timers have no names yet.
+Of the 261 calls to those routines, 17 aren't read, and the two timers no call is found
+for, 21 and 41, are likely among them. The timers have no names yet.
+
+**A call's arguments are made another way.** The compiler before put each constant in
+`AX` and pushed it. This one puts the first in `AX` and the next in `CX`, `mov ax,7` /
+`push ax` / `mov cx,198` / `push cx`, so that most calls with two constants, a timer's
+count and its number or a flag and its object, went unread until the tools took that too.
+
+## Where a flag is used
+
+The three routines that test, set and clear a flag are at `0261:0576`, `05AE` and `05E4`,
+the later compiler's versions of the ones from *Spellcasting 201*: each has a routine
+find the flag's byte and bit from the table, and then does its one thing. The tools find
+them by how they end, and `flags` says where every flag is tested and changed: 1,157 calls,
+with 26 more whose flag or object isn't a constant.
+
+```
+flag 3: not known (bit 2, for every type)
+    at the start, on 9 objects: 2 of type 1, 1 of type 2, 1 of type 5, 5 of type 7
+    tested 4 times, set 1, cleared 1
+```
+
+That is what naming the flags needs, and they have no names yet.
 
 ### What isn't read yet
 
-Two things found by code of the old kind still aren't: the routines that test and change
-a flag, which `flags` needs to say where each flag is used, and the code that saves a
-game, which says how `RESTART.DAT` is laid out.
+One thing found by code of the old kind still isn't: the code that saves a game, which
+says how `RESTART.DAT` is laid out.
 
 ## Still to do
 
-- The routines that test and change a flag, the saved game, and the pictures.
-- The 44 calls about a timer that aren't read, and the timers' names.
+- The saved game, and the pictures.
+- The flags' names and the timers'.
 - The flags' names, and the three fields of a record that aren't known.
 - The game hasn't been run on the PC, which will need the disc as a drive for its pictures.
