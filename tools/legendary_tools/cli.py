@@ -15,6 +15,7 @@ import sys
 import tempfile
 
 from . import data
+from .animations import is_animation, read_animation
 from .flags import (
     GAME_201,
     GAME_301,
@@ -30,6 +31,7 @@ from .gallery import write_index
 from .game import GameFolder
 from .grammar import NO_TURN, Form, action_flags, describe_flags, read_grammar
 from .handlers import action_routines, keyed_routines, object_routines
+from .iso import Disc
 from .loads import (
     POINTER_SEGMENT,
     StringNames,
@@ -780,11 +782,11 @@ def pictures(args: argparse.Namespace) -> None:
     folder = GameFolder(args.folder)
     skipped = 0
     # which game's kind the files are, which one file of them can't always say
-    files = [folder.read(path) for path in folder.ending(".pic")]
+    files = [folder.read(path) for path in _picture_files(folder)]
     later = is_later(files)
     imploded = is_imploded(files)
     known = is_known(files)
-    for path in folder.ending(".pic"):
+    for path in _picture_files(folder):
         name = os.path.splitext(os.path.basename(path))[0].lower()
         # the letter before the file's number says which display it's for
         file = PictureFile(
@@ -875,6 +877,85 @@ def regions(args: argparse.Namespace) -> None:
                 )
 
 
+def _animation_files(folder: GameFolder) -> list[str]:
+    """The .PIC files that are animations, which Gateway II's CD has beside its pictures."""
+    found = []
+    for path in folder.ending(".pic"):
+        with open(path, "rb") as file:
+            if is_animation(file.read(128)):
+                found.append(path)
+    return found
+
+
+def _picture_files(folder: GameFolder) -> list[str]:
+    """The .PIC files that are pictures."""
+    moving = set(_animation_files(folder))
+    return [path for path in folder.ending(".pic") if path not in moving]
+
+
+def animations(args: argparse.Namespace) -> None:
+    """The animations among the game's .PIC files: listed, or written to a folder as animated PNG files."""
+    folder = GameFolder(args.folder)
+    for path in _animation_files(folder):
+        moving = read_animation(folder.read(path))
+        name = os.path.splitext(os.path.basename(path))[0].lower()
+        print(
+            f"{os.path.basename(path):14} {len(moving.frames):3} frames, {moving.width} x {moving.height},"
+            f" {moving.seconds:5.1f} seconds"
+        )
+        if args.out:
+            _write(args.out, f"{name}.png", moving.apng())
+    if args.out:
+        print(f"written to {args.out}")
+
+
+def _disc_of(folder: GameFolder) -> tuple[str, str] | None:
+    """A CD's image beside a game, in its folder or the `cd` in it, and the game's folder on the disc."""
+    places = [folder.path, os.path.join(folder.path, "cd"), os.path.join(folder.path, "CD")]
+    image = next(
+        (
+            os.path.join(place, name)
+            for place in places
+            if os.path.isdir(place)
+            for name in sorted(os.listdir(place))
+            if name.lower().endswith(".iso")
+        ),
+        None,
+    )
+    settings = folder.find("legend.ini")
+    if image is None or settings is None:
+        return None
+    # GAMEDATA=D:\GW2\ is where the game looks for what its own folder hasn't got
+    for line in folder.read(settings).decode("latin-1").splitlines():
+        key, _, value = line.partition("=")
+        if key.strip().upper() == "GAMEDATA":
+            return image, value.strip().split(":", 1)[-1].strip("\\/")
+    return None
+
+
+def disc(args: argparse.Namespace) -> None:
+    """What a game's CD has that its folder hasn't: listed, or copied into the folder."""
+    folder = GameFolder(args.folder)
+    found = _disc_of(folder)
+    if found is None:
+        raise ValueError(f"{args.folder}: no CD's image is beside it, or LEGEND.INI doesn't say where on it")
+    image, inside = found
+    cd = Disc(image)
+    there = cd.find(inside)
+    if there is None or not there.folder:
+        raise ValueError(f"{os.path.basename(image)} has no folder {inside}")
+    files = [entry for entry in cd.entries(there) if not entry.folder]
+    missing = [entry for entry in files if folder.find(entry.name) is None]
+    print(f"{os.path.basename(image)}, folder {inside}: {len(files)} files")
+    print(f"{len(missing)} of them the game's folder hasn't:")
+    for entry in missing:
+        print(f"  {entry.name:14} {entry.size:9}")
+        if args.copy:
+            _write(folder.path, entry.name, cd.read(entry))
+    if args.copy and missing:
+        print(f"copied to {folder.path}")
+
+
 def _write(folder: str, name: str, contents: bytes) -> None:
     os.makedirs(folder, exist_ok=True)
     with open(os.path.join(folder, name), "wb") as file:
@@ -959,7 +1040,14 @@ def extract(args: argparse.Namespace) -> None:
     out = args.out or os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "media")
     for name, folder in games:
         counts = []
-        for kind, write in (("pictures", pictures), ("sounds", sounds), ("music", music), ("fonts", fonts)):
+        writers = (
+            ("pictures", pictures),
+            ("animations", animations),
+            ("sounds", sounds),
+            ("music", music),
+            ("fonts", fonts),
+        )
+        for kind, write in writers:
             into = os.path.join(out, name, kind)
             said = io.StringIO()
             try:
@@ -977,6 +1065,10 @@ def extract(args: argparse.Namespace) -> None:
                 if written:
                     counts.append(f"{written // 2} font{'' if written == 2 else 's'}")
                 continue
+            if kind == "animations":
+                if written:
+                    counts.append(f"{written} animation{'' if written == 1 else 's'}")
+                continue
             what = {"pictures": "picture", "sounds": "sound", "music": "song"}[kind]
             missed = re.search(r"^(\d+) pictures weren't written", said.getvalue(), re.MULTILINE)
             counts.append(
@@ -986,7 +1078,8 @@ def extract(args: argparse.Namespace) -> None:
         if not args.no_wav and os.path.isdir(os.path.join(out, name, "music")):
             counts.append(_adlib_songs(folder, os.path.join(out, name, "music")))
         # a page to look through them, when there is anything to look through
-        folders = [os.path.join(out, name, kind) for kind in ("pictures", "sounds", "music", "fonts")]
+        kinds = ("pictures", "animations", "sounds", "music", "fonts")
+        folders = [os.path.join(out, name, kind) for kind in kinds]
         if any(os.path.isdir(kind) and os.listdir(kind) for kind in folders):
             page = write_index(os.path.join(out, name), name)
             print(f"{name}: {', '.join(counts)}; to look through them, open {page}")
@@ -1074,6 +1167,15 @@ def _extract_options(extracting: argparse.ArgumentParser) -> None:
     )
 
 
+def _disc_options(moving: argparse.ArgumentParser, cd: argparse.ArgumentParser) -> None:
+    moving.add_argument(
+        "--out", metavar="FOLDER", help="write each there as an animated PNG file, which a browser plays"
+    )
+    cd.add_argument(
+        "--copy", action="store_true", help="copy what the game's folder hasn't into it, from the CD's image"
+    )
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(
         prog="legendary-tools",
@@ -1124,6 +1226,7 @@ def main() -> None:
     command(sounds).add_argument("--out", metavar="FOLDER", help="write each sound there as a WAV file")
     command(pictures).add_argument("--out", metavar="FOLDER", help="write each picture there as a PNG file")
     _extract_options(command(extract))
+    _disc_options(command(animations), command(disc))
     command(fonts).add_argument(
         "--out",
         metavar="FOLDER",
