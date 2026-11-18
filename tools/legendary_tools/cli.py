@@ -8,8 +8,11 @@ import contextlib
 import io
 import os
 import re
+import shutil
 import struct
+import subprocess
 import sys
+import tempfile
 
 from . import data
 from .flags import GAME_201, GAME_301, GAME_GATEWAY, GAME_TIMEQUEST, describe_flag, flag_name, flag_uses
@@ -944,7 +947,9 @@ def extract(args: argparse.Namespace) -> None:
             except (ValueError, IndexError, struct.error) as error:
                 counts.append(f"{kind} not read ({error})")
                 continue
-            written = len(os.listdir(into)) if os.path.isdir(into) else 0
+            # not the sound the player made of a song on an earlier run, which is beside it
+            listed = os.listdir(into) if os.path.isdir(into) else []
+            written = sum(1 for file in listed if kind != "music" or not file.lower().endswith(".wav"))
             if kind == "fonts":
                 # a sheet of its letters and a line set in it, for each
                 if written:
@@ -956,6 +961,8 @@ def extract(args: argparse.Namespace) -> None:
                 f"{written} {what}{'' if written == 1 else 's'}"
                 + (f" and {missed[1]} more not read" if missed else "")
             )
+        if not args.no_wav and os.path.isdir(os.path.join(out, name, "music")):
+            counts.append(_adlib_songs(folder, os.path.join(out, name, "music")))
         # a page to look through them, when there is anything to look through
         folders = [os.path.join(out, name, kind) for kind in ("pictures", "sounds", "music", "fonts")]
         if any(os.path.isdir(kind) and os.listdir(kind) for kind in folders):
@@ -963,6 +970,29 @@ def extract(args: argparse.Namespace) -> None:
             print(f"{name}: {', '.join(counts)}; to look through them, open {page}")
         else:
             print(f"{name}: {', '.join(counts)}")
+
+
+def _adlib_songs(folder: str, into: str) -> str:
+    """Have the player write a game's AdLib songs as WAV files, and say how it went.
+
+    The sound of an AdLib song is the FM chip's, which the player has and these scripts don't:
+    it plays each song through Ad Lib's driver as the game does, and records the chip.
+    """
+    project = os.path.join(
+        os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "src", "Legendary.Player"
+    )
+    if not os.path.isdir(project) or shutil.which("dotnet") is None:
+        return "AdLib songs not made into sound (that takes the player, and dotnet to run it)"
+    with tempfile.TemporaryDirectory() as scratch:
+        # with settings of its own, so that the user's aren't touched
+        command = ["dotnet", "run", "-c", "Release", "--project", project, "--", folder]
+        command += ["--settings", os.path.join(scratch, "settings.json"), "--songs", into]
+        ran = subprocess.run(command, capture_output=True, text=True, check=False)
+    if ran.returncode != 0:
+        said = (ran.stderr or ran.stdout).strip().splitlines()
+        return f"AdLib songs not made into sound ({said[-1] if said else 'the player failed'})"
+    made = sum(1 for file in os.listdir(into) if file.lower().endswith(".wav"))
+    return f"{made} of them as the AdLib plays them"
 
 
 def strings(args: argparse.Namespace) -> None:
@@ -1007,6 +1037,19 @@ def vocab(args: argparse.Namespace) -> None:
         if word.synonym:
             line += f"; for {words[word.synonym - 1].text} as {data.parts_of_speech(word.synonym_parts)}"
         print(line)
+
+
+def _extract_options(extracting: argparse.ArgumentParser) -> None:
+    extracting.add_argument(
+        "--out",
+        metavar="FOLDER",
+        help="write them there, a folder to a game (media, beside the tools)",
+    )
+    extracting.add_argument(
+        "--no-wav",
+        action="store_true",
+        help="don't have the player make the AdLib songs into sound, which takes minutes a game",
+    )
 
 
 def main() -> None:
@@ -1058,11 +1101,7 @@ def main() -> None:
     )
     command(sounds).add_argument("--out", metavar="FOLDER", help="write each sound there as a WAV file")
     command(pictures).add_argument("--out", metavar="FOLDER", help="write each picture there as a PNG file")
-    command(extract).add_argument(
-        "--out",
-        metavar="FOLDER",
-        help="write them there, a folder to a game (media, beside the tools)",
-    )
+    _extract_options(command(extract))
     command(fonts).add_argument(
         "--out",
         metavar="FOLDER",

@@ -95,12 +95,19 @@ def write_index(folder: str, name: str) -> str:
     page.append('<h2 id="music">Music</h2>')
     page.append(
         "<p>A .mid file is for the MT-32, and plays in anything that plays MIDI. A .rol or .mdi file is"
-        " the AdLib's, which an ordinary player doesn't open.</p><table>"
+        " the AdLib's, which an ordinary player doesn't open: where the player has made one into"
+        " sound, as the card plays it, it can be played here.</p><table>"
     )
     for song in songs:
         shown = html.escape(song)
         kind = "MIDI, for the MT-32" if song.lower().endswith(".mid") else "for the AdLib"
-        page.append(f'<tr><td><a href="music/{shown}">{shown}</a></td><td>{kind}</td></tr>')
+        sound = os.path.splitext(song)[0] + ".wav"
+        played = (
+            f'<audio controls preload="none" src="music/{html.escape(sound)}"></audio>'
+            if os.path.isfile(os.path.join(folder, "music", sound))
+            else ""
+        )
+        page.append(f'<tr><td><a href="music/{shown}">{shown}</a></td><td>{kind}</td><td>{played}</td></tr>')
     page.append("</table>")
     if fonts:
         page.append('<h2 id="fonts">Fonts</h2>')
