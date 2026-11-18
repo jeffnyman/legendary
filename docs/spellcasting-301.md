@@ -376,10 +376,35 @@ isn't there. So every routine that takes text takes a string's number as well, w
 of its own for it, and the game's writers could move a string out of the program and into
 the file by changing only how it was named.
 
-2,473 places in the program name a string this way, 2,424 different strings of the 4,777.
-The routine at `1D3A:10C6`, which prints, is handed 2,348 of them at once. The other strings
-are reached some other way, by a number that is worked out or from tables in the data,
-which the tools don't follow.
+Nearly every string is named by a constant, though half don't look it. Where a routine
+prints one of several strings, the compiler loaded each number where it was chosen and
+jumped to the one place that does the rest:
+
+```
+37b7:1bd5  mov ax, 0x429  ; string 1.41: %s to be locked.\n
+37b7:1bd8  jmp 0x1b90
+  ...
+37b7:1b90  mov dx, 0xf000
+37b7:1b93  push dx
+37b7:1b94  push ax
+```
+
+So the number and its `F000` can be far apart, and a search for the two together finds only
+the strings that are a routine's one message. Following the jump finds the rest. The tools
+take a string to be named where its number is loaded and `F000` is given at once or where a
+jump from there lands; where the two are put by as a far pointer, in a routine's variables
+or in the data; and where a far pointer of the kind is in the program's data as it starts.
+
+| How | Places |
+|---|---|
+| Handed at once to the routine that prints, `1D3A:10C6` | 4,194 |
+| Made in code for something else | 386 |
+| Kept as data | 231 |
+
+That is 4,811 places, and 4,737 of the file's 4,777 strings. The 40 left are a few the
+tools miss, where the segment is given before the number, and some nothing names at all:
+notes to the game's testers, `Welcome to the Gamma test version of S301!`, and messages for
+faults, `Bug: set_spell_verb`.
 
 ## The pictures
 
@@ -505,7 +530,6 @@ packed text, and this game's world.
 - What display 4 is, and what the `40` in a picture's kind says.
 - The fonts.
 - The saved game's layout: the code that saves isn't found.
-- The strings that aren't named by a constant: half of them.
 - Twelve flags aren't named, and timers 37 to 42 are named only by whose they are.
 - Two tables the code that calls routines reads, of 139 and 46 entries.
 - The four bytes a thing's record has more than *Spellcasting 201*'s.

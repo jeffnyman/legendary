@@ -79,7 +79,8 @@ python -m legendary_tools sentence <the game's folder>
   [names a string by one number](../docs/spellcasting-201.md#how-the-program-names-a-string),
   it lists every call that does, with the string. For *Spellcasting 301*, which names a
   string [as a far pointer no text is at](../docs/spellcasting-301.md#how-the-program-names-a-string),
-  it lists every place that does.
+  it lists every place that does, in code or in data, and says how many of the file's
+  strings are named.
 
 `segments`, `dump` and `dis` build the program's memory first: the root, the data, and the
 overlays `--overlay` names, which can't be two that load at the same place. Given a routine's
