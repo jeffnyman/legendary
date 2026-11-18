@@ -103,7 +103,8 @@ python -m legendary_tools dis ../../legend/sc101/game 3670:054e
   [*Spellcasting 301*'s](../docs/spellcasting-301.md#the-objects), whose lists end another
   way and whose records name their routines by number, and says of an object which routine
   [gives its text and which says whether a phrase means it](../docs/spellcasting-301.md#two-more-kinds-of-routine).
-  It reads [*Gateway*'s](../docs/gateway.md#the-objects), which are kept the same way. It reads [*Timequest*](../docs/timequest.md#the-objects) too, whose records are
+  It reads [*Gateway*'s](../docs/gateway.md#the-objects), which are kept the same way, and
+  [*Eric the Unready*'s](../docs/eric-the-unready.md#the-objects). It reads [*Timequest*](../docs/timequest.md#the-objects) too, whose records are
   between the two, with a [kind of exit](../docs/timequest.md#the-exits) of its own.
 
 - **`grammar`** lists the forms a command can take, from the program's tables: for each verb
@@ -173,7 +174,8 @@ python -m legendary_tools vocab <the game's folder>
   listened to, in a folder for each: `media/sc101/pictures`, `sounds`, `music` and, for a
   game that has them, `fonts`. It is `pictures`, `sounds`, `music` and `fonts` with `--out`,
   all at once. Given a folder of games, as `../legend`, it
-  does each game in it, and says for each how much it wrote. The `media` folder is beside
+  does each game in it, and says for each how much it wrote. A game's files may be in its
+  folder, in a `game` inside it, or a folder deeper, as *Eric the Unready*'s are. The `media` folder is beside
   `tools`, and the repository ignores it: what's in it is the games' own, and no more the
   repository's to hold than the games are. `--out` puts it somewhere else. It says how many
   pictures it couldn't read, of any that are kept a way that isn't known. Beside those

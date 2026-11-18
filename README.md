@@ -21,7 +21,7 @@ question of what a player is stays open until more of the games is understood.
 `--watch` and `--panel` show its world; [notes](docs/spellcasting-201.md) |
 | *Gateway* | 1992 | `gateway` | Plays, with its pictures and music; not yet played through. Built as *Spellcasting 301* is: its program, run-time library and overlays are read, and its vocabulary, objects, flags, grammar, routines, timers, text, pictures, saved game, music and sounds, and `--watch` and `--panel` show its world; [notes](docs/gateway.md) |
 | *Spellcasting 301: Spring Break* | 1992 | `sc301` | Plays, with its pictures and music; not yet played through. Linked with a newer .RTLink: its program, run-time library and overlays are read, and its vocabulary, objects, flags, grammar, routines, timers, text, pictures, music and sounds, and `--watch` and `--panel` show its world; [notes](docs/spellcasting-301.md) |
-| *Eric the Unready* | 1993 | `ericun` | Not yet tried |
+| *Eric the Unready* | 1993 | `ericun` | Not yet tried on the PC. Built as *Gateway* is: its program, run-time library and overlays are read, and its vocabulary, objects, grammar, routines, timers, text, saved game, music, sounds and fonts, and most of its pictures; [notes](docs/eric-the-unready.md) |
 | *Gateway II: Homeworld* | 1993 | `gateway2` | Not yet tried |
 | *Mission Critical* | 1995 | `mcritic` | Not yet tried; a 32-bit program, and another kind of game |
 
