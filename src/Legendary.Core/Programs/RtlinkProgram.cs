@@ -78,6 +78,30 @@ public sealed class RtlinkProgram : OverlaidProgram
         }
 
         var image = Mz.Image.Span;
+        if (!StartsInStub(Mz))
+        {
+            // a program the linker left whole, as Companions of Xanth is: an ordinary MZ
+            // program, with the linker's overlay manager in it and no library beside it. Its
+            // memory is its image, and its relocations the header's
+            StartOffset = Mz.Ip;
+            StartSegment = Mz.Cs;
+            _segments = [];
+            _groups = [];
+            MemoryEndSegment = (ushort)(Mz.Ss + (Mz.Sp + 15) / 16);
+            _memory = new byte[Math.Max(image.Length, MemoryEndSegment * 16)];
+            image.CopyTo(_memory);
+            foreach (var relocation in Mz.Relocations)
+            {
+                _relocations.Add(relocation.Linear);
+            }
+
+            Records = [];
+            LoaderSegment = TableSegment = StartSegment;
+            (Overlays, Thunks, OvlName) = ReadManager();
+            PlaceRest(exe);
+            return;
+        }
+
         LinkerVersion = Word(image, 0x34);
         if (LinkerVersion is not (Version or LaterVersion or LatestVersion))
         {
@@ -115,7 +139,46 @@ public sealed class RtlinkProgram : OverlaidProgram
         (Overlays, Thunks, OvlName) = ReadManager();
     }
 
-    /// <summary>Whether a program's bytes start in .RTLink's stub.</summary>
+    // what the file has after the image: the program's memory from past the overlays on, its
+    // far data and its data segment, which the linker's code reads in itself. The file leaves
+    // out the stretch between, where the overlays load. Where it goes is told by the data
+    // segment, which starts eight bytes before Microsoft's notice and is the segment past the
+    // overlays that the program's relocations name most
+    private void PlaceRest(byte[] exe)
+    {
+        var rest = exe.AsSpan(Mz.ImageEnd);
+        int notice = rest.IndexOf("MS Run-Time Library"u8);
+        int past = Overlays.Select(overlay => (int)overlay.EndSegment).DefaultIfEmpty(0).Max();
+        var image = Mz.Image;
+        var named = Mz.Relocations
+            .Select(relocation => (int)Word(image.Span, relocation.Linear))
+            .Where(segment => segment >= past && segment < MemoryEndSegment)
+            .GroupBy(segment => segment)
+            .OrderByDescending(group => group.Count())
+            .Select(group => group.Key)
+            .ToList();
+        if (notice < 8 || named.Count == 0)
+        {
+            return;
+        }
+
+        int at = (named[0] * 16) - (notice - 8);
+        if (at >= image.Length && at + rest.Length <= _memory.Length)
+        {
+            rest.CopyTo(_memory.AsSpan(at));
+        }
+    }
+
+    private static ReadOnlySpan<byte> RunTime => ".RTLink(R)/Plus run-time code"u8;
+
+    private static bool StartsInStub(MzExecutable mz)
+    {
+        int entry = (mz.Cs * 16) + mz.Ip;
+        var image = mz.Image.Span;
+        return entry + Entry.Length <= image.Length && image.Slice(entry, Entry.Length).SequenceEqual(Entry);
+    }
+
+    /// <summary>Whether a program's bytes start in .RTLink's stub, or have the linker's code in them.</summary>
     public static bool IsRtlink(byte[] exe)
     {
         ArgumentNullException.ThrowIfNull(exe);
@@ -129,16 +192,17 @@ public sealed class RtlinkProgram : OverlaidProgram
             return false;
         }
 
-        int entry = mz.Cs * 16 + mz.Ip;
-        var image = mz.Image.Span;
-        return entry + Entry.Length <= image.Length && image.Slice(entry, Entry.Length).SequenceEqual(Entry);
+        return StartsInStub(mz) || mz.Image.Span.IndexOf(RunTime) >= 0;
     }
 
     /// <summary>The run-time library a .RTLink program names, or null when it names none.</summary>
     public static string? NameOfLibrary(byte[] exe)
     {
-        var image = new MzExecutable(exe).Image.Span;
-        if (image.Length < 0x51 || image[0x1C] != 1)
+        var mz = new MzExecutable(exe);
+        var image = mz.Image.Span;
+
+        // a program the linker left whole has its library in it
+        if (!StartsInStub(mz) || image.Length < 0x51 || image[0x1C] != 1)
         {
             return null;
         }
@@ -390,11 +454,14 @@ public sealed class RtlinkProgram : OverlaidProgram
     private (IReadOnlyList<ProgramOverlay>, IReadOnlyList<ProgramThunk>, string) ReadManager()
     {
         int start = StartSegment * 16;
-        int length = Records
-            .Where(record => SegmentStart(record.Segment) == start)
-            .Select(record => record.Offset + record.Length)
-            .DefaultIfEmpty(0)
-            .Max();
+        // a program left whole has no records to say where the segment ends
+        int length = Records.Count == 0
+            ? Math.Min(0x10000, _memory.Length - start)
+            : Records
+                .Where(record => SegmentStart(record.Segment) == start)
+                .Select(record => record.Offset + record.Length)
+                .DefaultIfEmpty(0)
+                .Max();
         var segment = _memory.AsSpan(start, length);
 
         // the manager says where its table is: where the count is, where the entries start,

@@ -77,6 +77,35 @@ public sealed class World301Tests
     }
 
     /// <summary>
+    /// <i>Companions of Xanth</i> is a program the linker left whole: an ordinary MZ program
+    /// with the overlay manager in it, no library, and its data segment after the image in
+    /// its file. The overlays and thunks are found, and the data segment is where the
+    /// program's relocations say.
+    /// </summary>
+    [Fact]
+    public void Companions_of_Xanth_is_loaded_from_a_program_left_whole()
+    {
+        if (TestData.Game("xanth/game") is not { } folder || TestData.File(folder, "xanth.exe") is not { } path)
+        {
+            return;
+        }
+
+        var program = RtlinkProgram.Load(path);
+        Assert.Equal((70, 883), (program.Overlays.Count, program.Thunks.Count));
+        Assert.Equal((0x1DC1, 0x0835), (program.StartSegment, program.StartOffset));
+        Assert.Null(program.LibraryName);
+        Assert.All(program.Thunks, thunk =>
+        {
+            var overlay = program.Overlays.First(found => found.Number == thunk.Overlay);
+            Assert.InRange(thunk.TargetSegment, overlay.LoadSegment, overlay.EndSegment);
+        });
+
+        // the data segment, which Microsoft's notice starts eight bytes into
+        var memory = program.Image().Memory.Span;
+        Assert.Equal("MS Run-Time Library", System.Text.Encoding.ASCII.GetString(memory.Slice((0x38AF * 16) + 8, 19)));
+    }
+
+    /// <summary>
     /// <i>Gateway II</i> is linked by .RTLink 6.10, whose file has a second table of symbols
     /// that one fixup of the library names: the program loads, and every thunk goes into the
     /// overlay it names.
