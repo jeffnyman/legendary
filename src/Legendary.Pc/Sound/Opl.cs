@@ -33,6 +33,9 @@ internal sealed class Opl : ISoundSource
 
     public Opl(int sampleRate) => _chip.Setup((uint)sampleRate);
 
+    /// <summary>Called with each register written, its value, and when: for watching what a program plays.</summary>
+    public Action<int, byte, double>? Written { get; set; }
+
     /// <summary>
     /// A write to the card. <paramref name="port"/>'s low two bits pick what: 0 the address of
     /// the first bank, 1 data, 2 the address of the second bank, 3 data.
@@ -45,6 +48,7 @@ internal sealed class Opl : ISoundSource
             return;
         }
 
+        Written?.Invoke((int)_register, value, now);
         switch (_register)
         {
             // the timers' counts and control live on the card's side, not in the synthesis

@@ -35,6 +35,16 @@ public sealed partial class Machine
     private long _samples;
 
     /// <summary>
+    /// Called with each register a program writes on the FM chip, its value, and the machine's
+    /// time in seconds: for watching what is played, as a test of a song does.
+    /// </summary>
+    public Action<int, byte, double>? FmWritten
+    {
+        get => _opl.Written;
+        set => _opl.Written = value;
+    }
+
+    /// <summary>
     /// Takes the sound made so far and not yet read: 16-bit samples, left and right
     /// interleaved, at <see cref="SampleRate"/>. The machine keeps the last second of sound
     /// for reading, and drops what's older.
