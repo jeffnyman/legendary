@@ -4,7 +4,7 @@ Legend Entertainment, 1993. The second game from Frederik Pohl's books, by Glen 
 and Mike Verdu.
 
 This is the start of the first look: where the game's files are, how its program is
-built, and its text. What is known for certain is said plainly; what is inferred says so. Addresses are
+built, its text, and how its engine differs from the games' before. What is known for certain is said plainly; what is inferred says so. Addresses are
 `segment:offset` in hex, with segments relative to where the program loads. Every one of
 them can be looked at with the [tools](../tools/README.md).
 
@@ -105,7 +105,8 @@ The records, the other fixups, the manager's table and the thunks are read by wh
 And what they don't yet:
 
 - **The grammar, the objects and the timers.** The code the tools look for, to find each
-  table, isn't found as it is in the games before.
+  table, isn't as it is in the games before: [the engine was built
+  again](#the-engine-was-built-again).
 - **The pictures**, which are on the disc, and whose files are named another way:
   `EP_LAND.PIC` and `HT_DOCK4.PIC`, where the earlier games had `GATE_301.PIC`.
 
@@ -131,6 +132,51 @@ the block times 1,024 and the string's place in it. The routine most are handed 
 prints, is at `18A2:11FC`. There are 5,054 places that name a string, and 4,785 of the
 4,875 strings are named by one. Block 1 is named by none: it is the help, the keys and what the mouse
 does, shown by its block as *Eric the Unready*'s is.
+
+## The engine was built again
+
+The games before were found by the same few instructions in each: the ones that read the
+table of objects, compare a number with their count, and look a type up. None of them is
+in this game as it was. The routines are the same routines, in the same order, but they
+were compiled by a later compiler and with the data kept another way:
+
+- **A register is cleared with `xor`**, where the compiler before wrote `sub`.
+- **The data segment's variables are read as they are**, `mov ax,[3336]`, where every game
+  before loaded a segment into `ES` first even for those. So the count of objects is a
+  plain word of the data segment, at `4B4C:3336`.
+- **A table's entry is found with `BX`**, where it was `SI`.
+
+Set beside *Eric the Unready*'s, 1,177 of the root's first 2,600 instructions are the same
+but for their addresses, where that game and *Spellcasting 301* had 2,519. The routine that
+performs an action is at `0000:0184`, where it was at `01A4` in the three games before.
+
+## The objects, so far
+
+The table is found, and it is kept as before: six bytes an object, its type and a far
+pointer to its record, in segment `27D7` from `00BE`. There are 521 objects.
+
+**The records are a new design.** There are seven types, where there were eight, and
+their sizes are none of the earlier games':
+
+| Type | How many | Bytes | Places | Lists |
+|---|---|---|---|---|
+| 1 | 123 | 22 | 0 | 1 |
+| 2 | 210 | 28 | 1 | 1 |
+| 3 | 79 | 32 | 1 | 2 |
+| 4 | 5 | 12 | 0 | 0 |
+| 5 | 7 | 18 | 0 | 2 |
+| 6 | 73 | 18 | 0 | 1 |
+| 7 | 24 | 34 | 1 | 3 |
+
+A record still starts with its two names, as places in `OBJECT.DAT`, and its flags. After
+that the fields are in another order: by the records themselves, the number of an object's
+routine and where its nouns and adjectives start come last in most types, where the words
+came straight after the flags. Type 1 is the rooms, 123 of them, and type 7 has the
+player, who is object 1.
+
+What each field is, for each type, hasn't been worked out, so the tools find the table and
+can't yet list the objects. The grammar and the timers are found by code of the same old
+kind, and aren't found yet either.
 
 ## Still to do
 
