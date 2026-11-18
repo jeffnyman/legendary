@@ -221,8 +221,49 @@ FLAG_NAMES_GATEWAY = {
     41: "a person, and not you or a monster",
     42: "can't answer: asleep, or dead",
 }
+# Eric the Unready's: Gateway's flags under other numbers, from what has each as the game
+# starts and what the actions that test it say. Flags 3, 9, 30 and 38 aren't known
+FLAG_NAMES_ERIC = {
+    1: "takes `some`, and is still `it`",
+    2: "its name takes `an`",
+    4: "its name takes no article",
+    5: "touched, or for a place visited",
+    6: "a mark its own routine keeps, of something that has happened",
+    7: "plural: `some`, and `they`",
+    8: "seen by the player",
+    10: "can be taken, and hasn't been: taking it can be special",
+    11: "not listed among a room's contents",
+    12: "alive: a person or an animal",
+    13: "lit, or for a place has light",
+    14: "open",
+    15: "can be opened and closed",
+    16: "things can be on it",
+    17: "what's dropped in it lands outside it",
+    18: "female",
+    19: "can be eaten or drunk",
+    20: "a door",
+    21: "a liquid",
+    22: "a container",
+    23: "burns",
+    24: "cuts",
+    25: "can't answer: asleep, or dead",
+    26: "can be taken",
+    27: "cuts",
+    28: "can be read",
+    29: "locked",
+    31: "a key",
+    32: "got out of before you go anywhere",
+    33: "can be seen through",
+    34: "outdoors",
+    35: "turned on, or alight",
+    36: "can be turned on and off, or lit",
+    37: "can be got in or on",
+    39: "can be worn",
+    40: "can be spoken to",
+}
+
 GAME_101, GAME_TIMEQUEST, GAME_201 = "Spellcasting 101", "Timequest", "Spellcasting 201"
-GAME_301, GAME_GATEWAY = "Spellcasting 301", "Gateway"
+GAME_301, GAME_GATEWAY, GAME_ERIC = "Spellcasting 301", "Gateway", "Eric the Unready"
 # each game's names: for any object, and what a place's and a person's are instead
 _NAMES = {
     GAME_101: (FLAG_NAMES, PLACE_FLAG_NAMES, PERSON_FLAG_NAMES),
@@ -230,6 +271,7 @@ _NAMES = {
     GAME_201: (FLAG_NAMES_201, {}, {}),
     GAME_301: (FLAG_NAMES_301, {}, {}),
     GAME_GATEWAY: (FLAG_NAMES_GATEWAY, {}, {}),
+    GAME_ERIC: (FLAG_NAMES_ERIC, {}, {}),
 }
 
 
