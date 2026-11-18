@@ -195,6 +195,17 @@ LAYOUTS_GATEWAY = {
 }
 
 
+# Eric the Unready's: Gateway's, with a room as Spellcasting 301 has it, two bytes of flags
+# and no more; a door two bytes longer, for four bytes of flags; and something fixed in a
+# room two bytes shorter
+LAYOUTS_ERIC = {
+    **LAYOUTS_GATEWAY,
+    1: LAYOUTS_301[1],
+    6: Layout(26, flag_bytes=4, names=4, places=0x0C, lists=0x10, routine=0x18),
+    8: Layout(22, flag_bytes=4, names=4, places=0x0C, relation=0x0E, next=0x10, routine=0x14),
+}
+
+
 # the directions an exit can be in, by number, from the main loop's own tests of the word typed
 DIRECTIONS = (
     "",
@@ -348,7 +359,14 @@ class ObjectTable:
         self._layouts: dict[int, Layout] = next(
             (
                 layouts
-                for layouts in (LAYOUTS, LAYOUTS_TIMEQUEST, LAYOUTS_201, LAYOUTS_301, LAYOUTS_GATEWAY)
+                for layouts in (
+                    LAYOUTS,
+                    LAYOUTS_TIMEQUEST,
+                    LAYOUTS_201,
+                    LAYOUTS_301,
+                    LAYOUTS_GATEWAY,
+                    LAYOUTS_ERIC,
+                )
                 if all(
                     kind in layouts and layouts[kind].size == entry.size for kind, entry in self.types.items()
                 )
@@ -367,6 +385,8 @@ class ObjectTable:
             if self._layouts is LAYOUTS_301
             else "Gateway"
             if self._layouts is LAYOUTS_GATEWAY
+            else "Eric the Unready"
+            if self._layouts is LAYOUTS_ERIC
             else None
         )
         self.objects: list[GameObject] = []
