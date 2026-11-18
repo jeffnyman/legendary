@@ -224,8 +224,63 @@ looked at.
 
 ## The timers
 
-There are 71, numbered, and found as in *Gateway*: the tools list each with the routine it
-runs and the places that start it. They have no names yet.
+There are 72, numbered, and found as in *Gateway*: the tools list each with the routine it
+runs and the places that start it, stop it and ask about it. 71 are started somewhere the
+tools read; the other, 60, is one of the few calls they don't.
+
+### What each timer does
+
+Each is named from what its routine prints when it runs:
+
+| Timer | What it does | Timer | What it does |
+|---|---|---|---|
+| 1 | the farmer fires you | 37 | Morty's door opens |
+| 2 | the farmer wants an answer | 38 | the receptionist speaks into her headset |
+| 3 | a word forgotten | 39 | Clio comes back, and Morty finishes |
+| 4 | Ed McDwarf gives back the sweepstakes notice | 40 | Morty shows you out |
+| 5 | you tire of walking on your knees | 41 | the candles are put out |
+| 6 | the beard begins to itch | 42 | the librarian fusses |
+| 7 | the beard itches more | 43 | the library book disappears |
+| 8 | you rip off the beard | 44 | the library book is missed |
+| 9 | the wheel carries you round | 45 | the slimewig wriggles away |
+| 10 | a gnu lumbers through | 46 | the slimewig kicks |
+| 11 | the tavern's patrons and their Mead Lite | 47 | a salty burp |
+| 12 | Bruce the waiter | 48 | the raft's voyage, turn by turn |
+| 13 | the oaf's heads argue | 49 | the whirlpool |
+| 14 | a raspberry at Blicester Castle | 50 | Gnoll Island's own |
+| 15 | the turtles close in | 51 | the castaways of Milligan's Island talk |
+| 16 | the man in the stocks, turn by turn | 52 | a bottle floats in |
+| 17 | a boy and his father at the fair | 53 | the hourglass's sand runs |
+| 18 | the storyteller's show | 54 | the wedding in the Great Hall, turn by turn |
+| 19 | Lily's show | 55 | the makeup eats through the chain |
+| 20 | the jugglers come on | 56 | the witch turns you inside out |
+| 21 | the jugglers finish | 57 | the castle falls |
+| 22 | Sir Pectoral's thugs catch you | 58 | the small voice hurries you |
+| 23 | the elf's shell game | 59 | your squire calls you out |
+| 24 | the musician wanders off | 60 | the Sergeant-At-Arms |
+| 25 | the dragon flames, turn by turn | 61 | the knights' meeting |
+| 26 | the hanky dries out | 62 | the bard, for a copper penny |
+| 27 | the virgin stops crying | 63 | the bard, for a silver penny |
+| 28 | a unicorn comes for you | 64 | the bard finishes his song |
+| 29 | the priestess searches, and the sacrifice begins | 65 | the bard's song, which `listen` asks about |
+| 30 | a scream from the sanctuary | 66 | the feasters' food fight |
+| 31 | Molochi smokes and burns, turn by turn | 67 | the drunken knights fight |
+| 32 | words from the sanctuary | 68 | the vanilla melts |
+| 33 | the dragon's flame goes out | 69 | the delivery boy arrives |
+| 34 | the escalator carries you up | 70 | the Shooting Gallery's own |
+| 35 | a god greets you | 71 | something is tossed to the jugglers |
+| 36 | the cork pops | 72 | the clock strikes noon, and the quest is over |
+
+Timer 3 prints nothing: it clears one word of the data, and 21 places start it, most of them actions, with
+a count of 1, so the word lasts a turn. Timers 50 and 70 print nothing either, and are
+named for whose routines start and stop them. Timer 14 prints what someone says and plays
+`RASP1.RS`. Timer 65's routine wasn't read to its end; `listen` asks whether it is going,
+in the Village Square, with the bard's timers around it.
+
+The last timer is a clock: a routine of the root's starts 72 with a count of 180, and when
+it runs a small voice says the clock has struck noon and the quest is over. The same
+routine starts four others, so it looks to be what begins a part of the game; that
+hasn't been confirmed.
 
 ## A saved game
 
@@ -243,6 +298,7 @@ runs and the places that start it. They have no names yet.
 
 - Which screen display 4 is.
 - The 28 strings no place names, outside the help.
-- Flags 3, 9, 30 and 38, and the timers' names.
+- Flags 3, 9, 30 and 38.
+- What timers 3, 50, 65 and 70 do, which their names only point at.
 - Where a command is parsed and performed, for the player's `--watch`.
 - The game hasn't been run on the PC.
