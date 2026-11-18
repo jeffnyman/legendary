@@ -113,7 +113,7 @@ internal sealed class WorldWatch(
         }
 
         SayChanges(world);
-        string place = $"{(world.Visit is { } visit ? visit + ", " : "")}{Time(world.Minutes)}, turn {world.Moves}, in {Name(world, room)}";
+        string place = $"{(world.Visit is { } visit ? visit + ", " : "")}{Time(world.Minutes)}, {world.Progress}, in {Name(world, room)}";
         string here = $"  here: {Inside(world, room, depth: 0)}";
         string exits = $"  exits: {Exits(world, room)}";
         if (place == _place && here == _here && exits == _exits)
@@ -233,7 +233,7 @@ internal sealed class WorldWatch(
     {
         var lines = new List<PanelLine>
         {
-            new($"{Time(world.Minutes)}   turn {world.Moves}", PanelTone.Title),
+            new($"{Time(world.Minutes)}   {world.Progress}", PanelTone.Title),
             new(Name(world, room) + (world.Visit is { } visit ? $", {visit}" : ""), PanelTone.Title),
             new(""),
             new("Here", PanelTone.Dim),
@@ -445,13 +445,13 @@ internal sealed class WorldWatch(
     // is said with them, and with where the form let them be looked for
     private void Found()
     {
-        if (_world is not { IsThere: true } world)
+        if (_world is not { IsThere: true, IsFinding: true } world)
         {
             return;
         }
 
         var cpu = machine.Cpu;
-        var (lot, where, phrases) = world.Found((cpu.Ss * 16) + (ushort)cpu.Esp);
+        var (lot, where, phrases) = world.Found((cpu.Ss * 16) + (ushort)cpu.Esp, cpu.Ss);
         string[] places = [.. new[] { (1, "held"), (2, "carried"), (4, "in the room"), (8, "in something there") }.Where(place => (where & place.Item1) != 0).Select(place => place.Item2)];
         string looked = places.Length switch { 0 => "anywhere at all", 4 => "anywhere near", _ => string.Join(", ", places) };
         string Word(int number) => words is not null && number >= 1 && number <= words.Count ? words[number - 1].Text : "";
