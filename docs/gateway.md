@@ -325,7 +325,7 @@ Three things differ:
 
 ## The game as it runs
 
-The game starts on [the PC](the-pc.md) and takes commands, and the player's `--watch` and
+The game starts and plays on [the PC](the-pc.md), with its pictures and music, and the player's `--watch` and
 `--panel` follow it:
 
 ```
@@ -342,7 +342,6 @@ world:   action 152: go out
 world:   you (211) moved: from Your Quarters (238) to Heecheetown (241)
 ```
 
-It is run here without a screen: its pictures and sound haven't been looked at or heard.
 What an exit says is given by the player as a string's number, since `Legendary.Core`
 doesn't read the file of text for it.
 

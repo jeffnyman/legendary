@@ -147,7 +147,7 @@ internal static class Games
         new("sc201", "Spellcasting 201: The Sorcerer's Appliance", 1991, ["S201MAIN.EXE"], "S201.EXE", At,
             "starts and plays, with its pictures, music and sounds; not yet played through", World: Legendary.Core.Worlds.WorldMap.Spellcasting201),
         new("gateway", "Gateway", 1992, ["GATEMAIN.EXE"], "GATE.EXE", At,
-            "starts and runs on into the game, and takes commands; not yet played", World: Legendary.Core.Worlds.WorldMap.Gateway),
+            "starts and plays, with its pictures and music; not yet played through", World: Legendary.Core.Worlds.WorldMap.Gateway),
         new("sc301", "Spellcasting 301: Spring Break", 1992, ["S301MAIN.EXE"], "S301.EXE", At,
             "starts and plays, with its pictures and music; not yet played through",
             World: Legendary.Core.Worlds.WorldMap.Spellcasting301),
