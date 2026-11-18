@@ -43,6 +43,12 @@ _BY_NUMBER = re.compile(
     rb"\x3d(..)\x77.\xff\x4e\xfe\x8b\x5e\xfe\xd1\xe3\xd1\xe3\x8e\x06(..)\x26\x8b\x87(..)\x26\x8b\x97",
     re.DOTALL,
 )
+# Gateway II's, from a later compiler: cmp ax,<how many> / ja <none> / push [bp+8] /
+# mov bx,ax / dec bx / add bx,bx / add bx,bx / mov es,[segment variable] / mov ax,es:[bx+table]
+_BY_NUMBER_NEAR = re.compile(
+    rb"\x3d(..)\x77.\xff\x76.\x8b\xd8\x4b\x03\xdb\x03\xdb\x8e\x06(..)\x26\x8b\x87(..)\x26\x8b\x97",
+    re.DOTALL,
+)
 # cmp byte [bp+6],<how many> / ja <none> / mov al,6 / mul byte [bp+6] / mov bx,ax /
 # mov es,[segment variable] / call far es:[bx+table]: an action's routine, from a table of
 # six bytes an action
@@ -194,7 +200,7 @@ def _numbered_routines(code: _Code) -> dict[int, Routine] | None:
             offset, "little"
         )
 
-    match = _BY_NUMBER.search(code.root)
+    match = _BY_NUMBER.search(code.root) or _BY_NUMBER_NEAR.search(code.root)
     if match:
         count = int.from_bytes(match[1], "little")
         tables = [at(match[2], match[3])]

@@ -42,6 +42,17 @@ _TABLE_BX = re.compile(rb"\x8e\x06(..)\x26\x8a[\x87\x8f\x9f](..)", re.DOTALL)
 # and its count is in the data segment, read with no segment loaded: mov ax,[count] /
 # cmp [bp+6],ax
 _COUNT_NEAR = re.compile(rb"\xa1(..)\x39\x46\x06", re.DOTALL)
+# and its other tables are each read after add bx,bx / add bx,bx, or mov cl,3 / shl bx,cl:
+# the row of what is also in a room, a byte of it and then its word; a row of the exits, its
+# direction compared; an exit's text, a far pointer; and the variable that opens an exit,
+# with the room it leads to four before
+_NEAR_INDEX = rb"\x8e\x06(..)\x8b\x5e.\x03\xdb\x03\xdb"
+_NEAR_ALSO_HERE = re.compile(_NEAR_INDEX + rb"\x2a\xe4\x26\x8a\x87..\x89\x46.\x26\x8b\x8f(..)", re.DOTALL)
+_NEAR_EXIT_ROWS = re.compile(_NEAR_INDEX + rb"\x26\x38\x87(..)", re.DOTALL)
+_NEAR_EXIT_TEXTS = re.compile(_NEAR_INDEX + rb"\x26\x8b\x87(..)\x26\x8b\x97", re.DOTALL)
+_NEAR_EXIT_VARIABLES = re.compile(
+    rb"\x8e\x06(..)\xb1\x03\x8b\x5e.\xd3\xe3\x26\x8b\xb7(..)\x80\x3c\x00\x74.\x26\x8b\x87(..)", re.DOTALL
+)
 # and a type's entry is a byte or two before BX: mov es,[variable] / mov al|cl,es:[bx-3]
 _TYPES_BX = re.compile(rb"\x8e\x06(..)\x26\x8a[\x87\x8f]([\xf0-\xff]\xff)", re.DOTALL)
 # mov es,[segment variable] / mov ax,es:[count] / cmp [bp+6],ax: is the number an object's?
@@ -433,10 +444,60 @@ class ObjectTable:
             if self._layouts is LAYOUTS_GATEWAY2
             else None
         )
+        self._read_all(root, entries)
+
+    def _read_all(self, root: bytes, entries: list[int]) -> None:
+        memory = self.image.memory
+        if self.near:
+            self._find_near(root, entries)
         self.objects: list[GameObject] = []
         for number, entry in enumerate(entries, 1):
             offset, segment = struct.unpack_from("<HH", memory, entry + 2)
             self.objects.append(self._read(number, memory[entry], segment, offset))
+
+    def _find_near(self, root: bytes, entries: list[int]) -> None:
+        """
+        The tables of a game built by the later compiler. The lists of nouns and of adjectives
+        are where they have always been, after the table of objects and one after the other,
+        which the records themselves show; the rest are found by the code that reads each.
+        """
+        memory = self.image.memory
+
+        def after(table: int, words: int) -> int:
+            # past the row that starts furthest in: a row ends at a word with its top bit set
+            starts = []
+            for entry in entries:
+                layout = self._layouts.get(memory[entry])
+                if layout is not None and layout.words is not None:
+                    offset, segment = struct.unpack_from("<HH", memory, entry + 2)
+                    starts.append(self.image.word(segment * 16 + offset + layout.words + words))
+            at = table + 2 * (max(starts) - 1)
+            while not self.image.word(at) & 0x8000:
+                at += 2
+            return at + 2
+
+        if self._layouts:
+            nouns = entries[-1] + 6
+            self._word_lists = [nouns, after(nouns, 0)]
+        self._rows_marked = True
+        if here := _NEAR_ALSO_HERE.search(root):
+            segment = self._data_word(int.from_bytes(here[1], "little"))
+            self._room_rows = [segment * 16 + int.from_bytes(here[2], "little")]
+        texts = _NEAR_EXIT_TEXTS.search(root)
+        if texts:
+            self._exit_texts = self._data_word(int.from_bytes(texts[1], "little")) * 16
+            self._exit_texts += int.from_bytes(texts[2], "little")
+        # the timers' table is read the same way: the exits' is the one read nearest their texts'
+        near = texts.start() if texts else 0
+        if rows := min(
+            _NEAR_EXIT_ROWS.finditer(root), key=lambda found: abs(found.start() - near), default=None
+        ):
+            self._exit_rows = self._data_word(int.from_bytes(rows[1], "little")) * 16
+            self._exit_rows += int.from_bytes(rows[2], "little")
+        if opened := _NEAR_EXIT_VARIABLES.search(root):
+            rows_at, variable = int.from_bytes(opened[3], "little"), int.from_bytes(opened[2], "little")
+            self._exit_variables = self._data_word(int.from_bytes(opened[1], "little")) * 16 + rows_at
+            self._exit_variable_at = variable - rows_at
 
     def _find_exits(self, root: bytes) -> None:
         """The one table of exits, where a game has one, with the tables its kinds of exit use."""
@@ -610,9 +671,7 @@ class ObjectTable:
             found.next = found.word(layout.next)
         if layout.lists is not None:
             found.lists = [found.word(layout.lists + 2 * index) for index in range(entry.lists)]
-        if layout.also_here is not None and layout.seen_from is not None and len(self._room_rows) == 2:
-            found.also_here = self._row(self._room_rows[0], found.word(layout.also_here))
-            found.seen_from = self._row(self._room_rows[1], found.word(layout.seen_from))
+        self._read_rows(found, layout)
         if layout.exits is not None and layout.exit_count is not None:
             exits_offset, exits_segment = struct.unpack_from("<HH", record, layout.exits)
             at = exits_segment * 16 + exits_offset
@@ -629,6 +688,17 @@ class ObjectTable:
                 direction, way, value = struct.unpack_from("<BBH", memory, at + 4 * row)
                 found.exits.append(Exit(direction, way, 0, 0, value))
         return found
+
+    def _read_rows(self, found: GameObject, layout: Layout) -> None:
+        """A room's rows: what is also there, and where can be seen into from it."""
+        if layout.also_here is None:
+            return
+        if layout.seen_from is not None and len(self._room_rows) == 2:
+            found.also_here = self._row(self._room_rows[0], found.word(layout.also_here))
+            found.seen_from = self._row(self._room_rows[1], found.word(layout.seen_from))
+        elif layout.seen_from is None and self._room_rows:
+            # Gateway II's rooms have the one row
+            found.also_here = self._row(self._room_rows[0], found.word(layout.also_here))
 
     def _row(self, table: int, start: int) -> list[tuple[int, bool]]:
         """A room's row of a list: four bytes each, an object and whether it counts, to a zero."""
