@@ -171,9 +171,13 @@ sizes are the sharpest.
   would have, the packed text of a string file, the pictures of a picture file and their regions, the songs of a music file, and a
   RealSound recording, and the words of a vocabulary. It also reads a game's world from its
   memory as it runs: the room, the clock, the action, the tree of objects, and the grammar.
+  And it plays a song for the AdLib card as the games' driver does, into what is written to
+  the FM chip: the player's `--songs` records every song of a game that way, as WAV files.
 - **`tools`** has the same in Python, as commands to explore a game with: the overlays, the
   ways into them, memory in hex and as instructions, the text, the objects, the grammar, the
-  pictures as PNG files, and the sounds as WAV files. See [tools/README.md](tools/README.md).
+  pictures as PNG files, and the sounds as WAV files. Its `extract` writes all of a game's
+  pictures, sounds, music and fonts to a folder, with a page to look through them. See
+  [tools/README.md](tools/README.md).
 - **`docs`** has what was found, and how.
 
 ## Building

@@ -179,8 +179,13 @@ python -m legendary_tools vocab <the game's folder>
   pictures it couldn't read, of any that are kept a way that isn't known. Beside those
   folders it writes `index.html`, one page to look through them all in a browser: every
   picture, a file of the game's at a time, each under its number and size; every sound, to
-  be played there; the songs, as links; and each font, as a line set in it and all its
+  be played there; the songs, as links, with the AdLib's to be played there too; and each font, as a line set in it and all its
   characters.
+  The sound of an AdLib song is the FM chip's, which the player has and these scripts
+  don't. So `extract` has the player make it: it runs `legendary --songs` for each game,
+  which plays each song through Ad Lib's driver as the game does and records the chip, a WAV
+  file beside each `.rol` or `.mdi`. That needs `dotnet`, and takes some minutes a game;
+  `--no-wav` leaves it out, and without `dotnet` it is left out and said so.
 - **`fonts`** lists the fonts in each `.FNT` file, which the games from *Spellcasting 301*
   have: how high each is, how many characters, and how wide. With `--out`, it writes each to
   the folder as two PNG files, all its characters and a line set in it. The format is in

@@ -712,18 +712,51 @@ Visual Composer's own, played with the instruments in `S101.BNK`. Here it is a M
 one track, of the kind Ad Lib called `.MDI`: the notes are MIDI's, and the instruments come
 in the song itself, as events kept for a sequencer's own use that start with Ad Lib's
 number, `00 00 3F`, and then a word that says what they are. Three kinds are in the songs:
-1, with a voice's number and 28 values, 2 and 3, each with one byte. As the format is
-generally described, the first defines a voice's instrument, the second sets the rhythm
-mode and the third the range of the pitch wheel; the game's own player hasn't been read to
-confirm it. So there is no `.BNK` file, and each song carries the instruments it uses.
+1, with a voice's number and 28 values, 2 and 3, each with one byte. The first
+gives a voice its instrument, the second says whether there are drums, and the third how
+far the pitch wheel bends a note, in half tones. So there is no `.BNK` file, and each song
+carries the instruments it uses.
 
 Twenty of the game's 46 AdLib songs are 119 bytes, a header and no notes: those songs play
 on the MT-32 alone.
 
 *Timequest* already kept its AdLib songs this way, in a table of 120 entries of ten bytes,
 and the three games after *Spellcasting 201* keep theirs as it does. The tools list and
-write out all six games' songs. None of the `.MDI` files written has been played to check
-it.
+write out all six games' songs.
+
+### How the AdLib's song is played
+
+A channel is a voice of the card. A note's velocity is its voice's volume, a channel's
+pressure changes the volume while a note sounds, and the pitch wheel bends the voice. The
+songs have nothing else in them: no controllers, and no changes of program.
+
+The driver is in the game's program now, where *Spellcasting 101* had SOUND.COM run before
+it. It is still [Ad Lib's](spellcasting-101.md#how-the-adlibs-song-is-played), with three
+things changed:
+
+- **The frequencies are another table**: twelve numbers for the notes from G, 517 to 975,
+  with the octave apart. They are the notes of a keyboard tuned to an A of 440 Hz, each to
+  the nearest number, where Ad Lib's were each 6% above the last. A note below the lowest G
+  is its octave's number, halved.
+- **A volume turns both operators down**, so an instrument whose two operators are both
+  heard is quieter in both. Ad Lib's turned down only the second.
+- **A voice is silent until its first note** says how loud it is.
+
+`Legendary.Core` plays these too, and the player's `--songs` records them. The titles of
+four games were played both ways and what was written to the FM chip compared, as for
+*Spellcasting 101*: *Timequest*'s for 59 seconds, which has no drums, and this game's,
+*Spellcasting 301*'s and *Gateway*'s for about 68 each, which have. In all four, every
+register takes the same values in the same order as the game gives it.
+
+Two things aren't known:
+
+- **How the driver bends a note.** Four songs bend one, all *Timequest*'s, and none is a
+  title's. They are written with the bend taken as the part of a half tone it is, which is
+  what a bend is for; the driver's own arithmetic hasn't been read, and the four may differ
+  from the game by a little in the bent notes.
+- **Whether a game drops a note when it is busy.** *Gateway*'s title, run with the PC's
+  clock at another time of day, repeated one note once less than the song has it. The songs
+  are written as the song has them.
 
 ## A saved game
 

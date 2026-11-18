@@ -1194,6 +1194,47 @@ without the driver it opens `MUSIC.RS` and plays the title's music on the speake
 So the songs were written once and arranged twice, and the game ships the arrangers' files
 as they were.
 
+### How the AdLib's song is played
+
+`Legendary.Core` plays a `.ROL` song itself, with no PC under it: `AdLibSong` reads the
+song and the bank, `AdLibDriver` does what Ad Lib's driver does, and what comes out is what
+is written to the FM chip and when. The player's `--songs` records that through the chip,
+a WAV file to a song.
+
+The driver is the one Ad Lib gave programmers as `ADLIB.C`, and SOUND.COM is it, with what
+was found by setting the two against each other:
+
+- **Eleven voices, or nine.** A song says whether it has drums. With them, voices 0 to 5
+  are two operators each, 6 is the bass drum, with two, and 7 to 10 are the snare drum,
+  tom-tom, cymbal and hi-hat, with one each, started and stopped by five bits of register
+  `BD`. Without, there are nine voices of two operators.
+- **An instrument is 28 numbers**: thirteen for each operator and a wave for each. The bank
+  has 72 by name, and a song's voice names the one it plays, and when it changes.
+- **A volume turns down the operator that is heard.** A song's volume is a fraction, and
+  the driver's is 0 to 127: the game makes it by 128 and takes the whole part, no more than
+  127. So 0.9 is 115, and not the 114 that 127 would make it.
+- **A note's frequency is from a table** of twelve numbers, the notes of an octave from C,
+  and there are 25 such tables, for a note bent by each twenty-fifth of a half tone. They
+  are worked out when the driver starts, each note 6% above the last. SOUND.COM's table in
+  memory is the one `ADLIB.C` makes with the lowest C taken as 260.4 Hz, to the number.
+- **The tom-tom tunes the snare drum**, seven half tones above it. SOUND.COM keeps a bend
+  given to a drum, where `ADLIB.C` ignores it, and uses it when the drum's frequency is
+  next set: the title's song bends its snare drum a half tone down, and nothing else.
+- **A note ends when the next starts**, and a note of 0 is a rest.
+
+The title's song was played both ways, by the game on Legendary's PC and by `AdLibSong`,
+and what was written to the chip compared. For the 57 seconds the game was run, each
+voice's registers take the same values in the same order, and at the middle of each of the
+880 ticks the chip holds the same in every register. Two things differ, and neither is
+heard. The game does the voices of one tick in an order of its own, which hasn't been
+found, so two drums that start on one tick may start in the other order. And the game's
+ticks are half a percent longer than the file's tempo makes them, 65.56 thousandths of a
+second where 115 beats a minute and 8 ticks a beat make 65.22: the songs are written as
+the file says.
+
+Only the title's song was checked this way. The other 22 are played by the same code, and
+haven't been set against the game.
+
 ### The sounds
 
 The `.RS` files are RealSound: recorded sound for the PC's speaker, by a method Access
@@ -1241,7 +1282,8 @@ speaker's own timer the next byte of the sound as the pulse's length. So a byte 
 72, and a zero ends the sound. Playing each byte for 2 pulses or for 4 halves or quarters the
 speed, which is the header's count: the sounds are at 16,572, 8,286 and 4,143 bytes a second.
 
-The [tools](../tools/README.md) write the songs out as `.mid` and `.rol` files, and the
+The [tools](../tools/README.md) write the songs out as `.mid` and `.rol` files, with a WAV
+file of each AdLib song as the card plays it, made by the player, and the
 sounds as WAV files, a pulse's length as a level. The WAV files are made as the player's code
 says they should be; they haven't been listened to.
 
