@@ -123,7 +123,15 @@ public sealed class World
     public int Actor => DataWord(Map.ActorOffset);
 
     /// <summary>The turns taken.</summary>
-    public int Moves => DataWord(Map.MovesOffset);
+    public int Moves => Map.MovesOffset == 0 ? 0 : DataWord(Map.MovesOffset);
+
+    /// <summary>
+    /// How far the game has come, as it counts it: <c>turn 3</c>, or for a game that counts
+    /// days and not turns, <c>day 1</c>.
+    /// </summary>
+    public string Progress => Map.DaysOffset != 0
+        ? string.Create(System.Globalization.CultureInfo.InvariantCulture, $"day {DataWord(Map.DaysOffset) + 1}")
+        : string.Create(System.Globalization.CultureInfo.InvariantCulture, $"turn {Moves}");
 
     /// <summary>The time of day, in minutes from midnight; the game counts some at a time.</summary>
     public int Minutes => Map.ClocksSegment == 0 ? DataWord(Map.ClockOffset) * Map.ClockStep : (_read(Clock + 2) * 60) + _read(Clock + 3);
@@ -387,13 +395,20 @@ public sealed class World
             bool texts = Map.ExitTextsSegment != 0;
             int text = kind == 3 && texts ? Linear(Map.ExitTextsSegment, Map.ExitTextsOffset + (4 * value)) : 0;
             int opened = kind == 5 && texts ? Linear(Map.ExitVariablesSegment, Map.ExitVariablesOffset + (8 * value)) : 0;
+
+            // a row of those has the text's far pointer after the variable, or the number of
+            // one of the exits' texts, from 1, or 0 for none
+            int said = opened == 0 ? 0
+                : Map.ExitVariableAt == 2 ? opened + 4
+                : Word(opened + 6) is > 0 and var which ? Linear(Map.ExitTextsSegment, Map.ExitTextsOffset + (4 * (which - 1)))
+                : 0;
             exits.Add(new WorldExit(
                 _read(at), kind,
                 kind == 1 ? value : kind == 2 ? Word(door) : opened != 0 ? Word(opened) : 0,
                 kind == 2 ? Word(door + 2) : 0,
-                text != 0 ? Text(Word(text + 2), Word(text), 200) : opened != 0 ? Text(Word(opened + 6), Word(opened + 4), 200) : null,
+                text != 0 ? Text(Word(text + 2), Word(text), 200) : said != 0 ? Text(Word(said + 2), Word(said), 200) : null,
                 kind == 4 ? value : -1,
-                opened != 0 && _read(Linear(Map.DataSegment, Word(opened + 2))) != 0));
+                opened != 0 && _read(Linear(Map.DataSegment, Word(opened + Map.ExitVariableAt))) != 0));
         }
 
         return exits;
@@ -495,19 +510,31 @@ public sealed class World
     public int FoundAddress => Linear(Map.FoundSegment ?? Map.PerformSegment, Map.FoundOffset);
 
     /// <summary>
+    /// Whether the place at <see cref="FoundAddress"/> is the return from the call that finds
+    /// a lot's objects: always, in a game whose call is in the root, and otherwise only while
+    /// the call is what's before it, since another overlay's code can be at the same place.
+    /// </summary>
+    public bool IsFinding =>
+        Map.FinderOffset == 0
+        || (_read(FoundAddress - 5) == 0x9A && Word(FoundAddress - 4) == Map.FinderOffset && Word(FoundAddress - 2) == LoadSegment + Map.FinderSegment);
+
+    /// <summary>
     /// What was found, for a program that is at <see cref="FoundAddress"/>: which of the
     /// command's lots of phrases it was, 0 for the object's and 1 for the second object's;
     /// where the form let them be looked for; and each phrase with the objects it could be.
     /// </summary>
     /// <param name="stack">The linear address of the top of the stack, SS:SP.</param>
-    public (int Lot, int Where, IReadOnlyList<FoundPhrase> Phrases) Found(int stack)
+    /// <param name="stackSegment">SS, for a game that keeps what it found in the stack's segment.</param>
+    public (int Lot, int Where, IReadOnlyList<FoundPhrase> Phrases) Found(int stack, int stackSegment = 0)
     {
         int Far(int at) => ((Word(at + 2) * 16) + Word(at)) & 0xFFFFF;
         int lot = Far(stack), found = Far(stack + 6), said = Far(lot + 2);
         var phrases = new List<FoundPhrase>();
         for (int phrase = 0; phrase < Math.Min((int)_read(lot), 16); phrase++)
         {
-            int entry = found + (6 * phrase), objects = Far(entry + 2), words = said + (0x28 * phrase);
+            // where the objects are: by a far pointer, or by an offset in the stack's segment
+            int entry = found + (Map.FoundSize * phrase), words = said + (0x28 * phrase);
+            int objects = Map.FoundSize == 6 ? Far(entry + 2) : ((stackSegment * 16) + Word(entry + 2)) & 0xFFFFF;
             phrases.Add(new FoundPhrase(
                 Word(words) != 0,
                 [.. Enumerable.Range(0, Math.Min((int)_read(words + 4), 15)).Select(index => Word(words + 6 + (2 * index)))],
@@ -602,6 +629,13 @@ public sealed class World
         if (segment == 0 && offset == 0)
         {
             return null;
+        }
+
+        if (segment == 0xF000)
+        {
+            // not a place in memory but a string's number, in a game that names them so: the
+            // block above ten bits, and the string's place in it
+            return string.Create(System.Globalization.CultureInfo.InvariantCulture, $"(string {offset >> 10}.{offset & 0x3FF})");
         }
 
         var text = new StringBuilder();

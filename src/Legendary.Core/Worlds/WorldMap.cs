@@ -207,6 +207,26 @@ public sealed record AnswerPoint(ushort Offset, Asked Asked);
 /// <param name="HomeClockOffset">In the data, the clock for home.</param>
 /// <param name="PlaceNames">The places' names, by number: as many as there are places, and each has a clock for every time.</param>
 /// <param name="Times">How many times a place can be visited in.</param>
+/// <param name="ExitVariableAt">
+/// How far into a row of the exits a variable opens the variable is: 2, with a far pointer to
+/// what the exit says after it, or 4, with a word between and after it the number, from 1, of
+/// one of the exits' texts.
+/// </param>
+/// <param name="FinderSegment">
+/// The segment of the routine that finds a lot's objects, for a game in which the call to
+/// it is in an overlay: the place at <paramref name="FoundOffset"/> is that call's return
+/// only while the call is what's before it. With <paramref name="FinderOffset"/> 0, the
+/// place is taken to be always that.
+/// </param>
+/// <param name="FinderOffset">That routine's offset.</param>
+/// <param name="DaysOffset">
+/// In the data, for a game that counts days and not turns, how many days have passed. With
+/// it, <paramref name="MovesOffset"/> is 0: the game keeps no count of turns.
+/// </param>
+/// <param name="FoundSize">
+/// The size of what was found for a phrase: 6, a count and at 2 a far pointer to the objects,
+/// or 4, a count and at 2 where the objects are in the stack's segment.
+/// </param>
 /// <param name="FoundSegment">
 /// The segment the place at <paramref name="FoundOffset"/> is in, for a game whose main loop
 /// isn't in the segment of the routine that performs an action; null when it is.
@@ -239,7 +259,9 @@ public sealed record WorldMap(
     ushort ExitTextsSegment = 0, ushort ExitTextsOffset = 0, ushort ExitVariablesSegment = 0, ushort ExitVariablesOffset = 0,
     ushort PlaceOffset = 0, ushort TimeOffset = 0, ushort YearsOffset = 0,
     ushort ClocksSegment = 0, ushort ClocksOffset = 0, ushort HomeClockOffset = 0,
-    IReadOnlyList<string>? PlaceNames = null, int Times = 0, ushort? FoundSegment = null)
+    IReadOnlyList<string>? PlaceNames = null, int Times = 0, ushort? FoundSegment = null,
+    int ExitVariableAt = 2, ushort FinderSegment = 0, ushort FinderOffset = 0, int FoundSize = 6,
+    ushort DaysOffset = 0)
 {
     /// <summary>
     /// Whether the places in the program where a command is parsed are known. A map can have
@@ -892,4 +914,207 @@ public sealed record WorldMap(
         WideGrammar: true, TimerSize: 4,
         TokenizerSegment: 0x350B, TokenizerOffset: 0x01F4,
         FoundSegment: 0x0166);
+
+    /// <summary>
+    /// <i>Gateway</i> (1992): <i>Spellcasting 301</i>'s system with <i>Timequest</i>'s wider
+    /// flags and five kinds of exit, a clock in minutes, and the call that finds a command's
+    /// objects in an overlay.
+    /// </summary>
+    public static WorldMap Gateway { get; } = new(
+        DataSegment: 0x4C0B, TableSegment: 0x27E4, ObjectCount: 734, CountOffset: 0x3BEE, TypesOffset: 0xFFFD,
+        RoomOffset: 0x38D8, ActorOffset: 0x38DA, MovesOffset: 0, ClockOffset: 0x38E0,
+        ActionSegment: 0x3DA4, ActionOffset: 0xE658, ObjectOffset: 0x055A, SecondObjectOffset: 0x0558,
+        PerformSegment: 0x0000, PerformOffset: 0x01A4, DepthOffset: 0x38AE,
+        Answers:
+        [
+            // the same ten, where Spellcasting 301 has them
+            new(0x0370, Asked.Object), new(0x03A2, Asked.Object), new(0x03DA, Asked.Object), new(0x03F9, Asked.Object),
+            new(0x0416, Asked.Before),
+            new(0x044F, Asked.Object), new(0x046E, Asked.Object), new(0x04A4, Asked.Object), new(0x04C0, Asked.Object),
+            new(0x04DA, Asked.Action),
+        ],
+        JumpBackOffset: 0x07B8, GoAction: 152, DirectionOffset: 0xE659,
+        Directions: Spellcasting101.Directions,
+        GrammarSegment: 0x2C95, FormsOffset: 0x04BE, SecondsOffset: 0x1472, VocabularyFile: "VOCAB.DAT",
+        ActionNames: new Dictionary<int, string> { [152] = "go" },
+        // the routine that gathers the tokens is in overlay 2, and takes each word off the line
+        // by a thunk to another overlay
+        TokenSegment: 0x366B, TokenOffset: 0x06FB, AfterStopOffset: 0x078C, AfterAndOffset: 0x080A, TokenWordOffset: 0x6CA4,
+        WordTokens: Spellcasting101.WordTokens, MarkTokens: Spellcasting101.MarkTokens, EndTokens: Spellcasting101.EndTokens,
+        FormOffset: 0x0CF0, FormIndexOffset: 0x8D0A, FormActionOffset: 0x02DC, FoundOffset: 0x0295, LotsOffset: 0x02C4, LotSize: 12, LotCountOffset: 0x02BE,
+        TimersOffset: 0x8C04, TimerCountOffset: 0x38D4, TimerIndexOffset: 0x38D6,
+        TimerSegment: 0x02E3, TimerStartOffset: 0x002B, TimerStopOffset: 0x00A2, TimerRunOffset: 0x0222,
+        TimerNames: new Dictionary<int, string>
+        {
+            [1] = "the woman leaves you the gold card",
+            [2] = "the poker game, turn by turn",
+            [3] = "the beast limps about",
+            [4] = "the Dorman sun sets",
+            [5] = "a byte changed",
+            [6] = "two bytes forgotten",
+            [7] = "it has dried off",
+            [8] = "they have dried off",
+            [9] = "the Ballroom, turn by turn",
+            [10] = "the wheel turns, turn by turn",
+            [11] = "the beast goes, with the last berries",
+            [12] = "the boulder lands on you",
+            [13] = "the portals flare",
+            [14] = "the demon wanders, turn by turn",
+            [15] = "the demons grow restless",
+            [16] = "the hydra's head is knocked into the inferno",
+            [17] = "the demon stops coughing",
+            [18] = "the demon saws at the net",
+            [19] = "tiredness, every thirty turns",
+            [20] = "the hydra hunts for you",
+            [21] = "the beast slams you against the wall",
+            [22] = "the dust spills from the bag",
+            [23] = "Thom Seldridge comes into the bar",
+            [24] = "Terri Neilson comes to the bar",
+            [25] = "the robot bartender comes over",
+            [26] = "the robot bartender trundles away",
+            [27] = "the robot bartender chirps",
+            [28] = "Nubar snatches the drink",
+            [29] = "Nubar plays the trivia game",
+            [30] = "Terri Neilson at the bar, turn by turn",
+            [31] = "the boots come round the planet",
+            [32] = "nothing",
+            [33] = "the prospectors fill the conference room",
+            [34] = "the ship handling class ends",
+            [35] = "a guard clears the room for a meeting",
+            [36] = "the meeting ends",
+            [37] = "a man comes down the corridor",
+            [38] = "Perry scurries back",
+            [39] = "Thom Seldridge leaves the bar",
+            [40] = "Nubar Kamalian leaves the bar",
+            [41] = "Terri Neilson leaves the bar",
+            [42] = "a look at where you are, every thirty turns",
+            [43] = "a word forgotten",
+            [44] = "the MP arrests you at the Museum",
+            [45] = "a creature scurries across the desert",
+            [46] = "a yellow creature flits near",
+            [47] = "the blue fog clears",
+            [48] = "people stare below your navel",
+            [49] = "the alien berries, turn by turn",
+            [50] = "the old maintenance man appears",
+            [51] = "the old man looks for his key",
+            [52] = "the old man finishes and goes",
+            [53] = "the portal disappears",
+            [54] = "the Hydra lair's rock and path, every ten turns",
+            [55] = "the spider robot comes for the waste",
+            [56] = "the spider robot goes",
+            [57] = "the robot's waste box",
+            [58] = "the field actuator's hum rises",
+            [59] = "something crashes through the anemones",
+            [60] = "the spider decides",
+            [61] = "the spider's pincers",
+            [62] = "the enraged spider",
+            [63] = "a worm bursts from the ground",
+            [64] = "the worm chews at your helmet",
+            [65] = "the pod's tongue",
+            [66] = "your drink, every thirty turns",
+            [67] = "the snake strikes",
+            [68] = "the old man's room, every three turns",
+            [69] = "it burrows out of sight",
+            [70] = "it scampers out of view",
+            [71] = "the bartender snores",
+            [72] = "the salamander comes out of the lake",
+            [73] = "the salamander goes",
+            [74] = "a wailing from the east",
+            [75] = "a wailing, further off",
+            [76] = "a bubbling moan",
+            [77] = "nothing",
+            [78] = "the aliens file off",
+            [79] = "the program insists, turn by turn",
+            [80] = "the firestorm from the broken pyramid",
+            [81] = "the tech goes back to his newsletter",
+            [82] = "the chasm walls lurch, turn by turn",
+            [83] = "at the Tunnel Antechamber",
+            [84] = "the shoots grow around you",
+            [85] = "the salamander comes up in the tank",
+            [86] = "the cheeping stops",
+            [87] = "Becker begins his story",
+            [88] = "Becker's story ends",
+            [89] = "a seed spins into the air",
+            [90] = "it finishes the leaves and runs",
+            [91] = "sleepiness, every ten turns",
+            [92] = "the blister disappears",
+            [93] = "Becker goes through the wooden door",
+            [94] = "a leaf swats the air",
+            [95] = "the raft sinks",
+            [96] = "a sense of forgetting something",
+            [97] = "an opening appears in the wall",
+            [98] = "Becker sprints ahead",
+            [99] = "what comes through Becker's door",
+            [100] = "Becker asleep, turn by turn",
+            [101] = "the tech explains the Guide",
+            [102] = "your allotted time ends",
+            [103] = "the banner, every ten turns",
+            [104] = "Nubar Kamalian sits down next to you",
+            [105] = "the Tanning Room, turn by turn",
+            [106] = "Becker wants a nap",
+            [107] = "Becker wakes",
+            [108] = "the tan, every sixty turns",
+        },
+        PlaceType: 1, PersonType: 7,
+        FlagNames: new Dictionary<int, string>
+        {
+            [1] = "takes some",
+            [2] = "touched",
+            [4] = "its name takes no article",
+            [5] = "its name takes an",
+            [6] = "plural",
+            [7] = "seen",
+            [8] = "not listed",
+            [10] = "can be taken, and hasn't been",
+            [12] = "open",
+            [13] = "a liquid",
+            [14] = "can be opened and closed",
+            [15] = "a door",
+            [16] = "opened for you as you go through",
+            [17] = "what's dropped in it lands outside",
+            [18] = "can be eaten",
+            [19] = "a container",
+            [21] = "alive",
+            [22] = "lit",
+            [23] = "can be worn",
+            [24] = "cuts",
+            [26] = "can be read",
+            [27] = "cuts",
+            [28] = "things can be on it",
+            [29] = "can be taken",
+            [30] = "a key",
+            [31] = "can be seen through",
+            [33] = "turned on",
+            [34] = "can be got in or on",
+            [35] = "locked",
+            [36] = "can be turned on and off",
+            [37] = "playing cards",
+            [38] = "can be sat on",
+            [39] = "outdoors",
+            [40] = "female",
+            [41] = "a person, and not you or a monster",
+            [42] = "can't answer",
+        },
+        PlaceFlagNames: new Dictionary<int, string> { [2] = "visited", [22] = "has light" },
+        PersonFlagNames: new Dictionary<int, string>(),
+        StateFlags: [12, 22, 33, 35],
+        Layouts: new Dictionary<int, RecordLayout>
+        {
+            [1] = new(26, Lists: 0x0C, FlagBytes: 4, ExitCount: 0x16, ExitStart: 0x18, Names: 4),
+            [2] = new(36, Places: 0x0E, Relation: 0x10, Next: 0x12, Lists: 0x14, FlagBytes: 6, Names: 4),
+            [3] = new(12, Names: 4),
+            [4] = new(20, Lists: 0x0A, Names: 4),
+            [5] = new(22, Lists: 0x0C, FlagBytes: 4, Names: 4),
+            [6] = new(24, Places: 0x0A, Lists: 0x0E, Names: 4),
+            [7] = new(32, Places: 0x0C, Relation: 0x0E, Next: 0x10, Lists: 0x12, FlagBytes: 4, Names: 4),
+            [8] = new(24, Places: 0x0C, Relation: 0x0E, Next: 0x10, FlagBytes: 4, Names: 4),
+        },
+        TableOffset: 0x00C0, TypesSegment: 0x27E4, NamesFile: "OBJECT.DAT",
+        FlagsSegment: 0x27E4, FlagsOffset: 0x0014, FlagCount: 42,
+        ExitsSegment: 0x27E4, ExitsOffset: 0x417E, DoorsSegment: 0x27E4, DoorsOffset: 0x4996,
+        WideGrammar: true, TimerSize: 4, ClockStep: 1,
+        TokenizerSegment: 0x1CF4, TokenizerOffset: 0x12EF,
+        ExitTextsSegment: 0x27E4, ExitTextsOffset: 0x4AD2, ExitVariablesSegment: 0x4C0B, ExitVariablesOffset: 0x3BF0,
+        FoundSegment: 0x3569, ExitVariableAt: 4, FinderSegment: 0x3450, FinderOffset: 0x0442, FoundSize: 4,
+        DaysOffset: 0x38E2);
 }

@@ -76,6 +76,45 @@ public sealed class World301Tests
             thunk.TargetSegment, program.Overlays[thunk.Overlay - 1].LoadSegment, program.Overlays[thunk.Overlay - 1].EndSegment - 1));
     }
 
+    /// <summary>
+    /// <i>Gateway</i>'s world, in its own image: this game's records with wider flags, the
+    /// five kinds of exit, and a clock in minutes with a count of days.
+    /// </summary>
+    [Fact]
+    public void Gateways_world_is_read_from_its_image()
+    {
+        if (TestData.Game("gateway/game") is not { } folder || TestData.File(folder, "gatemain.exe") is not { } path
+            || TestData.File(folder, "object.dat") is not { } names)
+        {
+            return;
+        }
+
+        byte[] memory = RtlinkProgram.Load(path).Image().Memory.ToArray();
+        var world = World.Find(at => at < memory.Length ? memory[at] : (byte)0, memory.Length, WorldMap.Gateway, File.ReadAllBytes(names));
+        Assert.NotNull(world);
+        Assert.Equal((238, 211, "day 1"), (world.Room, world.Actor, world.Progress));
+        Assert.Equal(("Your Quarters", "you"), (world.Object(238).Name, world.Object(211).Name));
+        Assert.Equal([238], world.Object(211).Places);
+
+        // the room door is open, can be opened and closed, a door, and opens for you
+        Assert.Equal([8, 12, 14, 15, 16], Enumerable.Range(1, 64).Where(world.State(427).Has));
+
+        // Below Cave: up is opened by a byte of the data, and says something until it is
+        var up = world.Exits(6).Single(exit => exit.Direction == 9);
+        Assert.Equal((5, 9, false), (up.Kind, up.Room, up.Open));
+        Assert.StartsWith("(string ", up.Message, StringComparison.Ordinal);
+        memory[(WorldMap.Gateway.DataSegment * 16) + 0x84BE] = 1;
+        Assert.True(world.Exits(6).Single(exit => exit.Direction == 9).Open);
+
+        var all = Enumerable.Range(1, world.Map.ObjectCount).SelectMany(world.Exits).ToList();
+        Assert.Equal((232, 35, 13, 236, 2), (all.Count(exit => exit.Kind == 1), all.Count(exit => exit.Kind == 2),
+            all.Count(exit => exit.Kind == 3), all.Count(exit => exit.Kind == 4), all.Count(exit => exit.Kind == 5)));
+        for (int number = 1; number <= world.Map.ObjectCount; number++)
+        {
+            Assert.All(world.Contents(number), inside => Assert.Contains(number, world.Object(inside).Places));
+        }
+    }
+
     [Fact]
     public void The_game_is_found_in_its_own_image()
     {
