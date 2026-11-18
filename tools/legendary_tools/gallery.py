@@ -54,6 +54,7 @@ def write_index(folder: str, name: str) -> str:
     pictures = _listed(os.path.join(folder, "pictures"), (".png",))
     sounds = _listed(os.path.join(folder, "sounds"), (".wav",))
     songs = _listed(os.path.join(folder, "music"), (".mid", ".mdi", ".rol"))
+    fonts = [font for font in _listed(os.path.join(folder, "fonts"), (".png",)) if "_sample" not in font]
     title = html.escape(name)
     page = [
         "<!doctype html>",
@@ -61,9 +62,11 @@ def write_index(folder: str, name: str) -> str:
         '<meta name="viewport" content="width=device-width, initial-scale=1">',
         f"<title>{title}</title><style>{_STYLE}</style></head><body>",
         f"<h1>{title}</h1>",
-        f"<p>{len(pictures)} pictures, {len(sounds)} sounds, {len(songs)} songs.</p>",
+        f"<p>{len(pictures)} pictures, {len(sounds)} sounds, {len(songs)} songs"
+        + (f", {len(fonts)} fonts" if fonts else "")
+        + ".</p>",
         '<nav><a href="#pictures">Pictures</a> · <a href="#sounds">Sounds</a>'
-        ' · <a href="#music">Music</a></nav>',
+        ' · <a href="#music">Music</a>' + (' · <a href="#fonts">Fonts</a>' if fonts else "") + "</nav>",
         '<h2 id="pictures">Pictures</h2>',
     ]
     # a file of the game's at a time: s101_e1_038.png is picture 38 of S101_E1.PIC
@@ -98,7 +101,18 @@ def write_index(folder: str, name: str) -> str:
         shown = html.escape(song)
         kind = "MIDI, for the MT-32" if song.lower().endswith(".mid") else "for the AdLib"
         page.append(f'<tr><td><a href="music/{shown}">{shown}</a></td><td>{kind}</td></tr>')
-    page.append("</table></body></html>")
+    page.append("</table>")
+    if fonts:
+        page.append('<h2 id="fonts">Fonts</h2>')
+        for font in fonts:
+            shown = html.escape(font)
+            sample = html.escape(font.replace(".png", "_sample.png"))
+            page.append(
+                f"<h3>{html.escape(font[:-4].upper())}.FNT</h3>"
+                f'<figure><img loading="lazy" src="fonts/{sample}" alt="a line set in {shown}">'
+                f'<img loading="lazy" src="fonts/{shown}" alt="the letters of {shown}"></figure>'
+            )
+    page.append("</body></html>")
     os.makedirs(folder, exist_ok=True)
     path = os.path.join(folder, "index.html")
     with open(path, "w", encoding="utf-8") as file:

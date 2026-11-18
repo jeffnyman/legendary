@@ -13,6 +13,7 @@ import sys
 
 from . import data
 from .flags import GAME_201, GAME_301, GAME_GATEWAY, GAME_TIMEQUEST, describe_flag, flag_name, flag_uses
+from .fonts import read_font
 from .gallery import write_index
 from .game import GameFolder
 from .grammar import NO_TURN, Form, action_flags, describe_flags, read_grammar
@@ -807,6 +808,35 @@ def pictures(args: argparse.Namespace) -> None:
         print(f"{skipped} pictures weren't written: they are packed a way that isn't known")
 
 
+def fonts(args: argparse.Namespace) -> None:
+    """The fonts in the game's .FNT files: listed, or written to a folder as PNG files."""
+    folder = GameFolder(args.folder)
+    for path in folder.ending(".fnt"):
+        name = os.path.splitext(os.path.basename(path))[0].lower()
+        try:
+            font = read_font(folder.read(path))
+        except ValueError as error:
+            print(f"{os.path.basename(path):14} {error}")
+            continue
+        wide = (
+            f"every letter {font.fixed_width} wide"
+            if font.fixed_width is not None
+            else f"letters from {min(w for w in font.widths[font.first :] if w)}"
+            f" to {max(font.widths[font.first :])} wide, {font.gap} apart"
+        )
+        count = font.last - font.first + 1
+        print(f"{os.path.basename(path):14} {font.height:2} high, {count} characters, {wide}")
+        if args.out:
+            _write(args.out, f"{name}.png", font.sheet().png())
+            _write(args.out, f"{name}_sample.png", font.line(_FONT_SAMPLE).png())
+    if args.out:
+        print(f"written to {args.out}")
+
+
+# what each font is shown setting, beside the sheet of its letters
+_FONT_SAMPLE = "The quick brown fox jumps over the lazy dog, 0123456789!"
+
+
 def regions(args: argparse.Namespace) -> None:
     """The regions of the pictures in the game's .RGN files: what object is where in each."""
     folder = GameFolder(args.folder)
@@ -904,7 +934,7 @@ def extract(args: argparse.Namespace) -> None:
     out = args.out or os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "media")
     for name, folder in games:
         counts = []
-        for kind, write in (("pictures", pictures), ("sounds", sounds), ("music", music)):
+        for kind, write in (("pictures", pictures), ("sounds", sounds), ("music", music), ("fonts", fonts)):
             into = os.path.join(out, name, kind)
             said = io.StringIO()
             try:
@@ -915,6 +945,11 @@ def extract(args: argparse.Namespace) -> None:
                 counts.append(f"{kind} not read ({error})")
                 continue
             written = len(os.listdir(into)) if os.path.isdir(into) else 0
+            if kind == "fonts":
+                # a sheet of its letters and a line set in it, for each
+                if written:
+                    counts.append(f"{written // 2} font{'' if written == 2 else 's'}")
+                continue
             what = {"pictures": "picture", "sounds": "sound", "music": "song"}[kind]
             missed = re.search(r"^(\d+) pictures weren't written", said.getvalue(), re.MULTILINE)
             counts.append(
@@ -922,7 +957,7 @@ def extract(args: argparse.Namespace) -> None:
                 + (f" and {missed[1]} more not read" if missed else "")
             )
         # a page to look through them, when there is anything to look through
-        folders = [os.path.join(out, name, kind) for kind in ("pictures", "sounds", "music")]
+        folders = [os.path.join(out, name, kind) for kind in ("pictures", "sounds", "music", "fonts")]
         if any(os.path.isdir(kind) and os.listdir(kind) for kind in folders):
             page = write_index(os.path.join(out, name), name)
             print(f"{name}: {', '.join(counts)}; to look through them, open {page}")
@@ -1027,6 +1062,11 @@ def main() -> None:
         "--out",
         metavar="FOLDER",
         help="write them there, a folder to a game (media, beside the tools)",
+    )
+    command(fonts).add_argument(
+        "--out",
+        metavar="FOLDER",
+        help="write each font there as PNG files: its letters, and a line set in it",
     )
     command(regions)
     command(sentence)
