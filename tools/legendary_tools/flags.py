@@ -262,8 +262,51 @@ FLAG_NAMES_ERIC = {
     40: "can be spoken to",
 }
 
+# Gateway II's: the same flags under other numbers again, from what has each as the game
+# starts and the actions that test it. Flags 2, 14, 30, 31 and 40 aren't known
+FLAG_NAMES_GATEWAY2 = {
+    1: "takes `some`, and is still `it`",
+    3: "its name takes no article",
+    4: "plural: `some`, and `they`",
+    5: "its name takes `an`",
+    6: "a mark its own routine keeps, of something that has happened",
+    7: "touched, or for a place visited",
+    8: "seen by the player",
+    9: "can be taken, and hasn't been: taking it can be special",
+    10: "not listed among a room's contents",
+    11: "alive: an animal or a plant",
+    12: "lit, or for a place has light",
+    13: "can't answer: asleep, or dead",
+    15: "things can be on it",
+    16: "a door",
+    17: "can be taken",
+    18: "can be read",
+    19: "can be opened and closed",
+    20: "locked",
+    21: "open",
+    22: "can be turned on and off, or lit",
+    23: "a liquid",
+    24: "a key",
+    25: "cuts",
+    26: "another mark its own routine keeps",
+    27: "can be eaten",
+    28: "burns",
+    29: "turned on, or alight",
+    32: "can be got in or on",
+    33: "a weapon, which can cut",
+    34: "can be worn",
+    35: "a person",
+    36: "a container",
+    37: "what's dropped in it lands outside it",
+    38: "female",
+    39: "outdoors",
+    41: "can be sat on",
+    42: "can be folded",
+}
+
 GAME_101, GAME_TIMEQUEST, GAME_201 = "Spellcasting 101", "Timequest", "Spellcasting 201"
 GAME_301, GAME_GATEWAY, GAME_ERIC = "Spellcasting 301", "Gateway", "Eric the Unready"
+GAME_GATEWAY2 = "Gateway II"
 # each game's names: for any object, and what a place's and a person's are instead
 _NAMES = {
     GAME_101: (FLAG_NAMES, PLACE_FLAG_NAMES, PERSON_FLAG_NAMES),
@@ -272,6 +315,7 @@ _NAMES = {
     GAME_301: (FLAG_NAMES_301, {}, {}),
     GAME_GATEWAY: (FLAG_NAMES_GATEWAY, {}, {}),
     GAME_ERIC: (FLAG_NAMES_ERIC, {}, {}),
+    GAME_GATEWAY2: (FLAG_NAMES_GATEWAY2, {}, {}),
 }
 
 

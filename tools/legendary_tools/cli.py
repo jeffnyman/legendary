@@ -21,6 +21,7 @@ from .flags import (
     GAME_301,
     GAME_ERIC,
     GAME_GATEWAY,
+    GAME_GATEWAY2,
     GAME_TIMEQUEST,
     describe_flag,
     flag_name,
@@ -68,6 +69,7 @@ from .timers import (
     TIMER_NAMES_301,
     TIMER_NAMES_ERIC,
     TIMER_NAMES_GATEWAY,
+    TIMER_NAMES_GATEWAY2,
     TIMER_NAMES_TIMEQUEST,
     timer_calls,
     timer_code,
@@ -691,6 +693,7 @@ def timers(args: argparse.Namespace) -> None:
         GAME_301: TIMER_NAMES_301,
         GAME_GATEWAY: TIMER_NAMES_GATEWAY,
         GAME_ERIC: TIMER_NAMES_ERIC,
+        GAME_GATEWAY2: TIMER_NAMES_GATEWAY2,
     }.get(table.game or "", {})
     found = sorted({(call.number or 0, call.timer) for call in calls if call.timer})
     for number, timer in found:
