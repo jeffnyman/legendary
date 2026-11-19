@@ -228,6 +228,11 @@ internal static class Games
         new("gateway2", "Gateway II: Homeworld", 1993, ["HOMEMAIN.EXE"], "HOME.EXE", At,
             "starts and plays, with its pictures, animations and music, from its own folder or its CD; not yet played through",
             World: Legendary.Core.Worlds.WorldMap.Gateway2),
+        // its speech is a file of 190 megabytes on the CD, which it plays through the Sound
+        // Blaster; without the file in its folder, or the CD's image beside it, it has none
+        new("xanth", "Companions of Xanth", 1993, ["XANTH.EXE"], "XANTH.EXE", At,
+            "starts and plays, with its pictures, music and speech, by the mouse; not yet played through",
+            World: Legendary.Core.Worlds.WorldMap.Xanth),
         new("mcritic", "Mission Critical", 1995, ["MISSION.EXE"], "MISSION.EXE", Fast, Untried),
     ];
 

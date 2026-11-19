@@ -51,6 +51,12 @@ internal sealed class WorldWatch(
     private List<PanelLine> _now = [];
     private readonly List<PanelLine> _lately = [];
 
+    /// <summary>
+    /// The linear address of the game's data segment, once the game is found in memory, and
+    /// 0 before: for a test to read what the game keeps there.
+    /// </summary>
+    internal int DataAddress => _world is null ? 0 : (_world.LoadSegment + map.DataSegment) * 16;
+
     /// <summary>Looks at the game, and says what has changed since the last look.</summary>
     public void Look()
     {
@@ -71,7 +77,11 @@ internal sealed class WorldWatch(
 
             Say($"the game is in memory, loaded at {_world.LoadSegment:X4}h, with {map.ObjectCount} objects", PanelTone.Dim);
             machine.Cpu.Watch((uint)_world.PerformAddress, Performing);
-            machine.Cpu.Watch((uint)_world.JumpBackAddress, JumpedBack);
+            if (map.JumpBackOffset != 0)
+            {
+                machine.Cpu.Watch((uint)_world.JumpBackAddress, JumpedBack);
+            }
+
             machine.Cpu.Watch((uint)_world.TimerStartAddress, () => Timer(started: true));
             machine.Cpu.Watch((uint)_world.TimerStopAddress, () => Timer(started: false));
             machine.Cpu.Watch((uint)_world.TimerRunAddress, TimerRuns);
@@ -83,7 +93,7 @@ internal sealed class WorldWatch(
                 machine.Cpu.Watch((uint)_world.FormAddress, Form);
                 machine.Cpu.Watch((uint)_world.FoundAddress, Found);
             }
-            else
+            else if (map.HasParser)
             {
                 // where the program parses isn't known yet: its actions are said, and not how it came to them
                 Say("how the game parses a command isn't followed yet", PanelTone.Dim);
@@ -113,7 +123,8 @@ internal sealed class WorldWatch(
         }
 
         SayChanges(world);
-        string place = $"{(world.Visit is { } visit ? visit + ", " : "")}{Time(world.Minutes)}, {world.Progress}, in {Name(world, room)}";
+        string time = map.HasClock ? Time(world.Minutes) + ", " : "";
+        string place = $"{(world.Visit is { } visit ? visit + ", " : "")}{time}{world.Progress}, in {Name(world, room)}";
         string here = $"  here: {Inside(world, room, depth: 0)}";
         string exits = $"  exits: {Exits(world, room)}";
         if (place == _place && here == _here && exits == _exits)
@@ -233,7 +244,7 @@ internal sealed class WorldWatch(
     {
         var lines = new List<PanelLine>
         {
-            new($"{Time(world.Minutes)}   {world.Progress}", PanelTone.Title),
+            new(map.HasClock ? $"{Time(world.Minutes)}   {world.Progress}" : world.Progress, PanelTone.Title),
             new(Name(world, room) + (world.Visit is { } visit ? $", {visit}" : ""), PanelTone.Title),
             new(""),
             new("Here", PanelTone.Dim),
@@ -618,6 +629,17 @@ internal sealed class WorldWatch(
         }
 
         int[] objects = [.. new[] { first, second }.TakeWhile(number => number >= 1 && number <= map.ObjectCount)];
+        if (!map.HasParser && map.ActionNames.TryGetValue(action, out string? verb))
+        {
+            // a game played with the mouse: the verb as the game shows it, its first object
+            // where the dots are or after it, and its second last
+            string[] named = [.. objects.Select(number => Name(world, number))];
+            string start = verb.Contains("...", StringComparison.Ordinal)
+                ? verb.Replace("...", named.Length > 0 ? named[0] : "something", StringComparison.Ordinal)
+                : string.Join(' ', new[] { verb }.Concat(named.Take(1)));
+            return string.Join(' ', new[] { start }.Concat(named.Skip(1)));
+        }
+
         if (_grammar?.Shape(action, objects.Length) is not { } shape)
         {
             return objects.Length == 0 ? "no command makes it" : string.Join(", ", objects.Select(number => Name(world, number)));

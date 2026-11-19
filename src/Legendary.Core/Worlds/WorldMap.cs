@@ -274,6 +274,15 @@ public sealed record WorldMap(
     /// </summary>
     public bool Parses => TokenOffset != 0;
 
+    /// <summary>
+    /// Whether the game has a parser at all. One played with the mouse has none: its actions
+    /// are its verbs, which <see cref="ActionNames"/> then names every one of.
+    /// </summary>
+    public bool HasParser => GrammarSegment != 0;
+
+    /// <summary>Whether the game keeps a time of day that the map knows.</summary>
+    public bool HasClock => ClockOffset != 0 || ClocksSegment != 0;
+
     /// <summary>What a flag is for an object of a type, or null when it isn't known.</summary>
     public string? FlagName(int flag, int type) =>
         type == PlaceType && PlaceFlagNames.TryGetValue(flag, out string? place) ? place
@@ -1438,4 +1447,196 @@ public sealed record WorldMap(
         TokenizerSegment: 0x3246, TokenizerOffset: 0x01BE,
         ExitTextsSegment: 0x27D7, ExitTextsOffset: 0x3BAE, ExitVariablesSegment: 0x27D7, ExitVariablesOffset: 0x3BFA,
         FoundSegment: 0x0135, ExitVariableAt: 4, StateSegment: 0x4B4C);
+
+    /// <summary>
+    /// <i>Companions of Xanth</i>, the CD's release: the first game played with the mouse. Its
+    /// world is the parser games', and so is the routine that performs an action; what is
+    /// gone is the parser, so no command is followed as it is made, and an action is said by
+    /// its verb. Its actions are words, of which the low byte is the number.
+    /// </summary>
+    public static WorldMap Xanth { get; } = new(
+        DataSegment: 0x38AF, TableSegment: 0x23A1, ObjectCount: 498, CountOffset: 0x084C, TypesOffset: 0xFFFD,
+        RoomOffset: 0x0256, ActorOffset: 0x0258, MovesOffset: 0x025C, ClockOffset: 0,
+        // the timers' table is in a segment of its own, and what is being performed is in the data's
+        ActionSegment: 0x3420, ActionOffset: 0x6A06, ObjectOffset: 0x6A04, SecondObjectOffset: 0x6A02,
+        PerformSegment: 0x08A7, PerformOffset: 0x3C27, DepthOffset: 0x0100,
+        Answers:
+        [
+            // the same ten calls, in the same order
+            new(0x3CE5, Asked.Object), new(0x3D08, Asked.Object), new(0x3D38, Asked.Object), new(0x3D52, Asked.Object),
+            new(0x3D68, Asked.Before),
+            new(0x3D9A, Asked.Object), new(0x3DB1, Asked.Object), new(0x3DE1, Asked.Object), new(0x3DF8, Asked.Object),
+            new(0x3E0B, Asked.Action),
+        ],
+        // where the main loop's setjmp returns hasn't been found
+        JumpBackOffset: 0, GoAction: 81, DirectionOffset: 0x6E5C,
+        Directions: Spellcasting101.Directions,
+        GrammarSegment: 0, FormsOffset: 0, SecondsOffset: 0, VocabularyFile: "VOCAB.DAT",
+        // the verbs, as the game shows them: the dots are where the first object goes
+        ActionNames: new Dictionary<int, string>
+        {
+            [1] = "Answer",
+            [2] = "Attach ... to",
+            [3] = "Break",
+            [4] = "Catch ... with",
+            [5] = "Chase",
+            [6] = "Clean",
+            [7] = "Climb",
+            [8] = "Close",
+            [9] = "Crack ... on",
+            [10] = "Cross",
+            [11] = "Crumple",
+            [12] = "Cure",
+            [13] = "Douse ... with",
+            [14] = "Drink",
+            [15] = "Eat",
+            [16] = "Empty",
+            [17] = "Enjoy",
+            [18] = "Enter",
+            [19] = "Look at",
+            [20] = "Fill ... with",
+            [21] = "Fill out",
+            [22] = "Flatten",
+            [23] = "Flip",
+            [24] = "Follow",
+            [25] = "Give ... to",
+            [26] = "Go to",
+            [27] = "Grab",
+            [28] = "Jump",
+            [29] = "Kick",
+            [30] = "Kill",
+            [31] = "Kiss",
+            [32] = "Knead",
+            [33] = "Knock",
+            [34] = "Lead",
+            [35] = "Light",
+            [36] = "Listen",
+            [37] = "Lock ... with",
+            [38] = "Look",
+            [39] = "Look in",
+            [40] = "Mail",
+            [41] = "Get on",
+            [42] = "Move",
+            [44] = "Open",
+            [45] = "Peer at",
+            [46] = "Pick",
+            [47] = "Play",
+            [48] = "Plunge ... into",
+            [49] = "Poke",
+            [50] = "Pop ... with",
+            [51] = "Pour ... on",
+            [52] = "Press",
+            [53] = "Pry ... with",
+            [54] = "Pull",
+            [55] = "Push",
+            [56] = "Put ... on",
+            [58] = "Read",
+            [59] = "Remove",
+            [60] = "Rub ... with",
+            [61] = "Shake",
+            [62] = "Sit on",
+            [63] = "Smell",
+            [64] = "Spread ... on",
+            [65] = "Squirt ... on",
+            [66] = "Swim in",
+            [67] = "Swing",
+            [68] = "Take",
+            [69] = "Talk to",
+            [70] = "Taste",
+            [71] = "Throw ... at",
+            [72] = "Tie ... to",
+            [73] = "Touch",
+            [74] = "Turn",
+            [75] = "Turn off",
+            [76] = "Turn on",
+            [77] = "Unlock ... with",
+            [78] = "Untie",
+            [79] = "Use ... with",
+            [80] = "Wait",
+            [81] = "Walk",
+            [82] = "Wash",
+            [83] = "Wear",
+            [84] = "Wipe",
+            [85] = "Launch",
+            [87] = "Lower",
+            [88] = "Raise",
+            [89] = "Draw ... on",
+            [90] = "Attack ... with",
+            [91] = "Dig up ... with",
+            [92] = "Pet",
+        },
+        TokenSegment: 0, TokenOffset: 0, AfterStopOffset: 0, AfterAndOffset: 0, TokenWordOffset: 0,
+        WordTokens: new Dictionary<int, string>(), MarkTokens: new Dictionary<int, string>(), EndTokens: [],
+        FormOffset: 0, FormIndexOffset: 0, FormActionOffset: 0, FoundOffset: 0, LotsOffset: 0, LotSize: 12, LotCountOffset: 0,
+        TimersOffset: 0x0032, TimerCountOffset: 0x00EC, TimerIndexOffset: 0x00EE,
+        TimerSegment: 0x08A7, TimerStartOffset: 0x209F, TimerStopOffset: 0x2118, TimerRunOffset: 0x2222,
+        TimerNames: new Dictionary<int, string>
+        {
+            [2] = "the courier brings the package",
+            [3] = "the telephone rings",
+            [5] = "a companion beckons through the cavern door",
+            [6] = "the cherry bomb goes off",
+            [8] = "the butter melts",
+            [9] = "doubts about the companion chosen",
+            [12] = "a cough drop falls from the bush",
+            [13] = "Edsel's offer refused: the game is lost",
+            [14] = "the eye scream melts",
+            [15] = "a door shimmers in the desert",
+            [20] = "the firefly escapes in the barrow",
+            [25] = "the agony moss's pain",
+            [26] = "the cracker dough in the oven",
+            [27] = "the firecracker explodes",
+            [28] = "the wineskin, given and snatched back",
+            [31] = "the well overflows",
+            [32] = "the virus stops Com-Pewter",
+            [34] = "the sword waved in the desert",
+            [35] = "the castle's little door slams closed",
+            [36] = "Jenny's song",
+            [37] = "the cricket at the pier",
+            [38] = "the Gap Dragon comes nearer",
+            [39] = "Stanley's firestorm",
+            [40] = "Fracto's snowstorm",
+            [42] = "the telephone rings, as the game starts",
+            [43] = "Kim takes The Prize",
+            [44] = "a voice from Nada's arms in the dungeon",
+        },
+        PlaceType: 1, PersonType: 5,
+        FlagNames: new Dictionary<int, string>
+        {
+            [1] = "takes some",
+            [2] = "its name takes no article",
+            [3] = "plural",
+            [4] = "its name takes an",
+            [5] = "touched",
+            [6] = "seen",
+            [7] = "not yet taken",
+            [8] = "alive",
+            [10] = "its routine's own mark",
+            [11] = "things can be on it",
+            [12] = "can be taken",
+            [13] = "can be seen through",
+            [14] = "open",
+            [15] = "can be opened and closed",
+            [17] = "a container",
+            [19] = "in the player's own world",
+            [20] = "came in the game's box",
+            [21] = "outdoors",
+            [22] = "female",
+            [23] = "a person",
+        },
+        PlaceFlagNames: new Dictionary<int, string> { [5] = "visited" },
+        PersonFlagNames: new Dictionary<int, string>(),
+        StateFlags: [14],
+        Layouts: new Dictionary<int, RecordLayout>
+        {
+            [1] = new(18, Lists: 0x06, ExitCount: 0x0E, ExitStart: 0x10, Names: 4),
+            [2] = new(28, Places: 0x08, Relation: 0x0A, Next: 0x0C, Lists: 0x0E, FlagBytes: 4, Names: 4),
+            [3] = new(32, Places: 0x08, Relation: 0x0A, Next: 0x0C, Lists: 0x0E, FlagBytes: 4, Names: 4),
+            [4] = new(14, Lists: 0x06, Names: 4),
+            [5] = new(32, Places: 0x06, Relation: 0x08, Next: 0x0A, Lists: 0x0C, Names: 4),
+        },
+        TableOffset: 0x006C, TypesSegment: 0x23A1, NamesFile: "OBJECT.DAT",
+        FlagsSegment: 0x23A1, FlagsOffset: 0x000C, FlagCount: 23,
+        ExitsSegment: 0x23A1, ExitsOffset: 0x10FA, DoorsSegment: 0x38AF, DoorsOffset: 0x084E,
+        TimerSize: 4, ClockStep: 1, StateSegment: 0x38AF);
 }
