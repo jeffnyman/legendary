@@ -1765,10 +1765,28 @@ public sealed record WorldMap(
         TimerSegment: 0, TimerStartOffset: 0, TimerStopOffset: 0, TimerRunOffset: 0,
         TimerNames: new Dictionary<int, string>(),
         PlaceType: 1, PersonType: 5,
-        FlagNames: new Dictionary<int, string>(),
-        PlaceFlagNames: new Dictionary<int, string>(),
+        // from the program's use of each: how a name is written, what Open and Close and Look in
+        // ask and change, and which only the objects' own routines touch
+        FlagNames: new Dictionary<int, string>
+        {
+            [1] = "takes some",
+            [2] = "its name takes no article",
+            [3] = "plural",
+            [4] = "its name takes an",
+            [5] = "touched",
+            [6] = "seen",
+            [10] = "its routine's own mark",
+            [12] = "can be opened and closed",
+            [13] = "can be seen through",
+            [16] = "open",
+            [17] = "a room",
+            [18] = "things can be on it",
+            [19] = "female",
+            [20] = "a person",
+        },
+        PlaceFlagNames: new Dictionary<int, string> { [5] = "visited" },
         PersonFlagNames: new Dictionary<int, string>(),
-        StateFlags: [],
+        StateFlags: [16],
         // from the routines that get and set each field for each type
         Layouts: new Dictionary<int, RecordLayout>
         {
