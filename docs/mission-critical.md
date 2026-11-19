@@ -45,9 +45,10 @@ three lists of the installer's. The other two repeat its pictures, fonts, music 
 and none of its data. Each CD has a speech file of its own, and each starts as
 [*Companions of Xanth*'s](companions-of-xanth.md#the-speech) does, with a count of 1,297.
 The `.Q` files are the filmed scenes: each has a short header and then a `RIFF` `WAVE`
-sound. 89 of them are on all three CDs. Neither the speech nor the scenes are read yet, and
-the tools' `disc` doesn't yet know a game with more than one CD, or one whose `LEGEND.INI`
-names its CD by `VOCDATA`.
+sound. 89 of them are on all three CDs. Neither the speech nor the scenes are read yet.
+The tools' `disc` lists what each CD has that the game's folder hasn't, and with `--copy`
+puts it there, a file that's on more than one CD once; `LEGEND.INI` has no `GAMEDATA`, so
+it takes the CD's folder from `VOCDATA`. Why that's enough is [below](#running-it).
 
 The first CD also has the installer for Windows, a test of the video card, SciTech's
 UniVBE 5.1, and a demo of *Shannara*.
@@ -122,8 +123,10 @@ them. Neither has been followed yet.
 
 [The PC](the-pc.md) came with a 386's protected mode and a DPMI host that none of the
 earlier games use, and DOS/4GW runs on them as it is: it prints its banner, version 1.97,
-asks the host for memory, and loads the game's two objects into it. The game then stops in
-Watcom's startup code, at `000ad3e0`:
+asks the host for memory, and loads the game's two objects into it. The game then asked
+three things the PC didn't have, and stops now at a fourth.
+
+**The 8087.** Watcom's startup code, at `000ad3e0`, finds no coprocessor and does this:
 
 ```
 000ad3e0  mov eax, cr0
@@ -131,15 +134,43 @@ Watcom's startup code, at `000ad3e0`:
 000ad3e7  mov cr0, eax
 ```
 
-That is the run-time library finding no 8087 and turning on the processor's flag for
-emulating one, so that each floating-point instruction comes to its own routines instead.
-A program under a DPMI host hasn't the privilege to touch that register, the host gives it
-a general protection fault, and DOS/4GW prints its registers and ends. So the game needs
-one of two things of the PC: a host that lets a program read and set that flag, and a
-processor that then hands floating-point instructions back to the program; or an 8087.
+That turns on the processor's flag for emulating one, so that each floating-point
+instruction comes to the library's own routines as exception 7. A program under a DPMI host
+hasn't the privilege to touch that register, and the host gave it a general protection
+fault, which DOS/4GW printed with its registers before ending. Now the host does the two
+moves for the program, letting it change only the two bits about a coprocessor, and the
+processor raises exception 7 at a coprocessor's instruction when the flag is set. The first
+one comes at once, at `0009f203`, and the library's handler takes it.
+
+**The BIOS's data.** At `0009fc97` the game loads 40h into DS and reads the long at 63h: the
+video card's port, from the BIOS's variables. In real mode 40h is the segment they're in,
+and DOS extenders gave their programs a selector 40h that reaches the same place. The host
+has one now.
+
+**The CD.** The routine at `0008e580` looks for `MC001.VOC`, then `MC002.VOC`, then
+`MC003.VOC`, where `VOCDATA` says, and takes the first it finds as the CD that's in the
+drive; given a CD's number, it looks for that one's file first. That is all a CD is to the
+game, so a folder with all three files in it is all three CDs at once, and nothing will ever
+ask for another. The tools' `disc --copy` makes that folder: it copies what each CD has
+that the game's folder hasn't, 535 files, three of speech and 529 scenes in `Q`, about
+1.3 gigabytes. The PC then serves the game's folder as `D:\MISSION`, as it serves
+*Gateway II*'s as `D:\GW2`.
+
+With those, the game reads `LEGEND.INI`, `DIG.INI` and `MDI.INI`, loads the Miles drivers
+they name, which are 16-bit code it calls through INT 66h, starts the Sound Blaster at
+22,050 samples a second in stereo, prints `init_music()` and a row of dots, and then:
+
+```
+ERROR: Unable to establish VESA graphics mode 101h.  Please load the VESA
+       driver for your graphics card or try installing UniVBE 5.1
+```
+
+Mode 101h is 640 by 480 in 256 colors, which a VGA hasn't the memory for. The game asks the
+video BIOS for VESA's information, INT 10h function 4F00h, and the PC's has none: it has a
+VGA and nothing past it. That is next.
 
 ## Still to do
 
 Everything but the above: the pictures and the other fonts, the music, the speech and its
 text, the filmed scenes, the objects and the verbs, the variables' names, the battle game,
-and [getting it past its start](#running-it).
+and [a video card with VESA's modes](#running-it), without which it shows nothing.

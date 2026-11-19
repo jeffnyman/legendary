@@ -94,6 +94,19 @@ a key or a click. Why the music went with it hasn't been followed; it came back 
 Now the PC with no mouse has INT 33h pointing at the BIOS's `IRET`, the game sees no driver,
 and it is played by the keyboard as it was meant to be: the pages wait, and the music plays.
 
+## A program in protected mode
+
+*Mission Critical* is a 32-bit program, and brings DOS/4GW with it. The 386's protected
+mode and the DPMI host were here from the start, unused, and DOS/4GW ran on them the first
+time it was tried. [The game needed more](mission-critical.md#running-it):
+
+| What the game did | What the PC now does |
+|---|---|
+| Set CR0's bit for emulating a coprocessor, from level 3, where that is a general protection fault | The DPMI host does a level 3 program's moves from and to CR0 for it, changing only the two bits about a coprocessor |
+| Counted on each of the coprocessor's instructions coming to it then | Raises exception 7 at one when the bit is set; with it clear they do nothing, as before |
+| Read the BIOS's variables through selector 40h | The host's table has a selector 40h, 64 KB of data at 400h |
+| Asked for VESA's mode 101h | Nothing yet |
+
 ## The notes, checked
 
 A game running where its memory can be read is a way to check what was worked out by taking
