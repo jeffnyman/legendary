@@ -505,12 +505,13 @@ the same way. A file is ten bytes and then its letters:
 
 | At | What |
 |---|---|
-| 0 | Two bytes, both 1 |
+| 0 | Two bytes, both 1; the second is the bits in a pixel, and [one of *Mission Critical*'s fonts](mission-critical.md#the-fonts) has 8 |
 | 2 | How many bytes a row of a letter is |
 | 3 | The first character it has, and at 4 the last: `21` and `7F` in every file |
 | 5 | In a font whose letters differ in width, a small number, taken to be the gap left between letters; else 0 |
 | 6 | How many rows a letter is |
-| 7 | In a font whose letters are all one width, the width, a word; else `FFFF` |
+| 7 | In a font whose letters are all one width, the width; else `FF` |
+| 8 | `FF` when the second table below is there, as it is in every font here whose letters differ |
 | 9 | Zero |
 
 A font whose letters differ in width then has two tables of 128 bytes, one for each

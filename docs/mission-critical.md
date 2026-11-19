@@ -60,11 +60,10 @@ UniVBE 5.1, and a demo of *Shannara*.
 | The text | 38 blocks, 2,788 strings, 333,525 bytes packed into 167,191 |
 | The regions | 15 files, 384 pictures, 2,296 regions, every one an outline |
 | The guided tour | 2,391 events, 10 clicks |
-| The fonts | 5 of the 13 |
+| [The fonts](#the-fonts) | 13 |
 | [The pictures](#the-pictures) | 40 files, 2,984 pictures |
 
-And what they don't: eight
-of the fonts; the music, which is no longer in `.MUS` files; the speech and the filmed
+And what they don't: the music, which is no longer in `.MUS` files; the speech and the filmed
 scenes; and the objects, whose table has to be found in the program first.
 
 ## How the program is built
@@ -167,6 +166,28 @@ Kind 4 is 171 pictures, among them the mouse's pointers, the crew's manifest, an
 a control panel with a border of plain blue. That reads as pictures with a color that
 isn't drawn, but it hasn't been followed in the program.
 
+## The fonts
+
+The thirteen `.FNT` files are [*Spellcasting 301*'s kind](spellcasting-301.md#the-fonts),
+with two things that game's don't have, and the reader stopped at both.
+
+The first is in eight of them. A font whose letters differ in width had, in every earlier
+file looked at, two tables of 128 bytes before its letters: the widths, and a second not
+yet understood. These eight have the widths alone. The header says which: its bytes at 7
+and 8 were read as one word, `FFFF` for letters that differ, and are two bytes. The one at
+7 is the letters' width, or FFh when they differ; the one at 8 is FFh when the second
+table is there. In the fonts without it that byte is 0, or 1 in two of them, `MC030.FNT`
+and `MC031.FNT`, whose letters touch when set with nothing between; so the 1 may be the
+gap, but that is a guess. Two of *Companions of Xanth*'s six fonts are of this kind too,
+and are read now.
+
+The second is `MC016.FNT`, which is in colors. The header's second byte, 1 everywhere
+else, is 8: the bits in a pixel. A letter's row is 24 bytes, a byte a pixel, a color's
+number, and 0 where there is none. After the letters are 32 bytes with a bit for each of
+the 256 colors, set for five of them, 219 to 223, and then those five colors, grays from
+dark to darker. The letters are drawn in those on a slab of color 254, which the font
+doesn't bring: it is whatever the screen has there.
+
 ## Running it
 
 [The PC](the-pc.md) came with a 386's protected mode and a DPMI host that none of the
@@ -261,6 +282,6 @@ it. That is as far as it has been taken: nothing has been clicked.
 
 ## Still to do
 
-Everything but the above: which picture each change is to, and kind 4; the other fonts, the music, the speech and its
+Everything but the above: which picture each change is to, and kind 4; the music, the speech and its
 text, the filmed scenes, the objects and the verbs, the variables' names, the battle game,
 and playing it past its first picture.

@@ -40,7 +40,7 @@ bytes, which is [the game's speech](#the-speech). `disc --copy` puts them in the
 | The pictures | 27 files, 3,294 entries |
 | The music | 4 files, 86 songs |
 | The sounds | 29, RealSound |
-| The fonts | 6 |
+| The fonts | 6, two of them with [one table where the others have two](mission-critical.md#the-fonts) |
 | The regions | 17 files |
 
 The text, the pictures, the music and the regions are kept as the games before keep
