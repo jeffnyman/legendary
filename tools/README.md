@@ -203,6 +203,10 @@ python -m legendary_tools vocab <the game's folder>
 - **`animations`** lists the animations among a game's `.PIC` files, which *Gateway II*
   has: Autodesk Animator's `.FLI` files, each with its frames, size and length. With
   `--out`, it writes each to the folder as an animated PNG file, which a browser plays.
+- **`verbs`** lists the verbs of a game played with the mouse,
+  [*Companions of Xanth*](../docs/companions-of-xanth.md#the-verbs): each one's number,
+  name and how many objects it takes, with how many objects have it as the verb a click
+  does and how many list it, and then the pairs of objects that verbs of two take.
 - **`fonts`** lists the fonts in each `.FNT` file, which the games from *Spellcasting 301*
   have: how high each is, how many characters, and how wide. With `--out`, it writes each to
   the folder as two PNG files, all its characters and a line set in it. The format is in

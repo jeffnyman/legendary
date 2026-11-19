@@ -5,7 +5,8 @@ Lindner. It is Legend's first game without a parser: everything is done with the
 pictures and on lists of verbs and things.
 
 This is the start of the first look: what is in the game's folder, what of it the tools
-already read, how its program is built, and its objects. What is known for certain is said plainly; what
+already read, how its program is built, its objects, and the verbs it has in place of a
+parser. What is known for certain is said plainly; what
 is inferred says so. Addresses are `segment:offset` in hex, with segments relative to where
 the program loads. Every one of them can be looked at with the [tools](../tools/README.md).
 
@@ -133,12 +134,17 @@ six, this one adds it up. A room's exits are from the records.
 start, which every game before has, aren't here: nothing is typed, so nothing has a name
 to be typed by.
 
-**Three fields are new**, each with a routine to read it and most with one to write it: a
-word at `0C`, `14`, `18` and `18` of types 1, 2, 3 and 5; one at `16`, `1A`, `08` and `1A`
-of types 2, 3, 4 and 5; and one at `18`, `1C`, `0A` and `1C` of those. The first counts up
-through the rooms, 391, 392, 393, and is over 256 for things too. They are likely what the
-game shows for an object, a picture or a region or a line of text; that hasn't been looked
-at.
+**Three fields are new**, and they are what a game played with the mouse needs of an
+object in place of words:
+
+| Field | 1 | 2 | 3 | 4 | 5 |
+|---|---|---|---|---|---|
+| The picture shown for it | `0C` | `14` | `18` | | `18` |
+| The verb a click on it does | | `16` | `1A` | `08` | `1A` |
+| Where its list of verbs starts | | `18` | `1C` | `0A` | `1C` |
+
+Each has a routine to read it, [as the others have](#the-objects), and what they are is
+from the code that calls those.
 
 They are right by what they give: every object on a list says it is in the object whose
 list it is, all 296 of them; every room's exits start where the room before's end, 152
@@ -147,11 +153,56 @@ bracelet are in the envelope, which is on the desk, which is in the bedroom.
 
 There are 23 flags, in a table as before. None has a name yet.
 
+## The verbs
+
+Where the games before had a vocabulary and a grammar, this one has a table of verbs: 89
+of them, eight bytes each, in segment `22F6` from its start.
+
+| At | What |
+|---|---|
+| 0 | The verb's name, a place in the data segment: `Read`, `Talk to` |
+| 2 | What joins it to a second object, or 0: the `to` of `Attach ... to` |
+| 4 | How many objects it takes: 0, 1 or 2 |
+| 6 | Its number |
+
+Sixty-four take one object, 22 take two, and three take none: `Look`, `Wait` and `Walk`.
+The numbers go from 1 to 92 with three left out, 43, 57 and 86. Up to 84, `Wipe`, they
+are in the alphabet's order, and the seven after it aren't, so those look to have been
+added late: `Launch`, `Lower`, `Raise`, `Draw ... on`, `Attack ... with`, `Dig up ... with`
+and `Pet`. One is out of place among the first, `Look at` at 19, between `Enter` and
+`Fill`: where a verb beginning with E would be, as `Examine` does.
+
+**An object has a verb of its own**, which is what a click on it does when no verb has
+been chosen. 124 objects have one: `Open` for 26, `Flip` for 23, `Talk to` for 18 of the
+19 people, `Read` for 11. The letter from Pia is read, the bracelet worn, the computer
+turned on. The routine that settles what a click means, around `08A7:5700`, asks for it
+first, and falls back on `Look at`, or on `Talk to` for an object with flag 23.
+
+**An object has a list of the verbs it takes**, beside the ones everything takes. The
+lists follow the table of objects in its segment, where the lists of nouns were in the
+games before, each ended by a zero, and an object's record says where its own starts. 262
+objects have one: the Post-It takes `Attach ... to`, `Remove` and `Read`, and Metria
+`Kiss`, `Grab` and `Chase`. Every verb in every list is one the table has.
+
+**And a table says which two objects a verb of two takes**: 70 rows of a verb and two
+objects, after the verbs in the same segment, from `22F6:04D8`. `Put diskette on disk
+drive`, `Attach Post-It to personal computer`, `Unlock gate with key`, `Tie rope to
+anchor`. The same routine looks a verb and its two objects up there.
+
+**The picture** is a number from 263 to 472, on 142 objects: the rooms, 391 on, the
+people, and the things that can be carried. A routine that makes a list of what is shown
+puts down each object with its picture, or with 256 when it has none. Which picture of
+which file a number is hasn't been worked out.
+
+The tools' `verbs` command lists the verbs and the pairs, and `objects` with a number says
+an object's picture, its own verb and its list.
+
 ## Still to do
 
 - The speech, `XANTH_01.VOC`, which is on the CD alone.
-- The three new fields of a record, the exits' table, the routines' table and the flags'
-  names.
-- How a click on a picture or a list becomes something done, which is the part that is new.
+- Which picture an object's picture number is, the exits' table, the routines' table and
+  the flags' names.
+- How a verb and its objects, once chosen, are performed: the routine around `08A7:5700`
+  settles what is meant, and what it hands on to hasn't been followed.
 - The `.HLP` files.
 - The game hasn't been run on the PC.
