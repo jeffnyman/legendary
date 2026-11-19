@@ -472,6 +472,34 @@ def _routine_of(program: Program, number: int) -> str:
         return f"not known ({error})"
 
 
+def _show_mouse(table: ObjectTable, found: GameObject) -> None:
+    """What a game played with the mouse keeps of an object: its picture and its verbs."""
+    if found.picture:
+        print(f"  picture: {found.picture}")
+    if found.verb:
+        print(f"  a click on it: {table.verb_name(found.verb)}")
+    if found.verbs:
+        print("  its verbs: " + ", ".join(table.verb_name(verb) for verb in found.verbs))
+
+
+def verbs(args: argparse.Namespace) -> None:
+    """The verbs of a game played with the mouse: each one's number and name, and the pairs it takes."""
+    folder = GameFolder(args.folder)
+    table = _object_table(folder, _program(folder))
+    if not table.verbs:
+        raise ValueError(f"{args.folder}: the game has no table of verbs")
+    takes = {0: "nothing", 1: "an object", 2: "two objects"}
+    for number, (_, _, count) in sorted(table.verbs.items()):
+        own = sum(1 for found in table.objects if found.verb == number)
+        listed = sum(1 for found in table.objects if number in found.verbs)
+        name = table.verb_name(number)
+        print(f"{number:3}  {name:22} takes {takes[count]:12}  a click's on {own:3}, listed by {listed:3}")
+    print(f"\n{len(table.verb_pairs)} pairs of objects:")
+    for verb, first, second in table.verb_pairs:
+        name, joins, _ = table.verbs.get(verb, (f"verb {verb}", "", 0))
+        print(f"  {name} {_named(table, first)} {joins} {_named(table, second)}".replace("  ", " ").rstrip())
+
+
 def _show_routines(program: Program, number: int) -> None:
     """An object's routine, and the two other kinds it can have where a game keeps them in tables."""
     print(f"  routine: {_routine_of(program, number)}")
@@ -500,6 +528,7 @@ def _show_object(program: Program, table: ObjectTable, found: GameObject) -> Non
         for label, numbers in (("nouns", found.nouns), ("adjectives", found.adjectives)):
             if numbers:
                 print(f"  {label}: " + ", ".join(table.words[number - 1].text for number in numbers))
+    _show_mouse(table, found)
     _show_routines(program, found.number)
     for place in found.places:
         print(
@@ -1170,6 +1199,11 @@ def _extract_options(extracting: argparse.ArgumentParser) -> None:
     )
 
 
+def _mouse_commands(command) -> None:  # noqa: ANN001: the parser's own maker of commands
+    _disc_options(command(animations), command(disc))
+    command(verbs)
+
+
 def _disc_options(moving: argparse.ArgumentParser, cd: argparse.ArgumentParser) -> None:
     moving.add_argument(
         "--out", metavar="FOLDER", help="write each there as an animated PNG file, which a browser plays"
@@ -1229,7 +1263,7 @@ def main() -> None:
     command(sounds).add_argument("--out", metavar="FOLDER", help="write each sound there as a WAV file")
     command(pictures).add_argument("--out", metavar="FOLDER", help="write each picture there as a PNG file")
     _extract_options(command(extract))
-    _disc_options(command(animations), command(disc))
+    _mouse_commands(command)
     command(fonts).add_argument(
         "--out",
         metavar="FOLDER",

@@ -46,6 +46,17 @@ _TABLE_BX = re.compile(rb"\x8e\x06(..)\x26\x8a[\x87\x8f\x9f](..)", re.DOTALL)
 _TABLE_ADDS = re.compile(
     rb"\x8e\x06(..)\x8b\x5e\x06\x8b\xc3\x03\xdb\x03\xd8\x03\xdb\x26\x8b\x87(..)", re.DOTALL
 )
+# and its table of verbs is gone through eight bytes at a time for a verb's number:
+# mov [bp-18h],6 / mov ax,[bp+6] / mov es,[variable] / mov bx,[bp-18h] / cmp es:[bx],ax
+_VERBS = re.compile(rb"\xc7\x46.\x06\x00\x8b\x46\x06\x8e\x06(..)\x8b\x5e.\x26\x39\x07", re.DOTALL)
+# and after it a table of six bytes each, a verb and two objects, gone through from its
+# start to its end: mov [bp-1Ah],<start> / mov ax,[bp+6] / mov es,[variable] / mov bx,[bp-1Ah] /
+# cmp es:[bx],ax / jne / mov ax,[bp+8] / cmp es:[bx+2],ax ... add [bp-1Ah],6 / cmp [bp-1Ah],<end>
+_VERB_PAIRS = re.compile(
+    rb"\xc7\x46.(..)\x8b\x46\x06\x8e\x06(..)\x8b\x5e.\x26\x39\x07\x75.\x8b\x46\x08\x26\x39\x47\x02"
+    rb".{0,24}?\x83\x46.\x06\x81\x7e.(..)",
+    re.DOTALL,
+)
 # and its count is in the data segment, read with no segment loaded: mov ax,[count] /
 # cmp [bp+6],ax
 _COUNT_NEAR = re.compile(rb"\xa1(..)\x39\x46\x06", re.DOTALL)
@@ -129,6 +140,11 @@ class Layout:
     seen_from: int | None = None  # and in the list of the places that can be seen into from it
     routine: int | None = None  # the number of its routine, in a game that numbers them
     words: int | None = None  # where its nouns start, then its adjectives, when not after the flags
+    # in a game played with the mouse: its picture, the verb a click does, and where its list
+    # of verbs starts
+    picture: int | None = None
+    verb: int | None = None
+    verbs: int | None = None
 
 
 # Spellcasting 101's, from its routines that read and write each field for each type
@@ -258,11 +274,46 @@ LAYOUTS_GATEWAY2 = {
 # has no parser. From the routines that read and write each field for each type; a room's
 # exits are from the records, where each room's start where the room before's end
 LAYOUTS_XANTH = {
-    1: Layout(18, names=4, lists=0x06, routine=0x0A, exit_count=0x0E, exit_start=0x10),
-    2: Layout(28, flag_bytes=4, names=4, places=0x08, relation=0x0A, next=0x0C, lists=0x0E, routine=0x1A),
-    3: Layout(32, flag_bytes=4, names=4, places=0x08, relation=0x0A, next=0x0C, lists=0x0E, routine=0x1E),
-    4: Layout(14, names=4, lists=0x06, routine=0x0C),
-    5: Layout(32, names=4, places=0x06, relation=0x08, next=0x0A, lists=0x0C, routine=0x1E),
+    1: Layout(18, names=4, lists=0x06, routine=0x0A, picture=0x0C, exit_count=0x0E, exit_start=0x10),
+    2: Layout(
+        28,
+        flag_bytes=4,
+        names=4,
+        places=0x08,
+        relation=0x0A,
+        next=0x0C,
+        lists=0x0E,
+        picture=0x14,
+        verb=0x16,
+        verbs=0x18,
+        routine=0x1A,
+    ),
+    3: Layout(
+        32,
+        flag_bytes=4,
+        names=4,
+        places=0x08,
+        relation=0x0A,
+        next=0x0C,
+        lists=0x0E,
+        picture=0x18,
+        verb=0x1A,
+        verbs=0x1C,
+        routine=0x1E,
+    ),
+    4: Layout(14, names=4, lists=0x06, verb=0x08, verbs=0x0A, routine=0x0C),
+    5: Layout(
+        32,
+        names=4,
+        places=0x06,
+        relation=0x08,
+        next=0x0A,
+        lists=0x0C,
+        picture=0x18,
+        verb=0x1A,
+        verbs=0x1C,
+        routine=0x1E,
+    ),
 }
 
 
@@ -323,6 +374,11 @@ class GameObject:
     also_here: list[tuple[int, bool]] = field(default_factory=list)
     seen_from: list[tuple[int, bool]] = field(default_factory=list)
     routine: int = 0  # the number of its routine, from 1, in a game that numbers them; 0 for none
+    # in a game played with the mouse: the picture shown for it, 0 for none; the verb a click
+    # on it does; and the other verbs it takes
+    picture: int = 0
+    verb: int = 0
+    verbs: list[int] = field(default_factory=list)
 
     def word(self, at: int) -> int:
         return struct.unpack_from("<H", self.record, at)[0]
@@ -487,8 +543,47 @@ class ObjectTable:
         )
         return table_variable, table_offset, count_variable, count_offset, types_variable, types_offset
 
+    def _find_verbs(self, root: bytes, entries: list[int]) -> None:
+        """
+        The verbs of a game played with the mouse: a table of eight bytes each, a verb's name
+        and what joins it to a second object, both in the data segment, how many objects it
+        takes, and its number. And the lists of verbs the objects take, which follow the table
+        of objects where the nouns did, each ended by a zero.
+        """
+        self.verbs: dict[int, tuple[str, str, int]] = {}
+        self.verb_pairs = []
+        self._verb_lists = entries[-1] + 6 - 2 if entries else 0
+        found = _VERBS.search(root)
+        if not found:
+            return
+        at = self._data_word(int.from_bytes(found[1], "little")) * 16
+        while True:
+            name, second, takes, number = struct.unpack_from("<HHHH", self.image.memory, at)
+            if not (name and 0 < number < 256 and takes <= 2):
+                break
+            self.verbs[number] = (self._data_text(name), self._data_text(second) if second else "", takes)
+            at += 8
+        # the pairs of objects a verb of two takes
+        if pairs := _VERB_PAIRS.search(root):
+            segment = self._data_word(int.from_bytes(pairs[2], "little")) * 16
+            start, end = int.from_bytes(pairs[1], "little"), int.from_bytes(pairs[3], "little")
+            self.verb_pairs = [
+                struct.unpack_from("<HHH", self.image.memory, segment + row) for row in range(start, end, 6)
+            ]
+
+    def _data_text(self, offset: int) -> str:
+        return self._text(self.data_segment, offset) or ""
+
+    def verb_name(self, number: int) -> str:
+        """A verb as the game shows it: `Read`, or `Attach ... to`."""
+        if number not in self.verbs:
+            return f"verb {number}"
+        name, second, _ = self.verbs[number]
+        return f"{name} ... {second}" if second else name
+
     def _read_all(self, root: bytes, entries: list[int]) -> None:
         memory = self.image.memory
+        self._find_verbs(root, entries)
         if self.near:
             self._find_near(root, entries)
         self.objects: list[GameObject] = []
@@ -713,6 +808,7 @@ class ObjectTable:
         if layout.lists is not None:
             found.lists = [found.word(layout.lists + 2 * index) for index in range(entry.lists)]
         self._read_rows(found, layout)
+        self._read_mouse(found, layout)
         if layout.exits is not None and layout.exit_count is not None:
             exits_offset, exits_segment = struct.unpack_from("<HH", record, layout.exits)
             at = exits_segment * 16 + exits_offset
@@ -729,6 +825,18 @@ class ObjectTable:
                 direction, way, value = struct.unpack_from("<BBH", memory, at + 4 * row)
                 found.exits.append(Exit(direction, way, 0, 0, value))
         return found
+
+    def _read_mouse(self, found: GameObject, layout: Layout) -> None:
+        """What a game played with the mouse keeps of an object: its picture and its verbs."""
+        if layout.picture is not None:
+            found.picture = found.word(layout.picture)
+        if layout.verb is not None:
+            found.verb = found.word(layout.verb)
+        if layout.verbs is not None and (start := found.word(layout.verbs)):
+            at = self._verb_lists + 2 * start
+            while (verb := self.image.word(at)) and len(found.verbs) < 32:
+                found.verbs.append(verb)
+                at += 2
 
     def _read_rows(self, found: GameObject, layout: Layout) -> None:
         """A room's rows: what is also there, and where can be seen into from it."""
