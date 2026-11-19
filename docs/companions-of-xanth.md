@@ -526,10 +526,40 @@ and 241, which are the RealSound speeds, and then 91 and 45, which are 10,989 an
 second. It is the last: [the game, running](#the-game-as-it-runs), gives the Sound Blaster
 each piece of a line at 22,222 a second, and played at that the voices sound right, where
 at 16,572 they are slow. So the file is 143 minutes, with a line of five seconds in the
-middle and one of nearly four and a half minutes the longest. What gives a line its number
-hasn't been found.
+middle and one of nearly four and a half minutes the longest.
 
 The tools' `sounds` counts the lines, and with `--out` writes each as a WAV file.
+
+### What a line says
+
+A line's number is never beside its sound. It is in the program, with the text, and the
+routine that plays a line, at `08A7:B470`, is given the number. There are three ways it
+comes by one.
+
+**A line of talk has the number of its sound.** What the game's people say is a table of
+lines at `2ADA:0574`, four bytes each: a number for the line's text, and a word that leads
+on to what can be said next. The text's number is a place in a table of far pointers to
+texts, or from `8000` a routine that makes the text. There are 1,036 lines, which the game
+counts at `38AF:13E0`, and they are the first 1,036 of the speech: line 0 is `"Hey, Dug.
+What're you up to, dude?"`. What the player can say back is another table, at `2ADA:1AB8`,
+and isn't spoken.
+
+**A line of a scene is a record.** Where the game tells its story in pictures and voices,
+as in the demons' wager it starts with, each line is sixteen bytes in the scene's overlay:
+the number of its sound, a far pointer to its text, and where and in what color the text
+goes. There are 100, all in overlay 51, with the texts of block 78.
+
+**The rest are named where they are said**, by a constant put in the word the game keeps
+for the line to speak, at `38AF:6A10`, or one worked out from a number. There are 24 such
+constants and seven sums, and they haven't been followed; the last line of all, 1,325,
+which is four and a half minutes long, is one the code plays by its number alone.
+
+So 985 of the 1,222 lines have their text. It fits: across them, how long a line's sound
+is goes with how long its text is, closely, where a wrong table doesn't at all. Of the 237
+without, 190 are of the third kind and the rest are lines of talk whose text a routine
+makes.
+
+The tools' `speech` lists each line with how long it is and what it says.
 
 ## The game as it runs
 
@@ -581,7 +611,8 @@ routine gives an action up hasn't been found, so that isn't said.
 
 ## Still to do
 
-- What says which line of the speech goes with which text.
+- The 237 lines of speech whose text isn't read: those the code names where they are said,
+  and those a routine makes the text of.
 - For the watch: the command as it is made by clicks, and where the main loop's `setjmp`
   returns.
 - Flags 9, 16 and 18, the 56 routines of the exits, and the eighteen timers with no name.
