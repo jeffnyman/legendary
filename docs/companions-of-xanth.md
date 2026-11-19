@@ -415,6 +415,65 @@ place and what is in it hasn't been checked.
 
 The tools' `verbs` lists each verb's routine, and `objects` with a number an object's.
 
+## The timers
+
+The timers are the parser games': a routine is put by with a count of turns, and after
+each turn that takes time the counts go down and the routines whose count is out are
+called. They are numbered, as from *Timequest*: the table holds up to sixteen at once, four
+bytes each, a number and a count, and a second table has a far pointer for each of the 45
+numbers.
+
+| What | Where |
+|---|---|
+| The routine that empties the table | `08A7:208B` |
+| The ones that start a timer, stop it, ask if it is going, and ask its count | `08A7:209F`, `2118`, `2191`, `21D5` |
+| The routine that runs them after a turn | `08A7:2222` |
+| The routine that calls a timer by its number | `08A7:6600` |
+| How many are in the table, and which is being run | `38AF:00EC`, `00EE` |
+
+The program calls the four 152 times, of which the tools read 143, about 42 of the 45
+timers. A timer is started with a count 72 times, 49 of them with a number in the code,
+which is from 1 to 15 turns. None is started to run every turn, which the games before
+did for what goes on all the time; here that is left to the rooms' and objects' routines.
+
+Twenty-seven have a name, from what their routine prints:
+
+| Timer | What | Started by |
+|---|---|---|
+| 2 | The courier brings the package | The telephone, 9 turns on |
+| 3 | The telephone rings | Four routines, 12 turns on |
+| 5 | A companion beckons through the cavern door | The Dark Cavern |
+| 6 | The cherry bomb goes off | The cherry bomb, the turn after |
+| 8 | The butter melts | The buttercup and the firefly, 5 turns on |
+| 9 | Doubts about the companion chosen | A tree and a spring |
+| 12 | A cough drop falls from the bush | The forest |
+| 13 | Edsel's offer refused: the game is lost | 10 turns on |
+| 14 | The eye scream melts | The ice palace and the eye scream |
+| 15 | A door shimmers in the desert | The desert |
+| 20 | The firefly escapes in the barrow | The spring and the barrow |
+| 25 | The agony moss's pain | The agony moss, 2 turns on |
+| 26 | The cracker dough in the oven | The oven |
+| 27 | The firecracker explodes | The firecracker, the turn after |
+| 28 | The wineskin, given and snatched back | The lava path |
+| 31 | The well overflows | Not found |
+| 32 | The virus stops Com-Pewter | The cylinder |
+| 34 | The sword waved in the desert | The desert |
+| 35 | The castle's little door slams closed | The castle door and the little door, 3 turns on |
+| 36 | Jenny's song | Two routines |
+| 37 | The cricket at the pier | The pier, 5 turns on |
+| 38 | The Gap Dragon comes nearer | The gap |
+| 39 | Stanley's firestorm | 2 turns on |
+| 40 | Fracto's snowstorm | Two routines |
+| 42 | The telephone rings, as the game starts | The bedroom, 2 turns on |
+| 43 | Kim takes The Prize | The attic |
+| 44 | A voice from Nada's arms in the dungeon | The dungeon |
+
+The names are from a line or two of what each prints, and not from reading the routine
+through, so they say what a timer is about more surely than what it does. The other
+eighteen print nothing that says, or weren't bounded well enough to tell.
+
+The tools' `timers` lists each timer with every call about it.
+
 ## The guided tours
 
 The three `.HLP` files are the game's help: recordings of someone playing, which the game
@@ -475,7 +534,7 @@ The tools' `sounds` counts the lines, and with `--out` writes each as a WAV file
 ## Still to do
 
 - What says which line of the speech goes with which text, and the call that plays one.
-- Flags 9, 16 and 18, and the 56 routines of the exits.
+- Flags 9, 16 and 18, the 56 routines of the exits, and the eighteen timers with no name.
 - The kinds of thing on the screen that haven't been read: 2, 4, 5 and 6; and event
   `0002` of the tours.
 - The game hasn't been run on the PC.
