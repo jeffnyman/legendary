@@ -124,7 +124,7 @@ them. Neither has been followed yet.
 [The PC](the-pc.md) came with a 386's protected mode and a DPMI host that none of the
 earlier games use, and DOS/4GW runs on them as it is: it prints its banner, version 1.97,
 asks the host for memory, and loads the game's two objects into it. The game then asked
-five things the PC didn't have.
+six things the PC didn't have.
 
 **The 8087.** Watcom's startup code, at `000ad3e0`, finds no coprocessor and does this:
 
@@ -185,6 +185,17 @@ a read took one instruction's time, and past sixteen million a second the reads 
 before the timer was. Now a use of the FM chip's ports takes a microsecond at the least.
 The player also gives this game a disk of 1.5 megabytes a second, where the older games
 have 200 KB: at that, the program alone took six seconds to load.
+
+**A held sample.** While the game printed `init_music()` and its dots, the speakers made
+odd sounds. Miles's driver for the Sound Blaster finds the card's interrupt by playing one
+sample, 16 bits, of whatever is in memory where its buffer will be, and waiting for the
+interrupt that ends it. The sample it happened on was 7F80h, nearly the top of the swing.
+A real card's converter holds its last sample too, but its output goes through a
+capacitor, which passes no steady level: there the sample is a click. The PC's card held
+it, full over, for the second and a half until the film's sound began: a thump going
+in and another coming out, with nothing else playing between. Now a block's last sample is held for a
+fiftieth of a second, long enough for a program that starts its next block from the
+interrupt, and then dies away.
 
 With that the game runs. It plays its opening film, the planet and the ship and Legend's
 name, with sound; Escape goes past each part; it writes `RESTART.DAT`, tells how the
