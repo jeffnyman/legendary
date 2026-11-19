@@ -24,7 +24,7 @@ question of what a player is stays open until more of the games is understood.
 | *Eric the Unready* | 1993 | `ericun` | Plays, with its pictures, music and sounds; not yet played through. Built as *Gateway* is: its program, run-time library and overlays are read, and its vocabulary, objects, flags, grammar, routines, timers, text, saved game, pictures, music, sounds and fonts, and `--watch` and `--panel` show its world; [notes](docs/eric-the-unready.md) |
 | *Gateway II: Homeworld* | 1993 | `gateway2` | Plays, with its pictures, animations and music; not yet played through. Linked by a newer .RTLink again: its program, run-time library and overlays are read, and its vocabulary, text, objects, flags, grammar, routines, timers, saved game, pictures, animations, music and fonts, and `--watch` and `--panel` show its world; [notes](docs/gateway-ii.md) |
 | *Companions of Xanth* | 1993 | `xanth` | Plays, by the mouse, with its pictures, music and speech; not yet played through. The first game without a parser, and one program where the others are two: its program and overlays are read, and its text, objects, flags, verbs, routines, timers, regions, pictures, music, sounds, speech, fonts and guided tours, and `--watch` and `--panel` show its world; [notes](docs/companions-of-xanth.md) |
-| *Mission Critical* | 1995 | `mcritic` | Not yet tried; a 32-bit program, and another kind of game |
+| *Mission Critical* | 1995 | `mcritic` | Not yet played: a 32-bit program for DOS/4GW, which loads and then stops for want of an 8087 or a stand-in for one. Its program is read, and its text, regions and guided tour; [notes](docs/mission-critical.md) |
 
 None of the games are included: Legendary reads, and plays, copies you have.
 

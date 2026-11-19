@@ -49,6 +49,10 @@ hold.
   part of its memory kept after the image in its file. Under the mouse it is the parser
   games' world of objects, verbs for actions, and the same routine to perform them; it has
   speech, and its own guided tour, which is a recording of the game being played.
+- [Mission Critical](mission-critical.md): 1995. The start of a first look: a 32-bit
+  program for DOS/4GW, in one piece with no overlays, with a table of every address in it;
+  three CDs of speech and filmed scenes; and text, regions and a guided tour that are read
+  by what reads *Companions of Xanth*'s.
 - [Spellcasting 201: The Sorcerer's Appliance](spellcasting-201.md): 1991. The same system,
   linked by .RTLink/Plus in place of PLINK86: a program DOS can't load by itself, kept as
   records of its segments with their fixups, which the linker's own startup code puts in
