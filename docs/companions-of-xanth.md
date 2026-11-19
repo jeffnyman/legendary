@@ -30,8 +30,7 @@ The game came on a CD, and an image of it is beside the game, in `cd`. It is a r
 sector as the disc has it, with its 2,048 bytes of data sixteen bytes in. The tools' `disc`
 reads either. The disc's folder `XANTH` has 96 files, and the game's folder has all but
 four of them: three short lists of the installer's, and `XANTH_01.VOC`, 190,251,008
-bytes, which by its name and size is the game's speech. It starts with a count, 1,327, and
-that many places in the file; it hasn't been looked at further, or copied.
+bytes, which is [the game's speech](#the-speech). `disc --copy` puts them in the folder.
 
 ## What the tools read as it is
 
@@ -412,9 +411,30 @@ place and what is in it hasn't been checked.
 
 The tools' `verbs` lists each verb's routine, and `objects` with a number an object's.
 
+## The speech
+
+`XANTH_01.VOC` is every line the game speaks, and isn't Creative's file of that name. It
+starts with a word, 1,327, and that many offsets of four bytes, of which the last is the
+file's length: 1,326 numbers for lines, 104 of them with nothing, so 1,222 lines. A line
+is from its offset to the next and is the sound alone, a byte a sample with 128 for
+silence, as a Sound Blaster plays it. Every line starts at a multiple of 4,096: the header
+is filled out with `FF`, and a line with silence.
+
+**How fast it plays is worked out, not read.** Nothing in the file says. The Sound
+Blaster's driver in the program takes its speeds from a table at `38AF:4218`, of 60, 120,
+181 and 241 millionths of a second a sample, which are the RealSound speeds: 16,572 a
+second, and that played two, three and four times over. The pitch of the voices, measured
+across the file, is mostly 140 to 180 a second at the fastest, which is a voice, and half
+that at the next, which isn't. So 16,572 it is taken to be, and the file is 191 minutes,
+with a line of seven seconds in the middle and one of nearly six minutes the longest. The
+call that plays a line, and so the speed it asks for, hasn't been found; nor has what
+gives a line its number.
+
+The tools' `sounds` counts the lines, and with `--out` writes each as a WAV file.
+
 ## Still to do
 
-- The speech, `XANTH_01.VOC`, which is on the CD alone.
+- What says which line of the speech goes with which text, and the call that plays one.
 - Flags 9, 16 and 18, and the 56 routines of the exits.
 - What the four buttons under the verbs do, and the kinds of thing on the screen that
   haven't been read: 2, 4, 5 and 6.
