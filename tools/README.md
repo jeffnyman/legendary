@@ -257,12 +257,14 @@ python -m legendary_tools vocab <the game's folder>
 - **`sounds`** lists the `.RS` files: each sound's length, how many times each of its bytes
   is played, and so how long it lasts. With `--out`, it writes each to the folder as a WAV
   file. Where a game has a `.VOC` file of speech, as *Companions of Xanth* has, it counts its
-  lines and writes each as a WAV file too, in a folder of the file's name. Both are in
+  lines and writes each as a WAV file too, in a folder of the file's name.
+  [*Mission Critical*](../docs/mission-critical.md#the-speech) has three, and each line of
+  theirs is a WAV file already, which is written as it is. Both are in
   [docs/spellcasting-101.md](../docs/spellcasting-101.md#the-music-and-the-sounds), and both
   read *Timequest* too.
 - **`speech`** lists the lines of a game's speech, from its `.VOC` file, each with how long it
   is and the text it speaks, where the program says which: for *Companions of Xanth*, 985 of
-  its 1,222. It is in
+  its 1,222; for *Mission Critical* the lines are listed and none of the text is known yet. It is in
   [docs/companions-of-xanth.md](../docs/companions-of-xanth.md#what-a-line-says).
 - **`tour`** lists the guided tours in the `.HLP` files of a game played with the mouse, which
   are recordings of the game being played: the words each shows, and where it clicks. It is

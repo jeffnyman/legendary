@@ -65,7 +65,7 @@ from .program import Image, Program
 from .regions import read_regions
 from .rtlink import RtlinkProgram, is_rtlink, library_name
 from .sentence import read_sentence_grammar
-from .sound import SPEECH_RATE, read_songs, read_sound, read_speech
+from .sound import read_songs, read_sound, read_speech
 from .speech import speech_texts
 from .timers import (
     EVERY_TURN,
@@ -966,10 +966,18 @@ def pictures(args: argparse.Namespace) -> None:
 def speech(args: argparse.Namespace) -> None:
     """The lines of the game's speech, in its .VOC file: how long each is, and what it says."""
     folder = GameFolder(args.folder)
-    texts = speech_texts(_program(folder), data.StringFile(folder.read(folder.one("str.dat"))))
-    for path in folder.ending(".voc"):
+    # a 32-bit program names its lines some other way, not yet found
+    texts = (
+        {}
+        if folder.linear_program()
+        else speech_texts(_program(folder), data.StringFile(folder.read(folder.one("str.dat"))))
+    )
+    files = folder.ending(".voc")
+    for path in files:
         lines = read_speech(path)
         spoken = [line for line in range(len(lines)) if lines.seconds(line)]
+        if len(files) > 1:
+            print(os.path.basename(path))
         for line in spoken:
             said = _shown(texts[line], 90) if line in texts else "(its text isn't known)"
             print(f"{line:4}  {lines.seconds(line):5.1f}s  {said}")
@@ -1206,7 +1214,7 @@ def sounds(args: argparse.Namespace) -> None:
         name = os.path.basename(path)
         total = sum(speech.seconds(line) for line in range(len(speech)))
         spoken = sum(1 for line in range(len(speech)) if speech.seconds(line))
-        print(f"{name:14} {spoken} lines of speech, {total / 60:.0f} minutes at {SPEECH_RATE} a second")
+        print(f"{name:14} {spoken} lines of speech, {total / 60:.0f} minutes at {speech.rate} a second")
         if args.out:
             stem = os.path.splitext(name)[0].lower()
             for line in range(len(speech)):

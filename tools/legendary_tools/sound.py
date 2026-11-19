@@ -38,6 +38,11 @@ Nothing in the file says how fast it is played. The Sound Blaster's driver in th
 has a table of the speeds it can play at, as millionths of a second a sample: the four
 RealSound speeds, and 91 and 45, which are 10,989 and 22,222 a second. The speech is played
 at the last, 22,222: the game, run, gives the Sound Blaster a line at that speed.
+
+Mission Critical has three such files, one on each of its CDs, each with the same count and
+the lines that CD's part of the game speaks. There a line is a whole RIFF WAVE file, which
+says its own speed and size: one channel, 16 bits, 22,050 samples a second. A line starts
+at a multiple of 2,048, a CD's sector, and what fills it out after its WAVE ends is zeros.
 """
 
 from __future__ import annotations
@@ -150,22 +155,53 @@ class Speech:
 
     path: str
     offsets: tuple[int, ...]  # where each line starts, and after the last where it ends
+    waves: bool = False  # whether each line is a RIFF WAVE file, as Mission Critical's are
 
     def __len__(self) -> int:
         return len(self.offsets) - 1
 
+    def _read(self, line: int, size: int | None = None) -> bytes:
+        whole = self.offsets[line + 1] - self.offsets[line]
+        with open(self.path, "rb") as file:
+            file.seek(self.offsets[line])
+            return file.read(whole if size is None else min(size, whole))
+
+    def _wave(self, line: int) -> tuple[int, int, int] | None:
+        """A WAVE line's bytes a second, where its samples start in it, and how many bytes they are."""
+        header = self._read(line, 44)
+        if len(header) < 44 or header[:4] != b"RIFF" or header[8:16] != b"WAVEfmt ":
+            return None
+        if header[16:20] != b"\x10\0\0\0" or header[36:40] != b"data":
+            raise ValueError(f"line {line} is a WAVE file of a kind that isn't read")
+        return struct.unpack_from("<I", header, 28)[0], 44, struct.unpack_from("<I", header, 40)[0]
+
+    @property
+    def rate(self) -> int:
+        """How many samples a second the speech is played at."""
+        if self.waves:
+            for line in range(len(self)):
+                if self.offsets[line + 1] > self.offsets[line]:
+                    return struct.unpack_from("<I", self._read(line, 28), 24)[0]
+        return SPEECH_RATE
+
     def seconds(self, line: int) -> float:
-        """How long a line is, with the silence it is filled out with."""
+        """How long a line is: with the silence it is filled out with, where it doesn't say its size."""
+        if self.offsets[line + 1] == self.offsets[line]:
+            return 0.0
+        if self.waves and (wave := self._wave(line)):
+            return wave[2] / wave[0]
         return (self.offsets[line + 1] - self.offsets[line]) / SPEECH_RATE
 
     def samples(self, line: int) -> bytes:
         """A line's samples, without the silence at its end, which fills it out."""
-        with open(self.path, "rb") as file:
-            file.seek(self.offsets[line])
-            return file.read(self.offsets[line + 1] - self.offsets[line]).rstrip(b"\x80")
+        if self.waves and (wave := self._wave(line)):
+            return self._read(line)[wave[1] : wave[1] + wave[2]]
+        return self._read(line).rstrip(b"\x80")
 
     def wav(self, line: int) -> bytes:
-        """A line as a WAV file's bytes: eight bits, one channel."""
+        """A line as a WAV file's bytes: its own, or eight bits and one channel made into one."""
+        if self.waves and (wave := self._wave(line)):
+            return self._read(line)[: wave[1] + wave[2]]
         samples = self.samples(line)
         header = struct.pack(
             "<4sI4s4sIHHIIHH4sI", b"RIFF", 36 + len(samples), b"WAVE", b"fmt ", 16, 1, 1,
@@ -182,4 +218,11 @@ def read_speech(path: str) -> Speech:
         offsets = struct.unpack(f"<{count}I", file.read(4 * count))
     if not offsets or offsets[-1] != size or any(a > b for a, b in zip(offsets, offsets[1:])):
         raise ValueError("not a file of speech: its offsets don't go up to its length")
-    return Speech(path, offsets)
+    # what a line is, by how the first one there starts
+    first = next((at for at, after in zip(offsets, offsets[1:]) if after > at), None)
+    waves = False
+    if first is not None:
+        with open(path, "rb") as file:
+            file.seek(first)
+            waves = file.read(4) == b"RIFF"
+    return Speech(path, offsets, waves)
