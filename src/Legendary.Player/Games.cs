@@ -130,8 +130,8 @@ internal sealed record Game(string Folder, string Program, string Title, int Cyc
 /// </remarks>
 internal static class Games
 {
-    // an 8088 at 4.77 MHz, an AT, and a 386 or better
-    private const int Pc = 300, At = 3000, Fast = 30000;
+    // an 8088 at 4.77 MHz, and an AT
+    private const int Pc = 300, At = 3000;
 
 
     /// <summary>
@@ -270,7 +270,9 @@ internal static class Games
             World: Legendary.Core.Worlds.WorldMap.Xanth),
         // a 32-bit program that brings DOS/4GW with it; its speech and films are a gigabyte and
         // more on three CDs, and with all of them copied into its folder it never asks for one
-        new("mcritic", "Mission Critical", 1995, ["MISSION.EXE"], "MISSION.EXE", Fast,
+        // at 16,000 cycles, which is enough for its films: at 30,000 the PC itself only just
+        // keeps up on the machine it was tried on, and the sound crackles when it doesn't
+        new("mcritic", "Mission Critical", 1995, ["MISSION.EXE"], "MISSION.EXE", 16000,
             "starts, in VESA's 640 by 480, and plays its opening film with sound; not yet played",
 
             // a disk of 1995, and a CD drive that keeps up with the films: at the older games'

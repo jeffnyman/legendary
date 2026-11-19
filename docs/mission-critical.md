@@ -175,7 +175,7 @@ is 64: a program moves the window, by function 05h or by calling a routine the m
 description names, and the card has both.
 
 **The bus.** That was at eight million instructions a second. At the thirty million the
-player gives a game of 1995, the game ended before any of it, with
+player first gave it, the game ended before any of it, with
 `ERROR: Music driver installation failed.` and exit code 20. Miles's driver for the FM
 chip, `SBPRO2.MDI`, finds the chip the usual way: it starts the chip's timer, which runs out
 in 80 microseconds, waits, and looks for the timer's bit in the status. Its wait is a count
@@ -183,7 +183,9 @@ of reads of the status port. On a real card each read took a microsecond or so, 
 the card is on the ISA bus, which goes at its own pace whatever the processor's; on the PC
 a read took one instruction's time, and past sixteen million a second the reads were over
 before the timer was. Now a use of the FM chip's ports takes a microsecond at the least.
-The player also gives this game a disk of 1.5 megabytes a second, where the older games
+The player now runs the game at sixteen million, for a reason of its own: at thirty the PC
+only just keeps up with the clock on the machine it was tried on, and the sound crackled
+when it fell behind. It also gives this game a disk of 1.5 megabytes a second, where the older games
 have 200 KB: at that, the program alone took six seconds to load.
 
 **A held sample.** While the game printed `init_music()` and its dots, the speakers made
