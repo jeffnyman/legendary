@@ -39,6 +39,13 @@ from .program import Image, Program
 _TABLE = re.compile(rb"\x8e\x06(..)\x26\x8a\x84(..)", re.DOTALL)
 # Gateway II's, from a later compiler: the entry is found with BX, and into AL, BL or CL
 _TABLE_BX = re.compile(rb"\x8e\x06(..)\x26\x8a[\x87\x8f\x9f](..)", re.DOTALL)
+# Companions of Xanth's, from the same compiler told to make faster code: the number is made
+# six times itself with adds, and the record's far pointer read first, two bytes past the
+# type. mov es,[variable] / mov bx,[bp+6] / mov ax,bx / add bx,bx / add bx,ax / add bx,bx /
+# mov ax,es:[bx+table+2]
+_TABLE_ADDS = re.compile(
+    rb"\x8e\x06(..)\x8b\x5e\x06\x8b\xc3\x03\xdb\x03\xd8\x03\xdb\x26\x8b\x87(..)", re.DOTALL
+)
 # and its count is in the data segment, read with no segment loaded: mov ax,[count] /
 # cmp [bp+6],ax
 _COUNT_NEAR = re.compile(rb"\xa1(..)\x39\x46\x06", re.DOTALL)
@@ -247,6 +254,18 @@ LAYOUTS_GATEWAY2 = {
 }
 
 
+# Companions of Xanth's: Gateway II's design with five types and no words, since the game
+# has no parser. From the routines that read and write each field for each type; a room's
+# exits are from the records, where each room's start where the room before's end
+LAYOUTS_XANTH = {
+    1: Layout(18, names=4, lists=0x06, routine=0x0A, exit_count=0x0E, exit_start=0x10),
+    2: Layout(28, flag_bytes=4, names=4, places=0x08, relation=0x0A, next=0x0C, lists=0x0E, routine=0x1A),
+    3: Layout(32, flag_bytes=4, names=4, places=0x08, relation=0x0A, next=0x0C, lists=0x0E, routine=0x1E),
+    4: Layout(14, names=4, lists=0x06, routine=0x0C),
+    5: Layout(32, names=4, places=0x06, relation=0x08, next=0x0A, lists=0x0C, routine=0x1E),
+}
+
+
 # the directions an exit can be in, by number, from the main loop's own tests of the word typed
 DIRECTIONS = (
     "",
@@ -346,22 +365,8 @@ class ObjectTable:
             raise ValueError("the program's data segment wasn't found")
         self.data_segment = (notice - 8) // 16
 
-        # a later compiler's code, as Gateway II has, keeps the count where DS reaches it and
-        # finds the tables' entries by other registers
-        self.near = not _COUNT.search(root) and bool(_COUNT_NEAR.search(root))
-        table_variable, table_offset = self._commonest(_TABLE_BX if self.near else _TABLE, root)
-        table_offset = self._signed(table_offset) + 6
-        count_variable, count_offset = (
-            (0, self._commonest(_COUNT_NEAR, root)[0]) if self.near else self._commonest(_COUNT, root)
-        )
-        # the entries are read a byte at a time, so the lowest offset read is the table's start
-        types = _TYPES_BX if self.near else _TYPES
-        entries = collections.Counter(match.groups() for match in types.finditer(root))
-        types_variable = self._commonest(types, root)[0]
-        types_offset = min(
-            self._signed(int.from_bytes(offset, "little"))
-            for variable, offset in entries
-            if int.from_bytes(variable, "little") == types_variable
+        table_variable, table_offset, count_variable, count_offset, types_variable, types_offset = (
+            self._find_table(root)
         )
 
         # the two lists of words: mov es,[variable] / mov si,es:[bx+list] / or si,si, for the
@@ -419,6 +424,7 @@ class ObjectTable:
                     LAYOUTS_GATEWAY,
                     LAYOUTS_ERIC,
                     LAYOUTS_GATEWAY2,
+                    LAYOUTS_XANTH,
                 )
                 if all(
                     kind in layouts and layouts[kind].size == entry.size for kind, entry in self.types.items()
@@ -442,9 +448,44 @@ class ObjectTable:
             if self._layouts is LAYOUTS_ERIC
             else "Gateway II"
             if self._layouts is LAYOUTS_GATEWAY2
+            else "Companions of Xanth"
+            if self._layouts is LAYOUTS_XANTH
             else None
         )
         self._read_all(root, entries)
+
+    def _find_table(self, root: bytes) -> tuple[int, int, int, int, int, int]:
+        """
+        The table of objects, their count and the types' table, each a segment's variable and
+        an offset, from the code that reads them.
+        """
+        # a later compiler's code, as Gateway II has, keeps the count where DS reaches it and
+        # finds the tables' entries by other registers
+        self.near = not _COUNT.search(root) and bool(_COUNT_NEAR.search(root))
+        if self.near and _TABLE_ADDS.search(root):
+            table_variable, table_offset = self._commonest(_TABLE_ADDS, root)
+            table_offset -= 2
+        else:
+            table_variable, table_offset = self._commonest(_TABLE_BX if self.near else _TABLE, root)
+        table_offset = self._signed(table_offset) + 6
+        count_variable, count_offset = (
+            (0, self._commonest(_COUNT_NEAR, root)[0]) if self.near else self._commonest(_COUNT, root)
+        )
+        # the entries are read a byte at a time, so the lowest offset read is the table's start
+        types = _TYPES_BX if self.near else _TYPES
+        entries = collections.Counter(match.groups() for match in types.finditer(root))
+        if self.near:
+            # the types' table starts its segment, where it has always been: Companions of
+            # Xanth has no code that reads a type's first byte to say so
+            types_variable = self._commonest(types, root)[0] if entries else table_variable
+            return table_variable, table_offset, count_variable, count_offset, types_variable, -3
+        types_variable = self._commonest(types, root)[0]
+        types_offset = min(
+            self._signed(int.from_bytes(offset, "little"))
+            for variable, offset in entries
+            if int.from_bytes(variable, "little") == types_variable
+        )
+        return table_variable, table_offset, count_variable, count_offset, types_variable, types_offset
 
     def _read_all(self, root: bytes, entries: list[int]) -> None:
         memory = self.image.memory
@@ -476,7 +517,7 @@ class ObjectTable:
                 at += 2
             return at + 2
 
-        if self._layouts:
+        if any(layout.words is not None for layout in self._layouts.values()):
             nouns = entries[-1] + 6
             self._word_lists = [nouns, after(nouns, 0)]
         self._rows_marked = True
