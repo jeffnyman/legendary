@@ -36,8 +36,8 @@ header being filled out with FF and a line with silence.
 
 Nothing in the file says how fast it is played. The Sound Blaster's driver in the program
 has a table of the speeds it can play at, as millionths of a second a sample: the four
-RealSound speeds, and 91 and 45, which are 10,989 and 22,222 a second. The speech is taken
-to be the last, 22,222, by ear: the call that plays a line hasn't been found.
+RealSound speeds, and 91 and 45, which are 10,989 and 22,222 a second. The speech is played
+at the last, 22,222: the game, run, gives the Sound Blaster a line at that speed.
 """
 
 from __future__ import annotations

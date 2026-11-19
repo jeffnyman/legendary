@@ -23,7 +23,7 @@ question of what a player is stays open until more of the games is understood.
 | *Spellcasting 301: Spring Break* | 1992 | `sc301` | Plays, with its pictures and music; not yet played through. Linked with a newer .RTLink: its program, run-time library and overlays are read, and its vocabulary, objects, flags, grammar, routines, timers, text, pictures, music and sounds, and `--watch` and `--panel` show its world; [notes](docs/spellcasting-301.md) |
 | *Eric the Unready* | 1993 | `ericun` | Plays, with its pictures, music and sounds; not yet played through. Built as *Gateway* is: its program, run-time library and overlays are read, and its vocabulary, objects, flags, grammar, routines, timers, text, saved game, pictures, music, sounds and fonts, and `--watch` and `--panel` show its world; [notes](docs/eric-the-unready.md) |
 | *Gateway II: Homeworld* | 1993 | `gateway2` | Plays, with its pictures, animations and music; not yet played through. Linked by a newer .RTLink again: its program, run-time library and overlays are read, and its vocabulary, text, objects, flags, grammar, routines, timers, saved game, pictures, animations, music and fonts, and `--watch` and `--panel` show its world; [notes](docs/gateway-ii.md) |
-| *Companions of Xanth* | 1993 | `xanth` | Not yet tried on the PC. The first game without a parser, and one program where the others are two: its program and overlays are read, and its text, objects, verbs, pictures, music, sounds and fonts; [notes](docs/companions-of-xanth.md) |
+| *Companions of Xanth* | 1993 | `xanth` | Plays, by the mouse, with its pictures, music and speech; not yet played through. The first game without a parser, and one program where the others are two: its program and overlays are read, and its text, objects, flags, verbs, routines, timers, regions, pictures, music, sounds, speech, fonts and guided tours, and `--watch` and `--panel` show its world; [notes](docs/companions-of-xanth.md) |
 | *Mission Critical* | 1995 | `mcritic` | Not yet tried; a 32-bit program, and another kind of game |
 
 None of the games are included: Legendary reads, and plays, copies you have.
@@ -151,7 +151,9 @@ together, for the panel and the terminal's full record of the play.
 *Spellcasting 201*, *Timequest*, *Spellcasting 301*, *Gateway*, *Eric the Unready* and
 *Gateway II* can be watched the same way, with all of it: the room,
 each command's words, form and objects, each action and who answered it, the timers, and
-what changed. For *Timequest* the room comes with the place and the year, as `Rome, 44 BC`.
+what changed. For *Timequest* the room comes with the place and the year, as `Rome, 44 BC`. *Companions of Xanth*,
+which has no parser, is watched without a command's words: each action is said by its verb,
+as `action 68: Take Post-It(tm) (44)`.
 
 The panel's text is small: 8 pixels, doubled once the window is 960 high. `--panel-text 1.5`
 asks for the panel with its text one and a half times that size, and any size from 1 to 4 can

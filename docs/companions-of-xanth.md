@@ -520,21 +520,63 @@ is from its offset to the next and is the sound alone, a byte a sample with 128 
 silence, as a Sound Blaster plays it. Every line starts at a multiple of 4,096: the header
 is filled out with `FF`, and a line with silence.
 
-**How fast it plays is by ear, not read.** Nothing in the file says. The Sound Blaster's
-driver in the program takes its speeds from a table at `38AF:4218`, of millionths of a
-second a sample: 60, 120, 181 and 241, which are the RealSound speeds, and then 91 and 45,
-which are 10,989 and 22,222 a second. The pitch of the voices fits 16,572 and 22,222 both,
-and played at each, it is 22,222 that sounds right and 16,572 slow. At that the file is
-143 minutes, with a line of five seconds in the middle and one of nearly four and a half
-minutes the longest. The call that plays a line, and so the speed it asks for, hasn't been
-found; nor has what gives a line its number.
+**How fast it plays isn't in the file.** The Sound Blaster's driver in the program takes
+its speeds from a table at `38AF:4218`, of millionths of a second a sample: 60, 120, 181
+and 241, which are the RealSound speeds, and then 91 and 45, which are 10,989 and 22,222 a
+second. It is the last: [the game, running](#the-game-as-it-runs), gives the Sound Blaster
+each piece of a line at 22,222 a second, and played at that the voices sound right, where
+at 16,572 they are slow. So the file is 143 minutes, with a line of five seconds in the
+middle and one of nearly four and a half minutes the longest. What gives a line its number
+hasn't been found.
 
 The tools' `sounds` counts the lines, and with `--out` writes each as a WAV file.
 
+## The game as it runs
+
+The game starts on [the PC](the-pc.md) and is played by the mouse, with its pictures, its
+music and its speech, and the player's `--watch` and `--panel` follow it:
+
+```
+world: turn 0, in bedroom (34)
+world:   exits: northwest to entrance (51)
+world:   timer 3 (the telephone rings) started: 12 turns to go
+world:   action 68: Take Post-It(tm) (44)
+world:     answered by the action's own routine: 1
+world:   Post-It(tm) (44) moved: from personal computer (39), its list 2 to You (1)
+world:   Post-It(tm) (44): flag 5, touched, set
+world: turn 1, in bedroom (34)
+world:   action 81: go northwest
+world:   You (1) moved: from bedroom (34) to entrance (51)
+world:   exits: southeast to bedroom (34); west to kitchen (64); north: routine 0 decides
+```
+
+There are no words to follow, so an action is said by its verb, and the rest is as for the
+games with a parser: who answered, what moved, which flags changed, the timers. The game
+keeps no time of day, and the watch says the turn alone.
+
+**It needs nothing new of the PC.** As *Gateway II* does, it asks for its files at
+`D:\XANTH\` and keeps its saved games in `C:\XANTH\`, and the player makes both the
+game's own folder. It takes the mouse through a handler of its own, which draws the
+pointer, and Escape cuts short each line of the demons' wager that the game opens with.
+
+**The game says how fast its speech is.** It reads a line from `XANTH_01.VOC` 16,384
+bytes at a time and gives each to the Sound Blaster at 22,222 samples a second, which is
+what [was taken by ear](#the-speech).
+
+**The screen is as [read from the code](#the-parts-of-the-screen)**, seen with the game
+running: the verbs, the compass with `WAIT`, the system's button, `MAP` and `UNDO` under
+it, the picture, the line of text, the boxes for the companions, and the things carried
+with two arrows at their right, which by their look move through them.
+
+What isn't followed is the click itself, as the parser games' words are: which thing the
+pointer is on, and the command as it is made. And where the main loop comes back to when a
+routine gives an action up hasn't been found, so that isn't said.
+
 ## Still to do
 
-- What says which line of the speech goes with which text, and the call that plays one.
+- What says which line of the speech goes with which text.
+- For the watch: the command as it is made by clicks, and where the main loop's `setjmp`
+  returns.
 - Flags 9, 16 and 18, the 56 routines of the exits, and the eighteen timers with no name.
 - The kinds of thing on the screen that haven't been read: 2, 4, 5 and 6; and event
   `0002` of the tours.
-- The game hasn't been run on the PC.
