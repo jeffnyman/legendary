@@ -70,13 +70,24 @@ internal sealed class WorldWatch(
 
         if (_world is null)
         {
-            if (_looks++ % SearchEvery != 0 || (_world = World.Find(Read, 0xA0000, map, names)) is null)
+            // a 32-bit game is loaded above the first megabyte, wherever there was room
+            if (_looks++ % SearchEvery != 0 || (_world = World.Find(Read, map.Flat is null ? 0xA0000 : 0x100_0000, map, names)) is null)
             {
                 return;
             }
 
-            Say($"the game is in memory, loaded at {_world.LoadSegment:X4}h, with {map.ObjectCount} objects", PanelTone.Dim);
+            Say(
+                map.Flat is null
+                    ? $"the game is in memory, loaded at {_world.LoadSegment:X4}h, with {map.ObjectCount} objects"
+                    : $"the game is in memory, its tables at {_world.FoundAt:X8}h, with {map.ObjectCount} objects",
+                PanelTone.Dim);
             machine.Cpu.Watch((uint)_world.PerformAddress, Performing);
+            if (map.Flat is not null)
+            {
+                // its timers, and how a click becomes a command, aren't found yet
+                return;
+            }
+
             if (map.JumpBackOffset != 0)
             {
                 machine.Cpu.Watch((uint)_world.JumpBackAddress, JumpedBack);
@@ -129,7 +140,7 @@ internal sealed class WorldWatch(
 
         SayChanges(world);
         string time = map.HasClock ? Time(world.Minutes) + ", " : "";
-        string place = $"{(world.Visit is { } visit ? visit + ", " : "")}{time}{world.Progress}, in {Name(world, room)}";
+        string place = $"{(world.Visit is { } visit ? visit + ", " : "")}{time}{(map.Flat is null ? world.Progress + ", " : "")}in {Name(world, room)}";
         string here = $"  here: {Inside(world, room, depth: 0)}";
         string exits = $"  exits: {Exits(world, room)}";
         if (place == _place && here == _here && exits == _exits)
@@ -249,7 +260,8 @@ internal sealed class WorldWatch(
     {
         var lines = new List<PanelLine>
         {
-            new(map.HasClock ? $"{Time(world.Minutes)}   {world.Progress}" : world.Progress, PanelTone.Title),
+            // a game whose count of turns isn't known has nothing to say here
+            new(map.HasClock ? $"{Time(world.Minutes)}   {world.Progress}" : map.Flat is null ? world.Progress : "", PanelTone.Title),
             new(Name(world, room) + (world.Visit is { } visit ? $", {visit}" : ""), PanelTone.Title),
             new(""),
             new("Here", PanelTone.Dim),
@@ -275,7 +287,7 @@ internal sealed class WorldWatch(
         var exits = world.Exits(room);
         int width = exits.Count == 0 ? 0 : exits.Max(exit => DirectionName(exit.Direction).Length);
         lines.AddRange(exits.Select(exit => new PanelLine($"  {DirectionName(exit.Direction).PadRight(width)}  {Leads(world, exit).TrimStart(' ', ':')}")));
-        if (world.Timers is { Count: > 0 } timers)
+        if (map.Flat is null && world.Timers is { Count: > 0 } timers)
         {
             lines.Add(new PanelLine(""));
             lines.Add(new PanelLine("Timers", PanelTone.Dim));
@@ -367,7 +379,9 @@ internal sealed class WorldWatch(
         }
 
         var cpu = machine.Cpu;
-        var (action, first, second) = world.PerformArguments((cpu.Ss * 16) + (ushort)cpu.Esp);
+        var (action, first, second) = map.Flat is null
+            ? world.PerformArguments((cpu.Ss * 16) + (ushort)cpu.Esp)
+            : World.PerformArguments(cpu.Eax, cpu.Edx, cpu.Ebx);
         string inside = new(' ', 2 * Math.Clamp(world.PerformDepth, 0, 8));
         Say($"  {inside}action {action}: {Said(world, action, first, second)}", PanelTone.Action);
     }

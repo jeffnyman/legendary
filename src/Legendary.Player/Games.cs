@@ -273,7 +273,8 @@ internal static class Games
         // at 16,000 cycles, which is enough for its films: at 30,000 the PC itself only just
         // keeps up on the machine it was tried on, and the sound crackles when it doesn't
         new("mcritic", "Mission Critical", 1995, ["MISSION.EXE"], "MISSION.EXE", 16000,
-            "starts, in VESA's 640 by 480, and plays its opening film with sound; not yet played",
+            "starts and plays, by the mouse, with its films, music and speech; not yet played through",
+            World: Legendary.Core.Worlds.WorldMap.MissionCritical,
 
             // a disk of 1995, and a CD drive that keeps up with the films: at the older games'
             // 200 KB a second the program alone takes six seconds to load
