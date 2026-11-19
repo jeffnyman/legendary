@@ -139,7 +139,7 @@ object in place of words:
 
 | Field | 1 | 2 | 3 | 4 | 5 |
 |---|---|---|---|---|---|
-| The picture shown for it | `0C` | `14` | `18` | | `18` |
+| Its icon, a picture's number | `0C` | `14` | `18` | | `18` |
 | The verb a click on it does | | `16` | `1A` | `08` | `1A` |
 | Where its list of verbs starts | | `18` | `1C` | `0A` | `1C` |
 
@@ -189,19 +189,28 @@ objects, after the verbs in the same segment, from `22F6:04D8`. `Put diskette on
 drive`, `Attach Post-It to personal computer`, `Unlock gate with key`, `Tie rope to
 anchor`. The same routine looks a verb and its two objects up there.
 
-**The picture** is a number from 263 to 472, on 142 objects: the rooms, 391 on, the
-people, and the things that can be carried. A routine that makes a list of what is shown
-puts down each object with its picture, or with 256 when it has none. Which picture of
-which file a number is hasn't been worked out.
+**The picture is the object's icon.** It is a number from 263 to 472, on 142 objects: the
+rooms, the people, and the things that can be carried. A routine that makes a list of
+what is shown puts down each object with its picture, or with 256 when it has none.
+
+A number is a file and a place in it: the file's number times 256, and the picture's.
+Every one is of file 1, `XANTH_01.PIC`, which has 217 pictures, numbered to 216, and the
+highest an object names is 472, which is 256 and 216. Every picture an object names is 24
+by 20, small enough to be one of a row. And they are what they should be: the envelope's, 263, is an envelope, the letter's two pages, the Post-It's a
+yellow note and the bracelet's a ring; Nada's and Metria's are their faces; and the
+rooms' are small drawings of them, a desk with a computer for the bedroom, a door for the
+entrance, a refrigerator for the kitchen. Picture 0 of the file, 256, is a blank square.
+
+That the high byte is the file is from these alone, where it is always 1: no object names
+a picture of another file, so it hasn't been seen to be anything else.
 
 The tools' `verbs` command lists the verbs and the pairs, and `objects` with a number says
-an object's picture, its own verb and its list.
+an object's icon, its own verb and its list.
 
 ## Still to do
 
 - The speech, `XANTH_01.VOC`, which is on the CD alone.
-- Which picture an object's picture number is, the exits' table, the routines' table and
-  the flags' names.
+- The exits' table, the routines' table and the flags' names.
 - How a verb and its objects, once chosen, are performed: the routine around `08A7:5700`
   settles what is meant, and what it hands on to hasn't been followed.
 - The `.HLP` files.
