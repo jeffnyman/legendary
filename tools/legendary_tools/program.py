@@ -163,7 +163,9 @@ class Image:
         """Each segment the relocations name, with the places that name it."""
         found: dict[int, list[int]] = {}
         for linear in sorted(self.relocations):
-            found.setdefault(self.word(linear), []).append(linear)
+            # Companions of Xanth's program has one that points past all it loads
+            if linear + 2 <= len(self.memory):
+                found.setdefault(self.word(linear), []).append(linear)
         return found
 
     def overlay_at(self, linear: int) -> int | None:

@@ -684,10 +684,16 @@ def flags(args: argparse.Namespace) -> None:
     """The objects' flags: what has each as the game starts, and where the program tests or changes it."""
     folder = GameFolder(args.folder)
     program = _program(folder)
-    words = data.vocabulary(folder.read(folder.one("vocab.dat")))
-    table = _object_table(folder, program, words)
+    if folder.ending("vocab.dat"):
+        words = data.vocabulary(folder.read(folder.one("vocab.dat")))
+        table = _object_table(folder, program, words)
+        made = _shapes(read_grammar(program, words), words)
+        shapes = {number: found[0] for number, found in made.items()}
+    else:
+        # a game played with the mouse: its actions are its verbs
+        table = _object_table(folder, program)
+        shapes = {number: table.verb_name(number) for number in table.verbs}
     names = {found.number: found.name for found in table.objects}
-    shapes = {number: made[0] for number, made in _shapes(read_grammar(program, words), words).items()}
     uses, missed = flag_uses(program, names, shapes)
     most = max(found.flag_count for found in table.objects)
     for flag in range(1, most + 1):

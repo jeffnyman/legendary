@@ -95,6 +95,13 @@ _FLAG_TABLE = re.compile(rb"\xd3\xe6\x8e\x06(..)\x26\x8b\x84(..)\x89\x46.\xb8[\x
 # this row of the exits the direction asked for?
 _EXIT_ROWS = re.compile(rb"\xb1\x02\xd3\xe6\x8a\x46\x06\x8e\x06(..)\x26\x38\x84(..)", re.DOTALL)
 
+# Companions of Xanth's: add ax,<rows> / mov [bp-n],ax / mov al,[bp+6] / mov es,[segment
+# variable] / mov bx,[bp-n] / cmp es:[bx],al
+_EXIT_ROWS_ADDS = re.compile(rb"\x05(..)\x89\x46.\x8a\x46\x06\x8e\x06(..)\x8b\x5e.\x26\x38\x07", re.DOTALL)
+# and its doors': mov es,[segment variable] / mov bx,[bp-n] / add bx,bx / add bx,bx /
+# mov ax,es:[bx+doors] / mov [bp-n],ax / push ax
+_DOORS_ADDS = re.compile(rb"\x8e\x06(..)\x8b\x5e.\x03\xdb\x03\xdb\x26\x8b\x87(..)\x89\x46.\x50", re.DOTALL)
+
 # shl bx,1 / shl bx,1 / mov es,[segment variable] / mov ax,es:[bx+doors] / mov [bp-n],ax /
 # mov ax,flag / push ax: a door's own object, to be asked if it's open, which the room it
 # leads to is two before
@@ -652,6 +659,12 @@ class ObjectTable:
             _, nearest = min(exits, key=lambda found: found[0])
             self._exit_rows = self._data_word(int.from_bytes(nearest[1], "little")) * 16
             self._exit_rows += int.from_bytes(nearest[2], "little")
+        if self._exit_rows is None and (adds := _EXIT_ROWS_ADDS.search(root)):
+            self._exit_rows = self._data_word(int.from_bytes(adds[2], "little")) * 16
+            self._exit_rows += int.from_bytes(adds[1], "little")
+            if doors := _DOORS_ADDS.search(root, adds.end()):
+                self._doors = self._data_word(int.from_bytes(doors[1], "little")) * 16
+                self._doors += int.from_bytes(doors[2], "little") - 2
         self._exit_texts = self._exit_variables = None
         self._exit_variable_at = 2
         if self._exit_rows is not None:

@@ -304,9 +304,33 @@ FLAG_NAMES_GATEWAY2 = {
     42: "can be folded",
 }
 
+# Companions of Xanth's, of its 23: from who has each as the game starts and what tests it
+FLAG_NAMES_XANTH = {
+    1: "takes `some`",
+    2: "its name takes no article",
+    3: "plural",
+    4: "its name takes `an`",
+    5: "touched, or for a place visited",
+    6: "seen by the player",
+    7: "not yet taken or moved",
+    8: "alive",
+    10: "a mark its own routine keeps, of something that has happened",
+    11: "things can be on it",
+    12: "can be taken",
+    13: "can be seen through",
+    14: "open",
+    15: "can be opened and closed",
+    17: "a container",
+    19: "a place in the player's own world, before the game is entered",
+    20: "came in the game's box",
+    21: "outdoors",
+    22: "female",
+    23: "a person",
+}
+
 GAME_101, GAME_TIMEQUEST, GAME_201 = "Spellcasting 101", "Timequest", "Spellcasting 201"
 GAME_301, GAME_GATEWAY, GAME_ERIC = "Spellcasting 301", "Gateway", "Eric the Unready"
-GAME_GATEWAY2 = "Gateway II"
+GAME_GATEWAY2, GAME_XANTH = "Gateway II", "Companions of Xanth"
 # each game's names: for any object, and what a place's and a person's are instead
 _NAMES = {
     GAME_101: (FLAG_NAMES, PLACE_FLAG_NAMES, PERSON_FLAG_NAMES),
@@ -316,6 +340,7 @@ _NAMES = {
     GAME_GATEWAY: (FLAG_NAMES_GATEWAY, {}, {}),
     GAME_ERIC: (FLAG_NAMES_ERIC, {}, {}),
     GAME_GATEWAY2: (FLAG_NAMES_GATEWAY2, {}, {}),
+    GAME_XANTH: (FLAG_NAMES_XANTH, {}, {}),
 }
 
 
@@ -362,6 +387,11 @@ _TESTS_LATER = bytes.fromhex("c45efa 8a4efe 268a07 d2e8 250100")
 _SETS_LATER = bytes.fromhex("c45efa 8a4efe b001 d2e0 260a07 268807")
 # the same / not al / and al,es:[bx] / mov es:[bx],al
 _CLEARS_LATER = bytes.fromhex("c45efa 8a4efe b001 d2e0 f6d0 262207 268807")
+# Companions of Xanth's test is the same, and its other two load the pointer after the bit:
+# mov cl,[bp-2] / mov al,1 / shl al,cl / les bx,[bp-6] / or es:[bx],al
+_SETS_FAST = bytes.fromhex("8a4efe b001 d2e0 c45efa 260807")
+# the same / not al / les bx,[bp-6] / and es:[bx],al
+_CLEARS_FAST = bytes.fromhex("8a4efe b001 d2e0 f6d0 c45efa 262007")
 _PROLOGUE = b"\x55\x8b\xec"
 # the words the game keeps that a call can take its object from. Spellcasting 101's: in the
 # action's segment, where it keeps what it is performing, and in the data's
@@ -373,6 +403,12 @@ _ENDINGS = (
     ((_TESTS, _SETS, _CLEARS), _ACTION_WORDS, _DATA_WORDS),
     ((_TESTS_LOOKED_UP, _SETS_LOOKED_UP, _CLEARS_LOOKED_UP), {0x2A06: "the room"}, {}),
     ((_TESTS_LATER, _SETS_LATER, _CLEARS_LATER), {}, {}),
+    # Companions of Xanth keeps what it is performing in the data's segment
+    (
+        (_TESTS_LATER, _SETS_FAST, _CLEARS_FAST),
+        {},
+        {0x6A04: "the object", 0x6A02: "the second object", 0x256: "the room", 0x258: "the actor"},
+    ),
 )
 
 
