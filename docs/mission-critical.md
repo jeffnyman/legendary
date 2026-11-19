@@ -172,6 +172,39 @@ So object 1 is `you`, also `me`, a person in room 147, a Corridor, carrying the 
 note. A click on you is Talk to. The objects' routines are numbered to 734, as each
 came to be written: yours is 1.
 
+### The flags
+
+A flag is a number from 1 to 20, and the table says which bit of a record it is and which
+types have it, so that one bit serves two flags: bit 10 is flag 11 in a room or a thing and
+flag 12 in a holder or a fixture. Three routines take an object and a flag's number, at
+`00013a74` to test it, `00013aa4` to set it and `00013ad0` to clear it, and what the
+program does with each flag is where its name comes from.
+
+| Flag | What it is | How it's known |
+|---|---|---|
+| 1 | Takes `some` | The routine that writes a name asks it, with 2, 3 and 4: `power and data cables` |
+| 2 | Its name takes no article | `you`, `Tran`, `Your Stateroom` |
+| 3 | Plural | `consoles`, `system controls` |
+| 4 | Its name takes `an` | Asked with those, though nothing starts with it |
+| 5 | Touched; for a room, visited | Take and Open set it, and it is set on a room as you come into it |
+| 6 | Seen | Set on a room with 5 as you come into it; the name is the earlier game's for the flag after `touched` |
+| 10 | Its routine's own mark | Tested 133 times, set 30 and cleared 8, each time on one object named by its number: the objects' routines keep their state in it, as [*Companions of Xanth*'s flag 10](companions-of-xanth.md#the-flags) is kept |
+| 12 | Can be opened and closed | Open asks it before it opens anything; cabinets, drawers, compartments |
+| 13 | Can be seen through | Look in asks it of what isn't open |
+| 16 | Open | Open says `already open` when it's set, and sets it; Close clears it. Tested 371 times, most of them an object's routine asking about a door |
+| 17 | A room | Every room starts with it, and nothing else can have it |
+| 18 | Things can be on it | `You don't see anything on` it is said of what has it: chairs, beds, desks |
+| 19 | Female | Picks `herself` from `himself`; Tran |
+| 20 | A person | You and Tran: `Closing` one `would be more difficult than it sounds` |
+
+Six aren't known. Flag 7 starts on 31 things, a vase, a plastic card, a cabinet, the
+molecular glue; 9 on 96, you and the ship's consoles and systems among them; 11 on every
+room and two things; 14 on one door; 15 on a slot, a hole and a crater; and 8 on nothing.
+
+The first six and the last few are the flags *Companions of Xanth* has, some with the same
+numbers. `flags` lists them, each with its bit and types, what starts with it, and how
+often the program tests, sets and clears it.
+
 ### The rooms
 
 The game is seen through your eyes, and a room is what is seen from one place, facing one
@@ -627,7 +660,8 @@ world:   here: you (1) [Captain's note (148)], Emergency Stores Cabinet (137) [m
 
 Action 15 is one of the four that no verb makes, and this is what it is seen to do: it is
 named `Walk on` for that and nothing else. Its object is one of the 76 that are a routine's
-number alone. Flags 5 and 6 are set on a room as you come into it.
+number alone. Coming into a room sets two of [its flags](#the-flags): it is visited, and
+seen.
 
 What the watch doesn't have for this game: a count of turns or a time of day, the timers,
 how a click becomes an action, and whose routine answered one.
@@ -636,4 +670,4 @@ how a click becomes an action, and whose routine answered one.
 
 Everything but the above: which picture each change is to, and kind 4; what
 the 325 lines of speech named in the code say; what an action's routine and an object's do, and the
-fields of a record not yet named; the flags' and the variables' names; the battle game; and playing it past its first picture.
+fields of a record not yet named; six of the flags, and the variables' names; the battle game; and playing it past its first picture.
