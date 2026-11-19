@@ -912,10 +912,18 @@ def regions(args: argparse.Namespace) -> None:
             rest = f", the rest of it {named(picture.object)}" if picture.object else ""
             print(f"  picture {picture.picture}{rest}")
             for region in picture.regions:
-                print(
-                    f"    {region.left * 2:3},{region.top:3} to {region.right * 2 + 1:3},{region.bottom:3}"
-                    f"  {named(region.object)}"
-                )
+                if len(region.points) > 2:
+                    # an outline: its corners, and the box they are in
+                    where = f"an outline of {len(region.points)} corners, in"
+                    low, high = map(min, zip(*region.points)), map(max, zip(*region.points))
+                    box = "{:3},{:3} to {:3},{:3}".format(*low, *high)
+                    print(f"    {where} {box}  {named(region.object)}")
+                elif region.points:
+                    (left, top), (right, bottom) = region.points
+                    print(f"    {left:3},{top:3} to {right:3},{bottom:3}  {named(region.object)}")
+                else:
+                    box = f"{region.left * 2:3},{region.top:3} to {region.right * 2 + 1:3},{region.bottom:3}"
+                    print(f"    {box}  {named(region.object)}")
 
 
 def _animation_files(folder: GameFolder) -> list[str]:

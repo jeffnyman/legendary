@@ -228,7 +228,9 @@ python -m legendary_tools vocab <the game's folder>
   of a kind that isn't known is left out, and counted.
 - **`regions`** lists the regions in each `.RGN` file: for each picture that has them, the
   object the rest of the picture is, and each rectangle, in the EGA's pixels, with the object
-  that's there. The objects are named when the program's table of them can be read, which is
+  that's there. *Gateway II* and *Companions of Xanth* keep a region as a list of points, and
+  for those it gives a rectangle's corners in pixels, or says a region is an outline, with how
+  many corners it has and the box they are in. The objects are named when the program's table of them can be read, which is
   for *Spellcasting 101*. It is in
   [docs/spellcasting-101.md](../docs/spellcasting-101.md#what-is-where-in-a-picture).
 - **`sounds`** lists the `.RS` files: each sound's length, how many times each of its bytes
