@@ -73,6 +73,9 @@ public sealed partial class Machine : ICpuBus
     // the time, counted in instructions, with those the processor would have run while halted
     private long _time;
 
+    // time the bus took within the instructions the processor is running, to be added to theirs
+    private long _busTime;
+
     // when counter 0 next raises IRQ 0, in timer ticks
     private long _nextIrq0 = 0x10000;
 
@@ -344,8 +347,20 @@ public sealed partial class Machine : ICpuBus
     {
         // a repeated string instruction takes a step of time for each repetition
         Cpu.InterruptWaiting = _pic.HasInterrupt;
-        _time += Cpu.RunFor(until - _time);
+        long ran = Cpu.RunFor(until - _time);
+        _time += ran + _busTime;
+        _busTime = 0;
     }
+
+    /// <summary>
+    /// A use of the FM chip's ports takes a microsecond at the least, however fast the processor:
+    /// the card is on the ISA bus, which goes at its own pace. Programs count on it. The chip
+    /// wants a wait after each write, and its timers take 80 microseconds and more to run out,
+    /// and a driver waits by reading the status port some number of times: Miles's, finding the
+    /// chip, reads it too few times for a processor that does twenty million instructions a
+    /// second, unless each read costs what the bus made it cost.
+    /// </summary>
+    private void TakeBusTime() => _busTime += Math.Max(0, (InstructionsPerSecond / 1_000_000) - 1);
 
     /// <summary>
     /// The devices' part between runs of instructions: the timer's interrupt and the sound card's
@@ -477,6 +492,7 @@ public sealed partial class Machine : ICpuBus
             case 0x229:
                 // the FM synthesizer: the AdLib's ports, and the Sound Blaster's (its first four
                 // reach both banks, and 228h and 229h the first, as on an AdLib)
+                TakeBusTime();
                 return _opl.Read(port, Seconds);
             case 0x330:
             case 0x331:
@@ -557,6 +573,7 @@ public sealed partial class Machine : ICpuBus
             case 0x228:
             case 0x229:
                 UpdateSound();
+                TakeBusTime();
                 _opl.Write(port, value, Seconds);
                 break;
             case 0x330:
