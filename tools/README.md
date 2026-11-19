@@ -196,7 +196,7 @@ python -m legendary_tools vocab <the game's folder>
   `--no-wav` leaves it out, and without `dotnet` it is left out and said so.
 - **`disc`** is for a game that came on a CD and reads some of its files from the disc, as
   [*Gateway II*](../docs/gateway-ii.md#the-pictures) reads its pictures. With an image of
-  the CD beside the game, in its folder or in a `cd` inside it, it lists what the game's
+  the CD beside the game, in its folder or in a `cd` inside it, plain ISO 9660 or raw, it lists what the game's
   folder on the disc has that the game's own folder hasn't; `LEGEND.INI` says which folder
   that is. With `--copy` it copies those files into the game's folder, which is then whole:
   nothing else here reads the image, and a game's folder can be kept without it.
