@@ -18,7 +18,7 @@ the program loads. Every one of them can be looked at with the [tools](../tools/
 | `XANTH.OVL` | Its overlays, 326,091 bytes |
 | `XANTHSTR.DAT` | The text |
 | `OBJECT.DAT`, `RESTART.DAT` | The objects' names, and the state the game starts from |
-| `XANTH_00.HLP` to `XANTH_02.HLP` | Three files of a kind the earlier games don't have, not looked at |
+| `XANTH_00.HLP` to `XANTH_02.HLP` | [The game's guided tours](#the-guided-tours), which the earlier games don't have |
 | `XANTH_nn.PIC`, `.RGN`, `.FNT`, `.MUS`, and `.RS` files | Pictures, their regions, fonts, music and sounds |
 | `LEGEND.INI` | Where the game looks: `GAMEDATA=D:\XANTH\`, `SAVEDATA=C:\XANTH\` |
 
@@ -330,16 +330,20 @@ it draws them in:
 
 | Part | Left, top to right, bottom | What shows it |
 |---|---|---|
-| The verbs, a list down the left | 2, 4 to 49, and as far down as the list goes | Each verb's box is added as it is written |
-| Four buttons under them | 4, 168 to 45, 195, in two rows of two | Four boxes drawn there |
+| The verbs, a list down the left | 2, 4 to 49, and as far down as the list goes | The tour clicks `Take` at 18, 9 and `Put` at 15, 17 |
+| The compass | 4, 129 to 45, 167 | The tour clicks directions at 12, 135 and 12, 148 |
+| Four buttons under it, in two rows of two | 4, 168 to 45, 195 | The tour clicks them: the system's menu at 35, 174, the map at 10, 187, undo at 35, 185 |
 | The picture | 51, 4 to 314, 125 | 264 by 122, which is what the regions are in |
-| The words of the sentence being made, and what the game says | 51, 128 to 314, 151 | |
-| A box of 32 by 44, by its shape the compass | 51, 152 to 82, 195 | Picture 257 is drawn there, and is 32 by 44 |
-| The things carried, as icons | 88, 152 to 287, 195 | Picture 258, of 200 by 44: two rows of eight icons of 24 by 20 |
+| The command being made, and what the game says | 51, 128 to 314, 151 | |
+| Boxes for the companions | 51, 152 to 82, 195 | Picture 257 is drawn there, and is 32 by 44; the tour says what they are for |
+| The things carried, as icons | 88, 152 to 287, 195 | Picture 258, of 200 by 44: two rows of eight icons of 24 by 20. The tour clicks one at 102, 162 |
 | Two buttons, one over the other | 293, 152 to 314, 173, and 293, 173 to 314, 195 | Pictures of 22 by 44 |
 
-That the box of 32 by 44 is the compass, and what each of the four buttons is, are guesses
-from the shapes; the game hasn't been run to see.
+The game's own [guided tour](#the-guided-tours) says what the parts are for, and its clicks
+are where the code puts them. The fourth button under the compass, at the top left, is by
+elimination the one to wait, which the tour names and doesn't click. What the two buttons
+at the right do isn't said; by their place they move through the things carried. The map
+button changes the picture for a map of the rooms visited, and becomes the button back.
 
 **What can be pointed at** is kept in lists the game makes as it draws, up to eight of
 them, and not in a table in the program: how many lists at `38AF:51DE`, a far pointer to
@@ -411,6 +415,43 @@ place and what is in it hasn't been checked.
 
 The tools' `verbs` lists each verb's routine, and `objects` with a number an object's.
 
+## The guided tours
+
+The three `.HLP` files are the game's help: recordings of someone playing, which the game
+plays back by moving its own pointer and clicking, with words shown as it goes.
+`XANTH_00.HLP` is the whole tour, of 26 clicks; `XANTH_01.HLP` is the part on making a
+command, and `XANTH_02.HLP` the part on the compass.
+
+A file is text, a line an event:
+
+```
+00050 0008  18   9   0
+00000 0004  18   9   1
+00000 4000   0   0   0
+20, 16, 280, That series of mouse clicks created a game command and executed it.
+```
+
+The numbers are the time since the event before, in thousandths of a second; the event;
+where the pointer is, across and down; and a button.
+
+| Event | What |
+|---|---|
+| `0008` | The pointer is here. There is one every tick of the PC's clock, so they are 50 or 60 apart |
+| `0004` | A click here, with button 1 |
+| `4000` | Words are shown. The line after is where, across and down, how wide, and the words |
+| `8000` | The end |
+| `0002` | Not understood: it comes among the others, nearly always with no button |
+
+The tour is also the game's makers saying how it works, and it gives their names for
+things found above: an object's own verb, used when it is clicked with no verb chosen, is
+its **default verb**, and the verbs an object adds to the list are its **special verbs**.
+A command isn't done until a second click; until then it changes as the pointer moves,
+with the default verb for whatever is pointed at. The right button, or a click on nothing,
+clears it. And a thing inside an open thing carried is drawn to the right of it.
+
+*Mission Critical* has one such file, `MC001.HLP`, in the same form. The tools' `tour`
+lists a game's tours: what each says, and where it clicks.
+
 ## The speech
 
 `XANTH_01.VOC` is every line the game speaks, and isn't Creative's file of that name. It
@@ -435,7 +476,6 @@ The tools' `sounds` counts the lines, and with `--out` writes each as a WAV file
 
 - What says which line of the speech goes with which text, and the call that plays one.
 - Flags 9, 16 and 18, and the 56 routines of the exits.
-- What the four buttons under the verbs do, and the kinds of thing on the screen that
-  haven't been read: 2, 4, 5 and 6.
-- The `.HLP` files.
+- The kinds of thing on the screen that haven't been read: 2, 4, 5 and 6; and event
+  `0002` of the tours.
 - The game hasn't been run on the PC.
