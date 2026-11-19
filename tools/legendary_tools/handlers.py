@@ -49,6 +49,20 @@ _BY_NUMBER_NEAR = re.compile(
     rb"\x3d(..)\x77.\xff\x76.\x8b\xd8\x4b\x03\xdb\x03\xdb\x8e\x06(..)\x26\x8b\x87(..)\x26\x8b\x97",
     re.DOTALL,
 )
+# Companions of Xanth's, from the compiler told to make faster code: cmp ax,<how many> /
+# ja <none> / push [bp+8] / mov es,[segment variable] / mov bx,ax / add bx,ax / add bx,bx /
+# call far es:[bx-4]
+_BY_NUMBER_ADDS = re.compile(
+    rb"\x3d(..)\x77.\xff\x76.\x8e\x06(..)\x8b\xd8\x03\xd8\x03\xdb\x26\xff(?:\x9f\xfc\xff|\x5f\xfc)()",
+    re.DOTALL,
+)
+# and its actions' routines are looked for by the action's number, in a table of six bytes
+# each, the number and a far pointer: mov [bp-4],<start> / mov ax,[bp+6] / mov es,[variable] /
+# mov bx,[bp-4] / cmp es:[bx],ax / je <found> / inc [bp-2] / add [bp-4],6 / cmp [bp-4],<end>
+_ACTIONS_BY_NUMBER = re.compile(
+    rb"\xc7\x46.(..)\x8b\x46\x06\x8e\x06(..)\x8b\x5e.\x26\x39\x07\x74.\xff\x46.\x83\x46.\x06\x81\x7e.(..)",
+    re.DOTALL,
+)
 # cmp byte [bp+6],<how many> / ja <none> / mov al,6 / mul byte [bp+6] / mov bx,ax /
 # mov es,[segment variable] / call far es:[bx+table]: an action's routine, from a table of
 # six bytes an action
@@ -200,7 +214,9 @@ def _numbered_routines(code: _Code) -> dict[int, Routine] | None:
             offset, "little"
         )
 
-    match = _BY_NUMBER.search(code.root) or _BY_NUMBER_NEAR.search(code.root)
+    match = (
+        _BY_NUMBER.search(code.root) or _BY_NUMBER_NEAR.search(code.root) or _BY_NUMBER_ADDS.search(code.root)
+    )
     if match:
         count = int.from_bytes(match[1], "little")
         tables = [at(match[2], match[3])]
@@ -243,10 +259,34 @@ def action_routines(program: Program) -> tuple[dict[int, Routine], dict[int, Rou
             return code.routines(start), before
         # the switch called first, of few cases, is the routines that come before
         before = code.routines(start)
-    tabled = _tabled_actions(code)
+    tabled = _tabled_actions(code) or _numbered_actions(code)
     if tabled is not None:
         return tabled
     raise ValueError("the code that calls an action's routine wasn't found")
+
+
+def _numbered_actions(code: _Code) -> tuple[dict[int, Routine], dict[int, Routine]] | None:
+    """
+    The same, where a table has each action's number with its routine, six bytes an action,
+    and is gone through for the number: Companions of Xanth's, whose actions are its verbs.
+    The two routines that come before an action there are called by a switch, and aren't
+    given.
+    """
+    match = _ACTIONS_BY_NUMBER.search(code.root)
+    notice = code.memory.find(_NOTICE)
+    if not match or notice < 0:
+        return None
+    segment = code.word(notice - 8 + int.from_bytes(match[2], "little")) * 16
+    actions = {}
+    for at in range(int.from_bytes(match[1], "little"), int.from_bytes(match[3], "little"), 6):
+        number, offset, target = struct.unpack_from("<HHH", code.memory, segment + at)
+        thunk = code.program.thunk_at(target, offset)
+        actions[number] = (
+            Routine(thunk.overlay, thunk.target_segment, thunk.target_offset)
+            if thunk
+            else Routine(None, target, offset)
+        )
+    return actions, {}
 
 
 def keyed_routines(program: Program) -> tuple[dict[int, list[Routine]], dict[int, Routine]]:

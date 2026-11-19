@@ -490,11 +490,19 @@ def verbs(args: argparse.Namespace) -> None:
     if not table.verbs:
         raise ValueError(f"{args.folder}: the game has no table of verbs")
     takes = {0: "nothing", 1: "an object", 2: "two objects"}
+    try:
+        routines, _ = action_routines(_program(folder))
+    except ValueError:
+        routines = {}
     for number, (_, _, count) in sorted(table.verbs.items()):
         own = sum(1 for found in table.objects if found.verb == number)
         listed = sum(1 for found in table.objects if number in found.verbs)
         name = table.verb_name(number)
-        print(f"{number:3}  {name:22} takes {takes[count]:12}  a click's on {own:3}, listed by {listed:3}")
+        where = f"  {routines[number]}" if number in routines else ""
+        print(
+            f"{number:3}  {name:22} takes {takes[count]:12}"
+            f"  a click's on {own:3}, listed by {listed:3}{where}"
+        )
     print(f"\n{len(table.verb_pairs)} pairs of objects:")
     for verb, first, second in table.verb_pairs:
         name, joins, _ = table.verbs.get(verb, (f"verb {verb}", "", 0))
