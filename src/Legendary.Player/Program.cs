@@ -345,9 +345,9 @@ internal static class Program
         {
             InstructionsPerSecond = (profile.Cycles ?? game.Cycles) * 1000,
 
-            // a hard disk of the games' day, 200 KB a second: one of them, at least, depends on
-            // a file's taking time to read
-            DiskBytesPerSecond = 200_000,
+            // a hard disk of the games' day, 200 KB a second unless the game says another: one of
+            // them, at least, depends on a file's taking time to read
+            DiskBytesPerSecond = game.Known?.DiskBytesPerSecond ?? 200_000,
             Log = log is null ? null : log.WriteLine,
             Mouse = (profile.Mouse ?? true) && !headless,
             Composite = profile.Composite ?? false,

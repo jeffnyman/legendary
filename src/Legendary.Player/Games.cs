@@ -84,6 +84,10 @@ internal sealed record CrackedBytes(string Program, int Offset, byte[] Cracked, 
 /// Where it keeps its world in memory, for the player to show while it's played; null for a
 /// game not yet taken apart.
 /// </param>
+/// <param name="DiskBytesPerSecond">
+/// How fast its disk reads: 200 KB a second, a hard disk of the early games' day, unless the
+/// game is of a later one.
+/// </param>
 /// <param name="Hint">
 /// Something to know before playing, said as its program starts, from its folder and its save
 /// folder: null for nothing to say.
@@ -92,7 +96,7 @@ internal sealed record KnownGame(
     string Key, string Title, int Year, string[] Markers, string? Program, int Cycles, string Note,
     VideoAdapter Video = VideoAdapter.Vga, DiskSet? Disks = null, bool MouseJoystick = false, CrackedBytes[]? Cracks = null,
     Func<string, IReadOnlyList<GameDocument>>? Documents = null, Func<string, string, string?>? Hint = null,
-    string[]? Drivers = null, Legendary.Core.Worlds.WorldMap? World = null);
+    string[]? Drivers = null, Legendary.Core.Worlds.WorldMap? World = null, int DiskBytesPerSecond = 200_000);
 
 /// <summary>A game to play: its folder, the program in it to run, and how fast to run it.</summary>
 /// <param name="Folder">The game's folder, which becomes drive C:.</param>
@@ -267,7 +271,11 @@ internal static class Games
         // a 32-bit program that brings DOS/4GW with it; its speech and films are a gigabyte and
         // more on three CDs, and with all of them copied into its folder it never asks for one
         new("mcritic", "Mission Critical", 1995, ["MISSION.EXE"], "MISSION.EXE", Fast,
-            "starts, in VESA's 640 by 480, and plays its opening film with sound; not yet played"),
+            "starts, in VESA's 640 by 480, and plays its opening film with sound; not yet played",
+
+            // a disk of 1995, and a CD drive that keeps up with the films: at the older games'
+            // 200 KB a second the program alone takes six seconds to load
+            DiskBytesPerSecond: 1_500_000),
     ];
 
     /// <summary>The speed of a program the player doesn't know: an AT's.</summary>
