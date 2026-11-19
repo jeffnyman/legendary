@@ -50,7 +50,9 @@ from .objects import DIRECTIONS, Exit, GameObject, ObjectTable, SavedState, is_p
 from .pictures import (
     HUFFMAN,
     IMPLODED,
+    LHA,
     LZW,
+    RAW_BYTES,
     RAW_PLANE,
     RAW_PLANES,
     PictureFile,
@@ -907,6 +909,8 @@ _PACKINGS = {
     HUFFMAN: "Huffman",
     LZW: "LZW",
     IMPLODED: "imploded",
+    LHA: "LHA's -lh4-",
+    RAW_BYTES: "as it is, a byte a pixel",
 }
 
 
@@ -927,7 +931,7 @@ def pictures(args: argparse.Namespace) -> None:
         )
         found = file.pictures()
         # the later games' files say the display in each picture, and not in the file's name
-        display = "" if imploded else f", for the {'EGA' if file.ega else 'CGA'}"
+        display = "" if imploded or file.sized else f", for the {'EGA' if file.ega else 'CGA'}"
         print(f"{os.path.basename(path)}: {len(found)} pictures{display}")
         for entry in found:
             if args.out:
@@ -947,7 +951,9 @@ def pictures(args: argparse.Namespace) -> None:
                     png.write(picture.png())
             else:
                 packing = _PACKINGS.get(entry.packing, f"{entry.kind:#04x}")
-                notes = "" if entry.has_palette and file.ega else ", no palette"
+                notes = "" if entry.has_palette and (file.ega or file.sized) else ", no palette"
+                if entry.sized and (entry.across or entry.down):
+                    notes += f", a piece at {entry.across},{entry.down}"
                 if entry.places:
                     notes += f", placed {entry.places} time{'s' if entry.places > 1 else ''}"
                 print(f"  {entry.number:3}  {entry.width:3} x {entry.height:3}  {packing}{notes}")

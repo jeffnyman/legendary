@@ -241,6 +241,10 @@ python -m legendary_tools vocab <the game's folder>
   *Spellcasting 301*'s and *Gateway*'s, which are
   [imploded](../docs/spellcasting-301.md#the-pictures) and come in 256 colors too. A picture
   of a kind that isn't known is left out, and counted.
+  [*Mission Critical*'s](../docs/mission-critical.md#the-pictures) are packed as LHA packs a
+  file, and most are changes to another picture: one is written as what it makes of the
+  picture before it in its file, where there is one it fits in, and as it is where there isn't.
+  Its 2,949 pictures take a minute or so.
 - **`regions`** lists the regions in each `.RGN` file: for each picture that has them, the
   object the rest of the picture is, and each rectangle, in the EGA's pixels, with the object
   that's there. *Gateway II* and *Companions of Xanth* keep a region as a list of points, and

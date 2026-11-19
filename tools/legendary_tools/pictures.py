@@ -47,6 +47,37 @@ followed by a byte. A 1 bit is followed by a length, as a Huffman code and some 
 and a distance back, as a Huffman code for its high bits and its low bits as they are: that
 many bytes are copied from that far back. A length of 519 ends it.
 
+*Mission Critical* keeps its a fourth way. Its directory is 256 entries of twenty bytes:
+
+    0  where the picture starts in the file, or 0 for none
+    4  how many bytes its pixels are in the file
+    8  its kind: 0 a picture, 3 a change to one, and 4 not yet understood
+    9  FFh when the picture starts with colors, and 0 when it has none
+    10 where it is drawn, across and down, when it is a piece of another
+    14 its width and then its height, in pixels
+    18 a word not yet understood
+
+A picture with colors starts with two words, where in the 256 colors its own start and how
+many it has, both counted in bytes at three a color, and then the colors, red, green and blue
+from 0 to 63. Nearly all have the whole 256. The pixels are a byte each. When their size in
+the file is the width times the height they are as they are; otherwise they are packed as
+LHA packs a file by its method `-lh4-`: Lempel and Ziv's copying over a window of 4,096
+bytes, with the lengths and distances in Huffman's codes that are sent anew for each block.
+
+A block starts with a 16-bit count of its codes, then three tables of code lengths. The first
+is for the lengths of the second, and has 19 of them, each three bits, or more for a length
+over 6: a 7 and then a 1 bit for each one more; after the third there are two bits for how
+many zeros follow. The second has up to 510, for a byte or a length of copy, each written
+with the first's codes, where 0, 1 and 2 are runs of zeros: one, 3 to 18, and 20 to 531. The
+third has 13, for a distance, kept as the first is but with no run after the third. A table
+with a count of 0 is one code alone, given next. A code below 256 is a byte; one above is
+a copy of that less 253 bytes, and then a distance's code says how many bits of distance
+follow, with the top one left out. Bits are read from each byte's high bit down.
+
+A picture of kind 3 is not pixels but a change to pixels: each byte is to be exclusive-ored
+with the pixel already there, so a 0 leaves it. A door's two leaves, opened, are a change
+to the picture of the door shut. Which picture a change is to, the file doesn't say.
+
 Pictures are given here as a byte a pixel, a color's number.
 """
 
@@ -61,6 +92,12 @@ RAW_PLANE, RAW_PLANES, HUFFMAN, LZW = 4, 5, 1, 0
 _LATER = {0x02: LZW, 0x04: HUFFMAN, 0x20: RAW_PLANE, 0x40: RAW_PLANES}
 _FIRST_ONLY, _LATER_ONLY = {0, 1, 8, 9, 10, 11}, {4, 0x20, 0x21, 0x40, 0x41}
 IMPLODED = 6  # the one way the games from Spellcasting 301 on pack a picture's pixels
+LHA, RAW_BYTES = 7, 8  # and Mission Critical's two: LHA's -lh4-, and a byte a pixel as it is
+
+_CHANGE = 3  # the kind of a picture of Mission Critical's that is a change to another
+
+# Mission Critical's directory: 256 entries of twenty bytes
+_SIZED_ENTRY, _SIZED_COUNT = 20, 256
 
 # the EGA's 16 colors as it starts, by their numbers among its 64
 DEFAULT_PALETTE = bytes([0, 1, 2, 3, 4, 5, 20, 7, 56, 57, 58, 59, 60, 61, 62, 63])
@@ -88,6 +125,11 @@ class Entry:
     unknown: int
     later: bool = False  # whether the kind is read as the games after the first have it
     imploded: bool = False  # or as the games from Spellcasting 301 on have it
+    sized: bool = False  # or the entry is Mission Critical's, which has the four below
+    size: int = 0  # how many bytes its pixels are in the file
+    colors: int = 0  # FFh when it starts with colors
+    across: int = 0  # where it's drawn, when it's a piece of another
+    down: int = 0
 
     @property
     def display(self) -> int:
@@ -96,6 +138,8 @@ class Entry:
 
     @property
     def packing(self) -> int:
+        if self.sized:
+            return RAW_BYTES if self.size == self.width * self.height else LHA
         if self.imploded:
             return IMPLODED if self.kind & 0x60 else -1
         if self.later:
@@ -105,6 +149,8 @@ class Entry:
 
     @property
     def has_palette(self) -> bool:
+        if self.sized:
+            return self.colors == 0xFF
         if self.imploded:
             return bool(self.kind & 0x10)
         return bool(self.kind & 1) if self.later else not self.kind & 1
@@ -332,6 +378,141 @@ def explode(data: bytes, at: int) -> bytes:
         raise ValueError("imploded data goes past the end of its file") from None
 
 
+def _code_table(lengths: list[int], bits: int) -> list[int]:
+    """
+    A Huffman code from its lengths, as a table to look the next `bits` bits up in: each entry
+    is a symbol and, in its low five bits, the length of its code. The codes are in order of
+    length and then of symbol.
+    """
+    table = [0] * (1 << bits)
+    code = 0
+    for length in range(1, bits + 1):
+        for symbol, its in enumerate(lengths):
+            if its == length:
+                start = code << (bits - length)
+                entry = symbol << 5 | length
+                for index in range(start, start + (1 << (bits - length))):
+                    table[index] = entry
+                code += 1
+        code <<= 1
+    return table
+
+
+class _LhaBits:
+    """Bytes read as bits from each one's high bit down, with a look ahead of sixteen."""
+
+    def __init__(self, data: bytes):
+        self.data = data
+        self.at = 0
+        self.held = 0
+        self.count = 0
+
+    def _fill(self, width: int) -> None:
+        # past the end the bits are zeros, to look ahead into: `over` says when they've been used
+        while self.count < width:
+            chunk = self.data[self.at : self.at + 8]
+            self.at += 8
+            self.held = self.held << 64 | int.from_bytes(chunk.ljust(8, b"\0"), "big")
+            self.count += 64
+
+    def take(self, width: int) -> int:
+        if self.count < width:
+            self._fill(width)
+        self.count -= width
+        found = self.held >> self.count
+        self.held &= (1 << self.count) - 1
+        return found
+
+    def symbol(self, table: list[int] | int) -> int:
+        """The next symbol by a table of codes, or the one symbol a table without codes has."""
+        if isinstance(table, int):
+            return table
+        if self.count < 16:
+            self._fill(16)
+        entry = table[self.held >> (self.count - 16)]
+        if not entry:
+            raise ValueError("packed data has a code that isn't one")
+        self.count -= entry & 31
+        self.held &= (1 << self.count) - 1
+        return entry >> 5
+
+    @property
+    def over(self) -> bool:
+        """Whether more bits have been read than there are."""
+        return 8 * self.at - self.count > 8 * len(self.data)
+
+
+def _lha_lengths(bits: _LhaBits, count_bits: int, limit: int, run_after: int) -> list[int] | int:
+    """A table of code lengths as -lh4- keeps the first and the third; one symbol, for a count of 0."""
+    count = bits.take(count_bits)
+    if count == 0:
+        return bits.take(count_bits)
+    lengths = [0] * limit
+    index = 0
+    while index < min(count, limit):
+        length = bits.take(3)
+        if length == 7:
+            while bits.take(1):
+                length += 1
+        lengths[index] = length
+        index += 1
+        if index == run_after:
+            index += bits.take(2)
+    return _code_table(lengths, 16)
+
+
+_LHA_CODES, _LHA_LENGTHS, _LHA_DISTANCES = 510, 19, 13
+
+
+def unpack_lha(data: bytes, size: int) -> bytes:  # noqa: PLR0912
+    """Bytes packed by LHA's -lh4-, unpacked to the size given."""
+    bits = _LhaBits(data)
+    unpacked = bytearray()
+    left = 0
+    codes: list[int] | int = 0
+    distances: list[int] | int = 0
+    while len(unpacked) < size:
+        if left == 0:
+            left = bits.take(16)
+            first = _lha_lengths(bits, 5, _LHA_LENGTHS, 3)
+            count = bits.take(9)
+            if count == 0:
+                codes = bits.take(9)
+            else:
+                lengths = [0] * _LHA_CODES
+                index = 0
+                while index < min(count, _LHA_CODES):
+                    found = bits.symbol(first)
+                    if found > 2:
+                        lengths[index] = found - 2
+                        index += 1
+                    else:
+                        # a run of zeros: one, or 3 and up, or 20 and up
+                        index += 1 if found == 0 else bits.take(4) + 3 if found == 1 else bits.take(9) + 20
+                codes = _code_table(lengths, 16)
+            distances = _lha_lengths(bits, 4, _LHA_DISTANCES, -1)
+            if left == 0 or bits.over:
+                raise ValueError("packed data ends before its picture does")
+        left -= 1
+        found = bits.symbol(codes)
+        if found < 256:
+            unpacked.append(found)
+            continue
+        length = found - 253
+        high = bits.symbol(distances)
+        distance = ((1 << (high - 1)) + bits.take(high - 1) if high else 0) + 1
+        if distance > len(unpacked):
+            raise ValueError("packed data copies from before its start")
+        if distance >= length:
+            unpacked += unpacked[-distance : len(unpacked) - distance + length]
+        else:
+            for _ in range(length):
+                unpacked.append(unpacked[-distance])
+    if bits.over:
+        raise ValueError("packed data ends before its picture does")
+    return bytes(unpacked[:size])
+
+
 def _spread(rows: bytes, row_bytes: int, width: int, height: int, planes: int) -> bytes:
     """Rows of bits, a plane after another in each row, as a byte a pixel."""
     pixels = bytearray(width * height)
@@ -390,6 +571,33 @@ class PictureFile:
         self.data = data
         self.ega = ega
         (first,) = struct.unpack_from("<I", data, 0)
+        self.sized = first == _SIZED_ENTRY * _SIZED_COUNT <= len(data)
+        self._unpacked: dict[int, bytes] = {}
+        if self.sized:
+            # Mission Critical's: nothing of the other games' kinds applies
+            self.later, self.imploded = False, False
+            self.entries = [
+                Entry(
+                    number,
+                    offset,
+                    0,
+                    kind,
+                    width,
+                    height,
+                    unknown,
+                    False,
+                    False,
+                    True,
+                    size,
+                    colors,
+                    across,
+                    down,
+                )
+                for number, (offset, size, kind, colors, across, down, width, height, unknown) in enumerate(
+                    struct.iter_unpack("<IIBBhhHHH", data[:first])
+                )
+            ]
+            return
         if first % 12 or not 12 <= first <= len(data):
             raise ValueError("not a picture file: its directory doesn't end where its first picture starts")
         if later is None:
@@ -465,7 +673,71 @@ class PictureFile:
             raise ValueError(f"picture {entry.number} unpacks to {len(unpacked)} bytes, which isn't its size")
         return Picture(width, height, pixels, palette, places, rgb)
 
+    def _sized_colors(self, entry: Entry) -> bytes:
+        """
+        The 256 colors a picture of Mission Critical's is shown in: each picture's own, put
+        over those of the pictures before it in the file, up to this one.
+        """
+        colors = bytearray(768)
+        for other in self.entries[: entry.number + 1]:
+            if other.offset and other.has_palette:
+                start, size = struct.unpack_from("<HH", self.data, other.offset)
+                colors[start : start + size] = self.data[other.offset + 4 : other.offset + 4 + size]
+        # the VGA's colors go from 0 to 63
+        return bytes(value * 255 // 63 for value in colors[:768])
+
+    def _read_sized(self, entry: Entry) -> Picture:
+        """A picture of Mission Critical's: its colors if it has them, and its pixels."""
+        at = entry.offset
+        if entry.has_palette:
+            at += 4 + struct.unpack_from("<H", self.data, at + 2)[0]
+        places = [(entry.across, entry.down)] if entry.across or entry.down else []
+        pixels = self._sized_pixels(entry)
+        under = self._under(entry) if entry.kind == _CHANGE else None
+        if under:
+            # what the piece makes of the picture it changes, where it changes it
+            start = entry.down * under.width + entry.across
+            below = self._sized_pixels(under)
+            pixels = bytes(
+                pixel ^ below[start + row * under.width + column]
+                for row in range(entry.height)
+                for column, pixel in enumerate(pixels[row * entry.width : (row + 1) * entry.width])
+            )
+        return Picture(entry.width, entry.height, pixels, None, places, self._sized_colors(entry))
+
+    def _sized_pixels(self, entry: Entry) -> bytes:
+        """The bytes a picture of Mission Critical's unpacks to, kept for the pieces that change it."""
+        if entry.number not in self._unpacked:
+            at = entry.offset
+            if entry.has_palette:
+                at += 4 + struct.unpack_from("<H", self.data, at + 2)[0]
+            packed = self.data[at : at + entry.size]
+            if entry.packing == LHA:
+                packed = unpack_lha(packed, entry.width * entry.height)
+            # one picture is kept, the last: a file's pieces follow the picture they change
+            self._unpacked = {entry.number: packed} if entry.kind != _CHANGE else self._unpacked
+            return packed
+        return self._unpacked[entry.number]
+
+    def _under(self, entry: Entry) -> Entry | None:
+        """
+        The picture a piece changes: here taken to be the last before it in the file that
+        isn't itself a change and that the piece fits in. The file doesn't say; the program does.
+        """
+        for other in reversed(self.entries[: entry.number]):
+            if other.offset and other.width and other.kind != _CHANGE:
+                fits = (
+                    entry.across >= 0
+                    and entry.down >= 0
+                    and entry.across + entry.width <= other.width
+                    and entry.down + entry.height <= other.height
+                )
+                return other if fits else None
+        return None
+
     def read(self, entry: Entry) -> Picture:
+        if self.sized:
+            return self._read_sized(entry)
         if self.imploded:
             return self._read_imploded(entry)
         at = entry.offset
