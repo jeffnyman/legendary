@@ -66,8 +66,9 @@ UniVBE 5.1, and a demo of *Shannara*.
 | [The objects](#the-objects) | 872, in six types |
 | [The verbs](#the-verbs) | 58, each making an action of its own |
 | [The music](#the-music) | 3 files, 38 songs in each and one more in one, 78 minutes |
+| [The filmed scenes](#the-filmed-scenes) | 529 files, 41,068 frames, 70 minutes |
 
-And what they don't: the filmed scenes.
+That is every kind of file the game has but its battle game's.
 
 ## How the program is built
 
@@ -336,6 +337,93 @@ on and none turned off that wasn't on.
 33 of the 38 songs have the marks Miles added for a part to be played over, controllers
 116 and 117. A file written here keeps the marks and plays the part once.
 
+## The filmed scenes
+
+The 529 `.Q` files in `Q` are the game's moving pictures, and the format is Legend's own:
+the opening film, the people who speak to you on screens, and, the most of them, the walk
+from one room to the next, a second or two each. 267 are forty frames or fewer. The
+longest is `MC001.Q`, the opening, 5,955 frames, ten minutes.
+
+A file starts with 26 bytes: `39 68`, a version, the picture's size in blocks, 160 by 72,
+a block's size, 4 by 4, which makes 640 by 288, the count of frames, and at 16 how many
+frames a second, 10. The files here are of six versions, 4.1 to 5.3, and what differs
+between them is which kinds of chunk they use.
+
+Then chunks to the end, each a word for its kind and a long for its size:
+
+| Kind | What |
+|---|---|
+| 0 | Sound, a frame's worth, 4,410 bytes |
+| 1 | The 256 colors, red, green and blue from 0 to 63 |
+| 2 | A frame |
+| 5 | A table of patterns, two bytes each, for the frames after it |
+| 6 | A mark, with nothing after it whatever its size says: keep the picture that is there, for the frames to draw over |
+| 7 | A mark, the same: from here a run is of whole blocks |
+| 8 | The 44 bytes that start a WAVE file: 16 bits, one channel, 22,050 a second |
+| 9 | A frame that is whole |
+| 10 | Nothing: filling, so that every frame takes as long to read from a CD |
+| 11 | A frame of changes |
+| FFFFh | The end |
+
+136 of the files have sound; the walks have none.
+
+### A frame
+
+The program's routine for a frame is at `0009ca50`, and it is not a compiler's work:
+some six kilobytes of assembly written by hand, the loop unrolled into a copy for each
+thing that can come before the next, so that it never has to ask. Read back into one loop,
+it is this.
+
+A frame is its blocks from the top left, a row at a time, each drawn over the frame
+before. A block starts with a byte. Below F8h it is a color, and the next byte is a second:
+
+- The same color twice is a block of that color, two bytes.
+- Else a third byte is a pattern. With its top bit clear it is the number of a pattern in
+  the table of chunk 5; with it set, it and a fourth byte are the pattern itself. A pattern
+  is two bytes, the lower two rows and then the upper two, a bit a pixel from the top bit:
+  the first color where the bit is clear, the second where it's set.
+
+From F8h it is a code:
+
+| Code | Then | What |
+|---|---|---|
+| F8 | | Over the kept picture, three ways: F8 again is its block here; FB and sixteen bytes are pixels, with F8 for one where the kept picture shows; any other byte is a color and two bytes of pattern, the kept picture showing where a bit is set |
+| F9 | A count | Again, that many times, what was just done |
+| FA | A word | The block of that number, as it is now |
+| FB | A count | A run of that many blocks, of the kind just done |
+| FC | A byte | The block some way off, by a table of 256 ways in the program, at `000e17b0` |
+| FD | A byte | The block that many and one more after this one |
+| FE | A byte | The block that many and one more before |
+| FF | | Nothing: the block stays as it was |
+
+The blocks after this one still hold the frame before, so FD copies from that frame and FE
+from this one: movement costs two bytes a block wherever it lands.
+
+What F9 and FB do is by what came before them, which is why the routine is so many
+copies of itself. After a copy, F9 is more blocks copied the same way, and FB is that
+many more, each with its own byte, or word after FA, for where from. After a block of one
+color, FB is that many colors. After a block of two, FB is that many patterns in the same
+two colors. Otherwise F9 is the block before, again, or after FF more blocks left alone;
+and FB is whole blocks, sixteen bytes each. In a frame of changes, and in any frame after
+a mark of kind 7, FB is whole blocks whatever came before.
+
+And a whole block isn't always sixteen pixels. One that starts with a byte from F9h to FEh
+is a block of three to eight colors: the bits that say which color each pixel is, two each
+in four bytes for three or four colors, three each in six bytes for five to eight, and
+then the colors. So a block is two, three, four, eight, nine, twelve to fifteen or
+sixteen bytes, as its picture needs.
+
+The kept picture is not in the file. A scene is played over what the game has on the
+screen, the room's picture from a `.PIC` file, and nine scenes keep that to draw over: in
+`MC651.Q` a sky moves behind a tower and the ground it stands on, and the file has only
+the sky. The tools have no picture to keep, so there the tower is black.
+
+The tools' `scenes` lists them, and with `--out` writes each as an animated PNG, which a
+browser plays, and its sound as a WAV file. Every frame of every file is drawn from
+exactly the bytes its chunk has, with one exception that is the game's own: a frame of
+`MC124.Q` stops two blocks short, and the program draws the last two from the start of
+the chunk after it, as the tools do.
+
 ## The speech
 
 Each CD has a file of speech, and `disc --copy` puts all three in the game's folder. They
@@ -547,5 +635,5 @@ how a click becomes an action, and whose routine answered one.
 ## Still to do
 
 Everything but the above: which picture each change is to, and kind 4; what
-the 325 lines of speech named in the code say; the filmed scenes; what an action's routine and an object's do, and the
+the 325 lines of speech named in the code say; what an action's routine and an object's do, and the
 fields of a record not yet named; the flags' and the variables' names; the battle game; and playing it past its first picture.
