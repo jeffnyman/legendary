@@ -466,6 +466,52 @@ over the first corridor of the *Lexington*, with the row of `Help`, `Volume`, `U
 `Save`, `Restore`, `Restart`, `Quit` and `Map` above the picture and the inventory below
 it. That is as far as it has been taken: nothing has been clicked.
 
+## The game as it runs
+
+The player's `--watch` and `--panel` show this game's world as they show the others',
+read from the game's memory as it plays. Two things about a 32-bit program made that
+new.
+
+The earlier games are found in memory by Microsoft C's notice at the start of their data
+segment, below 640 KB, and everything else is so many segments from there. This program
+is loaded above the first megabyte, its two objects wherever DOS/4GW found room, a page at
+a time. So the watch looks for the table of types, eighteen bytes that never change, at
+each page of memory, as far into the page as the table is into one of the program's own.
+That places the code. The table of objects holds the address of each record, already
+memory's own, and the first of them places the data.
+
+And the routine that performs an action, at `00015210`, isn't called with its arguments on
+the stack: Watcom's compiler passes them in registers, the action in EAX and its two
+objects in EDX and EBX. It is otherwise the routine every game before has, down to the
+warning it keeps for an action that performs itself four times over. It counts how deep it
+is at `000cc5c0`, keeps the action at `000e37aa` and its objects at `000e37b2` and
+`000e37b0`, and asks the room's routine and the actor's before the action's own.
+
+As the game starts, after its film:
+
+```
+world: the game is in memory, its tables at 00208620h, with 872 objects
+world: in Corridor (147)
+world:   here: you (1) [Captain's note (148)]
+world:   exits: north to Corridor (136); south to Corridor (145); east to Corridor (149)
+```
+
+and with a click on the corridor ahead, as the game's own tour starts:
+
+```
+world:   action 15: Walk on a routine alone (65)
+world:   you (1) moved: from Corridor (147) to Corridor (136)
+world: in Corridor (136)
+world:   here: you (1) [Captain's note (148)], Emergency Stores Cabinet (137) [molecular glue (142), ...
+```
+
+Action 15 is one of the four that no verb makes, and this is what it is seen to do: it is
+named `Walk on` for that and nothing else. Its object is one of the 76 that are a routine's
+number alone. Flags 5 and 6 are set on a room as you come into it.
+
+What the watch doesn't have for this game: a count of turns or a time of day, the timers,
+how a click becomes an action, and whose routine answered one.
+
 ## Still to do
 
 Everything but the above: which picture each change is to, and kind 4; the music; what
