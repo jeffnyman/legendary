@@ -240,6 +240,9 @@ python -m legendary_tools vocab <the game's folder>
   lines and writes each as a WAV file too, in a folder of the file's name. Both are in
   [docs/spellcasting-101.md](../docs/spellcasting-101.md#the-music-and-the-sounds), and both
   read *Timequest* too.
+- **`tour`** lists the guided tours in the `.HLP` files of a game played with the mouse, which
+  are recordings of the game being played: the words each shows, and where it clicks. It is
+  in [docs/companions-of-xanth.md](../docs/companions-of-xanth.md#the-guided-tours).
 - **`strings`** prints the table that starts `...STR.DAT`: each block's size unpacked, its size
   packed, its count of strings, and where it is in the file. With `--words`, it lists the 128
   words the text is packed with, each with its code.

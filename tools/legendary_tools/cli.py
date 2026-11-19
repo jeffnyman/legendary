@@ -74,6 +74,7 @@ from .timers import (
     timer_calls,
     timer_code,
 )
+from .tour import CLICK, read_tour
 
 
 def _program(folder: GameFolder) -> Program:
@@ -871,6 +872,22 @@ def pictures(args: argparse.Namespace) -> None:
         print(f"{skipped} pictures weren't written: they are packed a way that isn't known")
 
 
+def tour(args: argparse.Namespace) -> None:
+    """The guided tours in the game's .HLP files: what each says, and where it clicks."""
+    folder = GameFolder(args.folder)
+    for path in folder.ending(".hlp"):
+        events = read_tour(folder.read(path))
+        clicks = sum(1 for event in events if event.kind == CLICK)
+        seconds = sum(event.after for event in events) / 1000
+        name = os.path.basename(path)
+        print(f"{name}: {len(events)} events, {clicks} clicks, {seconds:.0f} seconds of moving")
+        for event in events:
+            if event.kind == CLICK:
+                print(f"    a click at {event.x},{event.y}")
+            elif event.words:
+                print(f"  {event.words}")
+
+
 def fonts(args: argparse.Namespace) -> None:
     """The fonts in the game's .FNT files: listed, or written to a folder as PNG files."""
     folder = GameFolder(args.folder)
@@ -1237,6 +1254,7 @@ def _extract_options(extracting: argparse.ArgumentParser) -> None:
 def _mouse_commands(command) -> None:  # noqa: ANN001: the parser's own maker of commands
     _disc_options(command(animations), command(disc))
     command(verbs)
+    command(tour)
 
 
 def _disc_options(moving: argparse.ArgumentParser, cd: argparse.ArgumentParser) -> None:
