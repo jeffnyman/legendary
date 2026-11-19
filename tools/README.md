@@ -237,6 +237,8 @@ python -m legendary_tools vocab <the game's folder>
   as it is, a `.mid` file for the MT-32 and, for the AdLib, a `.rol` file in *Spellcasting
   101* and Ad Lib's kind of MIDI file, `.mdi`, [in the games
   after](../docs/spellcasting-201.md#the-music). It reads every game's.
+  [*Mission Critical*'s](../docs/mission-critical.md#the-music) is in `.XMI` files, the Miles
+  drivers' extended MIDI, and each song is written as a Standard MIDI File.
 - **`pictures`** lists the pictures in each `.PIC` file: each one's number, size, the way it's
   packed, whether it has a palette, and how many places it's drawn at. With `--out`, it
   writes every picture to the folder as a PNG file, named for its file and number, as

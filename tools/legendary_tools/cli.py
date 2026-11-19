@@ -82,6 +82,7 @@ from .timers import (
 )
 from .tour import CLICK, read_tour
 from .world32 import TYPE_NAMES, Thing, World
+from .xmi import read_xmi
 
 
 def _program(folder: GameFolder) -> Program:
@@ -1281,6 +1282,17 @@ def music(args: argparse.Namespace) -> None:
             print(f"  {song.number:2}  {len(song.data):5} bytes  {kind}" + (f": {names}" if names else ""))
             if args.out:
                 _write(args.out, f"{name}_{song.number:02}.{song.extension}", song.data)
+    # Mission Critical's: the Miles drivers' extended MIDI, once for each kind of card
+    for path in folder.ending(".xmi"):
+        name = os.path.splitext(os.path.basename(path))[0].lower()
+        found = read_xmi(folder.read(path))
+        total = sum(song.seconds for song in found)
+        print(f"{os.path.basename(path)}: {len(found)} songs, {total / 60:.0f} minutes")
+        for song in found:
+            wants = f"{len(song.timbres)} instruments"
+            print(f"  {song.number:2}  {len(song.events):5} bytes  {song.seconds:6.1f} seconds, {wants}")
+            if args.out:
+                _write(args.out, f"{name}_{song.number:02}.mid", song.midi())
     if args.out:
         print(f"written to {args.out}")
 
