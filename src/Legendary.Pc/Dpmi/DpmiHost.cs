@@ -48,7 +48,7 @@ internal sealed partial class DpmiHost(Machine machine, DosServices dos)
     // segments, which all start here
     private const uint HostBase = 0x11_0000;
     private const uint GdtAt = 0x0000;
-    private const uint GdtLimit = 0x37;
+    private const uint GdtLimit = 0x47;
     private const uint IdtAt = 0x0100;
     private const uint TssAt = 0x0900;
 
@@ -78,7 +78,7 @@ internal sealed partial class DpmiHost(Machine machine, DosServices dos)
 
     // the global table's selectors: code and data at level 0 and level 3, the task state segment
     // and the local table
-    private const ushort HostCode0 = 0x08, HostData0 = 0x10, HostCode3 = 0x1B, HostStack3 = 0x23, TaskSelector = 0x28, LdtSelector = 0x30;
+    private const ushort HostCode0 = 0x08, HostData0 = 0x10, HostCode3 = 0x1B, HostStack3 = 0x23, TaskSelector = 0x28, LdtSelector = 0x30, BiosDataSelector = 0x40;
 
     // the real-mode stubs, in the BIOS segment
     private const ushort EntryStub = 0x0600;
@@ -325,6 +325,10 @@ internal sealed partial class DpmiHost(Machine machine, DosServices dos)
         WriteDescriptor(HostBase + GdtAt + (HostStack3 & ~3u), HostBase, 0xFFFF, 0xF3, 0x40);
         WriteDescriptor(HostBase + GdtAt + TaskSelector, HostBase + TssAt, 0x67, 0x89, 0);
         WriteDescriptor(HostBase + GdtAt + LdtSelector, HostBase + LdtAt, (LdtEntries * 8) - 1, 0x82, 0);
+
+        // selector 40h is the BIOS's data, as its segment 40h is in real mode: DOS extenders gave
+        // their programs that, and a program built for one reads the BIOS's variables through it
+        WriteDescriptor(HostBase + GdtAt + BiosDataSelector, 0x400, 0xFFFF, 0xF3, 0);
 
         // the task state segment: only its level 0 stack is used. The I/O permission bitmap is
         // past its end, which leaves the ports to the I/O privilege level
@@ -712,6 +716,12 @@ internal sealed partial class DpmiHost(Machine machine, DosServices dos)
             return;
         }
 
+        if (vector == 13 && error == 0 && opcode == 0x0F && MoveControlRegister(DescriptorBase(cs) + eip))
+        {
+            ResumeProgram(eip + 3, cs, flags, esp, ss);
+            return;
+        }
+
         var handler = _exceptionHandlers[vector];
         machine.Trace($"DPMI exception {vector:X2}h, error {error:X4}h, at {cs:X4}:{eip:X8}, stack {ss:X4}:{esp:X8}: to {handler.Selector:X4}:{handler.Offset:X8}");
         if (handler.Selector == HostCode3 && handler.Offset == DefaultException)
@@ -738,6 +748,57 @@ internal sealed partial class DpmiHost(Machine machine, DosServices dos)
         }
 
         WriteFrame(frameAt, handler.Offset, handler.Selector, (flags & ~(InterruptFlag | TrapFlag | NestedTask)) | Iopl3, locked, HostStack3);
+    }
+
+    /// <summary>
+    /// A level 3 program's <c>MOV</c> from or to CR0, which only level 0 may run: the host does
+    /// it for the program, as DOS/4GW's own does, but lets it change only the two bits that
+    /// say what becomes of a coprocessor's instructions. Watcom's run-time library sets the
+    /// emulation bit when it finds no 8087, to have each of them come to its own routines.
+    /// </summary>
+    /// <param name="at">Where the faulting instruction is.</param>
+    /// <returns>Whether it was such an instruction, and is done.</returns>
+    private bool MoveControlRegister(uint at)
+    {
+        byte second = machine.Read(at + 1), modRm = machine.Read(at + 2);
+        if (second is not (0x20 or 0x22) || (modRm & 0xF8) != 0xC0)
+        {
+            return false;
+        }
+
+        int register = modRm & 7;
+        if (second == 0x20)
+        {
+            SetRegister(register, Cpu.Cr0);
+        }
+        else
+        {
+            const uint Changeable = Intel386.MonitorCoprocessor | Intel386.EmulateCoprocessor;
+            Cpu.Cr0 = (Cpu.Cr0 & ~Changeable) | (GetRegister(register) & Changeable);
+        }
+
+        machine.Trace($"DPMI: the program {(second == 0x20 ? "read" : "set")} CR0, {Cpu.Cr0:X8}h");
+        return true;
+    }
+
+    private uint GetRegister(int number) => number switch
+    {
+        0 => Cpu.Eax, 1 => Cpu.Ecx, 2 => Cpu.Edx, 3 => Cpu.Ebx, 4 => Cpu.Esp, 5 => Cpu.Ebp, 6 => Cpu.Esi, _ => Cpu.Edi,
+    };
+
+    private void SetRegister(int number, uint value)
+    {
+        switch (number)
+        {
+            case 0: Cpu.Eax = value; break;
+            case 1: Cpu.Ecx = value; break;
+            case 2: Cpu.Edx = value; break;
+            case 3: Cpu.Ebx = value; break;
+            case 4: Cpu.Esp = value; break;
+            case 5: Cpu.Ebp = value; break;
+            case 6: Cpu.Esi = value; break;
+            default: Cpu.Edi = value; break;
+        }
     }
 
     /// <summary>

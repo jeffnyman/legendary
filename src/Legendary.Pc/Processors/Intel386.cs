@@ -182,6 +182,9 @@ public sealed partial class Intel386
     /// <summary>Control register 0. Its lowest bit, PE, would switch to protected mode.</summary>
     public uint Cr0 { get; set; } = 0x0000_0010;
 
+    /// <summary>CR0's bits for a coprocessor: one is fitted to be waited for, and its instructions are to be emulated.</summary>
+    public const uint MonitorCoprocessor = 0x2, EmulateCoprocessor = 0x4;
+
     /// <summary>Control register 3, the page directory's address when paging is on.</summary>
     public uint Cr3 { get; set; }
 
@@ -493,6 +496,7 @@ public sealed partial class Intel386
         public const int Overflow = 4;
         public const int Bound = 5;
         public const int InvalidOpcode = 6;
+        public const int DeviceNotAvailable = 7;
         public const int DoubleFault = 8;
         public const int InvalidTss = 10;
         public const int SegmentNotPresent = 11;

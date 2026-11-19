@@ -322,6 +322,63 @@ public sealed class DpmiTests : IDisposable
     }
 
     [Fact]
+    public void A_program_turns_on_coprocessor_emulation_and_gets_its_instructions_as_exception_7()
+    {
+        // What Watcom's run-time library does when it finds no 8087: it sets CR0's emulation bit, which
+        // level 3 may not touch and the host does for it, and each of the coprocessor's instructions
+        // then comes to the program's own handler.
+        Run(
+        [
+            0x8C, 0x1E, 0x90, 0x00,             // mov [dsel], ds
+            0xB8, 0x03, 0x02,                   // mov ax, 0x0203    (a handler for exception 7, no coprocessor)
+            0xB3, 0x07,                         // mov bl, 7
+            0x8C, 0xC9,                         // mov cx, cs
+            0x66, 0xBA, 0x7C, 0x00, 0x00, 0x00, // mov edx, handler
+            0xCD, 0x31,                         // int 0x31
+            0x72, 0xAA,                         // jc fail
+            0xD9, 0xE8,                         // fld1    (with nothing set, a coprocessor's instruction does nothing)
+            0x83, 0x3E, 0x92, 0x00, 0x00,       // cmp word ptr [faults], 0
+            0x75, 0xA1,                         // jne fail
+            0x0F, 0x20, 0xC0,                   // mov eax, cr0    (level 0's alone, which the host does for the program)
+            0x0C, 0x04,                         // or al, 4    (emulate the coprocessor)
+            0x0F, 0x22, 0xC0,                   // mov cr0, eax
+            0xD9, 0xE8,                         // fld1    (and now it comes to the handler)
+            0x83, 0x3E, 0x92, 0x00, 0x01,       // cmp word ptr [faults], 1
+            0x75, 0x90,                         // jne fail
+            0x0F, 0x20, 0xC3,                   // mov ebx, cr0    (the bit reads back as set)
+            0xF6, 0xC3, 0x04,                   // test bl, 4
+            0x74, 0x88,                         // jz fail
+            0xEB, 0x8B,                         // jmp done
+            // handler:
+            0x1E,                               // push ds    (the handler, on the host's stack:)
+            0x2E, 0x8E, 0x1E, 0x90, 0x00,       // mov ds, cs:[dsel]
+            0xFF, 0x06, 0x92, 0x00,             // inc word ptr [faults]
+            0x1F,                               // pop ds
+            0x67, 0x66, 0x83, 0x44, 0x24, 0x0C, 0x02,// add dword ptr [esp+0x0C], 2    (on past the two-byte FLD1)
+            0x66, 0xCB,                         // .byte 0x66, 0xCB    (retf, 32-bit, to the host)
+            // dsel:
+            0x00, 0x00,                         // .word 0
+            // faults:
+            0x00, 0x00,                         // .word 0
+        ]);
+    }
+
+    [Fact]
+    public void Selector_40h_is_the_bioss_data()
+    {
+        // A program built for a DOS extender reads the BIOS's variables through selector 40h, as it
+        // would through segment 40h in real mode.
+        Run(
+        [
+            0xB8, 0x40, 0x00,                   // mov ax, 0x40
+            0x8E, 0xC0,                         // mov es, ax
+            0x26, 0x80, 0x3E, 0x49, 0x00, 0x03, // cmp byte ptr es:[0x49], 3    (the video mode, as the BIOS keeps it)
+            0x75, 0xB2,                         // jne fail
+            0xEB, 0xB5,                         // jmp done
+        ]);
+    }
+
+    [Fact]
     public void Real_mode_code_calls_back_into_the_program()
     {
         // A real-mode callback (function 0303h), called far by real-mode code, runs the program's

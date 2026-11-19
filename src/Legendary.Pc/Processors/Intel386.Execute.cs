@@ -431,8 +431,17 @@ public sealed partial class Intel386
             }
 
             // the coprocessor's instructions: with no coprocessor fitted they take their operand
-            // and do nothing, which is how a program finds there's none
-            case >= 0xD8 and <= 0xDF: DecodeModRm(); return;
+            // and do nothing, which is how a program finds there's none. A program that has its
+            // own routines to stand in for one sets CR0's emulation bit, and each then comes
+            // to it as exception 7 instead
+            case >= 0xD8 and <= 0xDF:
+                if ((Cr0 & EmulateCoprocessor) != 0)
+                {
+                    throw Fault(Vector.DeviceNotAvailable);
+                }
+
+                DecodeModRm();
+                return;
 
             case >= 0xE0 and <= 0xE3: Loop(opcode); return;
 
