@@ -64,6 +64,7 @@ from .plink86 import Plink86Program
 from .program import Image, Program
 from .regions import read_regions
 from .rtlink import RtlinkProgram, is_rtlink, library_name
+from .scenes import Scene, read_ways
 from .sentence import read_sentence_grammar
 from .sound import read_songs, read_sound, read_speech
 from .speech import speech_texts, speech_texts_32
@@ -1183,6 +1184,46 @@ def animations(args: argparse.Namespace) -> None:
         print(f"written to {args.out}")
 
 
+def scenes(args: argparse.Namespace) -> None:
+    """The filmed scenes in the game's .Q files: listed, or written as animated PNG and WAV files."""
+    folder = GameFolder(args.folder)
+    linear = _linear(folder)
+    # the films are where the CD has them, in a folder Q of the game's
+    place = next(
+        (os.path.join(folder.path, name) for name in os.listdir(folder.path) if name.lower() == "q"), None
+    )
+    if linear is None or place is None:
+        raise ValueError(f"{args.folder}: no filmed scenes are there: `disc --copy` brings them from the CDs")
+    ways = read_ways(linear)
+    wanted = args.name.lower() if args.name else None
+    seconds = count = 0
+    for name in sorted(os.listdir(place)):
+        stem, ending = os.path.splitext(name.lower())
+        if ending != ".q" or wanted not in (None, stem):
+            continue
+        with open(os.path.join(place, name), "rb") as file:
+            try:
+                scene = Scene(file.read(), ways)
+            except ValueError as error:
+                print(f"{name:10} {error}")
+                continue
+        sound = scene.sound()
+        version = f"{scene.version[0]}.{scene.version[1]}"
+        print(
+            f"{name:10} version {version}, {scene.pictures:4} frames, {scene.seconds:6.1f} seconds,"
+            f" {'with sound' if sound else 'silent'}"
+        )
+        count, seconds = count + 1, seconds + scene.seconds
+        if args.out:
+            os.makedirs(args.out, exist_ok=True)
+            scene.apng(os.path.join(args.out, f"{stem}.png"))
+            if sound:
+                _write(args.out, f"{stem}.wav", sound)
+    print(f"{count} scenes, {seconds / 60:.0f} minutes")
+    if args.out:
+        print(f"written to {args.out}")
+
+
 def _discs_of(folder: GameFolder) -> tuple[list[str], str] | None:
     """The CDs' images beside a game, in its folder or the `cd` in it, and the game's folder on them."""
     places = [folder.path] + [
@@ -1503,6 +1544,11 @@ def _mouse_commands(command) -> None:  # noqa: ANN001: the parser's own maker of
     command(verbs)
     command(tour)
     command(speech)
+    sub = command(scenes)
+    sub.add_argument("name", nargs="?", help="only this scene, as mc700")
+    sub.add_argument(
+        "--out", metavar="FOLDER", help="write each there as an animated PNG file and, with sound, a WAV file"
+    )
 
 
 def _disc_options(moving: argparse.ArgumentParser, cd: argparse.ArgumentParser) -> None:

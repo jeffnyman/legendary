@@ -220,6 +220,11 @@ python -m legendary_tools vocab <the game's folder>
 - **`animations`** lists the animations among a game's `.PIC` files, which *Gateway II*
   has: Autodesk Animator's `.FLI` files, each with its frames, size and length. With
   `--out`, it writes each to the folder as an animated PNG file, which a browser plays.
+- **`scenes`** lists [*Mission Critical*'s filmed scenes](../docs/mission-critical.md#the-filmed-scenes),
+  its `.Q` files: each one's version, frames, length, and whether it has sound. With a name,
+  as `mc700`, only that one. With `--out`, it writes each as an animated PNG file, which a
+  browser plays, and its sound as a WAV file; the ten minutes of the opening take a few
+  minutes and about a hundred megabytes, so a name is worth giving.
 - **`verbs`** lists the verbs of a game played with the mouse,
   [*Companions of Xanth*](../docs/companions-of-xanth.md#the-verbs): each one's number,
   name and how many objects it takes, with how many objects have it as the verb a click
