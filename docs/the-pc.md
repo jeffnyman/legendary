@@ -106,6 +106,7 @@ time it was tried. [The game needed more](mission-critical.md#running-it):
 | Counted on each of the coprocessor's instructions coming to it then | Raises exception 7 at one when the bit is set; with it clear they do nothing, as before |
 | Read the BIOS's variables through selector 40h | The host's table has a selector 40h, 64 KB of data at 400h |
 | Asked the video BIOS what VESA modes the card has, INT 10h function 4Fh, and for mode 101h, 640 by 480 in 256 colors | The card has a megabyte of memory past the VGA's, four of VESA's modes of 256 colors, and VESA 1.2's functions to describe and set them |
+| Found its FM chip by starting the chip's timer and reading the status port a fixed number of times, as its wait | A use of the FM chip's ports takes a microsecond at the least, as the ISA bus made it, however fast the processor is set |
 | Moved its 64 KB window over the picture's 300 KB | Moves it, by function 05h or by the far routine the mode's description names |
 
 ## The notes, checked

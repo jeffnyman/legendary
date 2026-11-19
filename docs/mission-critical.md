@@ -124,7 +124,7 @@ them. Neither has been followed yet.
 [The PC](the-pc.md) came with a 386's protected mode and a DPMI host that none of the
 earlier games use, and DOS/4GW runs on them as it is: it prints its banner, version 1.97,
 asks the host for memory, and loads the game's two objects into it. The game then asked
-four things the PC didn't have.
+five things the PC didn't have.
 
 **The 8087.** Watcom's startup code, at `000ad3e0`, finds no coprocessor and does this:
 
@@ -173,6 +173,18 @@ past the VGA's, the modes 100h, 101h, 103h and 105h, and VESA 1.2's functions fo
 picture of 640 by 480 is 300 KB, and the processor's window on video memory at `A0000h`
 is 64: a program moves the window, by function 05h or by calling a routine the mode's
 description names, and the card has both.
+
+**The bus.** That was at eight million instructions a second. At the thirty million the
+player gives a game of 1995, the game ended before any of it, with
+`ERROR: Music driver installation failed.` and exit code 20. Miles's driver for the FM
+chip, `SBPRO2.MDI`, finds the chip the usual way: it starts the chip's timer, which runs out
+in 80 microseconds, waits, and looks for the timer's bit in the status. Its wait is a count
+of reads of the status port. On a real card each read took a microsecond or so, because
+the card is on the ISA bus, which goes at its own pace whatever the processor's; on the PC
+a read took one instruction's time, and past sixteen million a second the reads were over
+before the timer was. Now a use of the FM chip's ports takes a microsecond at the least.
+The player also gives this game a disk of 1.5 megabytes a second, where the older games
+have 200 KB: at that, the program alone took six seconds to load.
 
 With that the game runs. It plays its opening film, the planet and the ship and Legend's
 name, with sound; Escape goes past each part; it writes `RESTART.DAT`, tells how the
