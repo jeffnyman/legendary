@@ -52,7 +52,8 @@ hold.
 - [Mission Critical](mission-critical.md): 1995. The start of a first look: a 32-bit
   program for DOS/4GW, in one piece with no overlays, with a table of every address in it;
   three CDs of speech and filmed scenes; and text, regions and a guided tour that are read
-  by what reads *Companions of Xanth*'s. It runs, on the PC's DPMI host, once that lets it
+  by what reads *Companions of Xanth*'s. Its 2,984 pictures are packed as LHA packs a file,
+  and two in three of them are changes to another picture, to be exclusive-ored over it. It runs, on the PC's DPMI host, once that lets it
   emulate an 8087, and the card has VESA's 640 by 480.
 - [Spellcasting 201: The Sorcerer's Appliance](spellcasting-201.md): 1991. The same system,
   linked by .RTLink/Plus in place of PLINK86: a program DOS can't load by itself, kept as

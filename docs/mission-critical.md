@@ -61,8 +61,9 @@ UniVBE 5.1, and a demo of *Shannara*.
 | The regions | 15 files, 384 pictures, 2,296 regions, every one an outline |
 | The guided tour | 2,391 events, 10 clicks |
 | The fonts | 5 of the 13 |
+| [The pictures](#the-pictures) | 40 files, 2,984 pictures |
 
-And what they don't: the pictures, whose files don't start as the earlier games' do; eight
+And what they don't: eight
 of the fonts; the music, which is no longer in `.MUS` files; the speech and the filmed
 scenes; and the objects, whose table has to be found in the program first.
 
@@ -118,6 +119,53 @@ The data starts with names that no earlier game had in it: `Debris Cut`, `Bomb A
 the story's variables under the names its writers gave them, kept for a debugging screen.
 After them are the verbs, `Activate`, `Analyze`, `Ascend`, as *Companions of Xanth* has
 them. Neither has been followed yet.
+
+## The pictures
+
+The 40 `.PIC` files are none of the three kinds the earlier games have. Each starts with a
+directory of 256 entries, twenty bytes each:
+
+| At | What |
+|---|---|
+| 0 | Where the picture starts in the file, or 0 for none |
+| 4 | How many bytes its pixels are in the file |
+| 8 | Its kind: 0 a picture, 3 a change to one, 4 not yet understood |
+| 9 | FFh when the picture starts with colors, 0 when it has none |
+| 10 | Where it is drawn, across and down, when it is a piece of another |
+| 14 | Its width and its height |
+| 18 | A word not yet understood: 0 for most, and 2 or 3 for most of the changes |
+
+2,984 entries have a picture, and 35 of those have no size. 528 start with colors: two
+words, where among the 256 colors its own start and how many there are, both counted in
+bytes at three a color, and then the colors, red, green and blue from 0 to 63. All but four
+have the whole 256. A room's picture is 640 by 288, the letter-box the game looks through.
+
+The pixels are a byte each. 36 pictures have them as they are; the rest are packed, and by
+nothing of Legend's or PKWARE's this time: it is LHA's method `-lh4-`, Lempel and Ziv's
+copying over a window of 4,096 bytes with the lengths and distances in Huffman's codes,
+sent anew for each block. The program's routine for it is at `0009a524`, which hands out
+4,096 bytes at a time from the decoder at `000a88f0`; that asks `000af860` for a byte or
+a length and `000af914` for a distance. What gave it away is in those two: 510 codes in the
+one table and 13 in the other, and a length that is the code less 253. Every packed
+picture in the game unpacks to exactly its width times its height, using exactly the bytes
+its entry says.
+
+A picture of kind 3, and 1,959 are, is not pixels but a change to pixels. Each of its
+bytes is exclusive-ored with the pixel already on the screen, so a 0 leaves the pixel as
+it was and anything else turns one color into another. The second picture of
+`MC002.PIC` is 222 by 210, at 209,78, and looks like noise; put over the first, the door
+at the corridor's end, it is the door open and the bridge beyond it. A change is smaller
+packed than what it changes to would be, wherever most of the picture stays.
+
+Which picture a change is to, the file doesn't say: the program knows. The tools take it
+to be the last before it in the file that isn't a change and that it fits in, and write
+what the change makes of that; 908 of the changes have such a picture. The rest come in
+runs with no picture before them, each much the size of the last, which read as the
+frames of something moving, and they are written as they are.
+
+Kind 4 is 171 pictures, among them the mouse's pointers, the crew's manifest, and
+a control panel with a border of plain blue. That reads as pictures with a color that
+isn't drawn, but it hasn't been followed in the program.
 
 ## Running it
 
@@ -213,6 +261,6 @@ it. That is as far as it has been taken: nothing has been clicked.
 
 ## Still to do
 
-Everything but the above: the pictures and the other fonts, the music, the speech and its
+Everything but the above: which picture each change is to, and kind 4; the other fonts, the music, the speech and its
 text, the filmed scenes, the objects and the verbs, the variables' names, the battle game,
 and playing it past its first picture.
