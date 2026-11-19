@@ -106,7 +106,7 @@ The records, the other fixups, the manager's table and the thunks are read by wh
 | The pictures | 1,130, once [copied from the CD](#the-pictures), and 17 animations |
 | The music | 82 songs in one file, 41 of them for the AdLib |
 | The fonts | 17 |
-| The regions | 9 files |
+| The regions | 9 files, 797 regions, [in a new form](#the-regions) |
 
 ## The text
 
@@ -436,6 +436,15 @@ are 295, where *Eric the Unready* has 84 and *Gateway* 261.
 The four words are copied from elsewhere in the data segment as a game is saved, and
 written from `908C`, `908E`, `9088` and `908A`. What they are isn't known, as it isn't in
 *Spellcasting 301*.
+
+## The regions
+
+The nine `.RGN` files say what is where in the pictures, for the mouse. Their form is new
+with this game: a region is an object's number, a count of points, and the points, each
+two words, across and down in pixels, where it was an object and a rectangle in six bytes.
+Two points are a rectangle's corners and more are the corners of an outline: 678 of the
+797 regions are outlines, the longest of 143 corners. [*Companions of
+Xanth*](companions-of-xanth.md#the-regions) keeps its regions the same way.
 
 ## The pictures
 

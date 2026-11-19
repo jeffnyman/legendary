@@ -6,7 +6,7 @@ pictures and on lists of verbs and things.
 
 This is the start of the first look: what is in the game's folder, what of it the tools
 already read, how its program is built, its objects, and the verbs it has in place of a
-parser, and how an action is performed. What is known for certain is said plainly; what
+parser, how a click becomes a command, and how an action is performed. What is known for certain is said plainly; what
 is inferred says so. Addresses are `segment:offset` in hex, with segments relative to where
 the program loads. Every one of them can be looked at with the [tools](../tools/README.md).
 
@@ -207,6 +207,71 @@ a picture of another file, so it hasn't been seen to be anything else.
 The tools' `verbs` command lists the verbs and the pairs, and `objects` with a number says
 an object's icon, its own verb and its list.
 
+## From a click to a command
+
+A command is three words, a verb and up to two objects, as a sentence was in the games
+before. The player makes it a piece at a time, pointing at a verb in a list and at things
+in the picture or in a list, and the game puts the pieces together.
+
+| What | Where |
+|---|---|
+| Where the pointer is, across and down | `38AF:69E4`, `69E6` |
+| The sentence being made: its verb, object and second object | `38AF:0050`, `0052`, `0054` |
+| The routine that looks at what the pointer is on | `08A7:175F` |
+| The routine that adds a piece to the sentence | `08A7:0594` |
+| The routine that settles it, and makes its words | `08A7:55D3` |
+| The command settled: its verb, object and second object | `38AF:69FA`, `6A0A`, `6A08` |
+
+**What the pointer is on.** The routine at `08A7:175F` hands the pointer's place to one
+that says which part of the screen it is in, which item of that part, and what kind of
+thing that is. Two kinds are an object, and a routine gives its number from the part and
+the item; one kind is a verb, from the list of them. Anything else is nothing.
+
+**Putting the pieces together.** The routine at `08A7:0594` is given the sentence so far
+and what was just pointed at, a verb or an object. A verb becomes the sentence's verb if
+it has none. An object becomes its object if it has none, and its second object if it has
+one and this is another. Then it has the sentence settled.
+
+**Settling it.** The routine at `08A7:55D3` is where [the verbs' tables](#the-verbs) are
+used. With no verb it takes the object's own. It looks the verb up in the object's list,
+and a verb of two with its two objects in the table of pairs. It makes the sentence's
+words, from the verb's name, the objects' names and the verb's joining word, and it leaves
+the command in the three words it is performed from.
+
+**A turn.** The routine that does a turn, around `08A7:3E33`, copies the command to where
+the action and its objects are kept, and [performs it](#once-a-verb-is-settled). Then, as
+in the games with a parser, it calls the player's routine and the room's, runs the timers
+and counts the turn, at `38AF:025C`. `Walk`, verb 81, is the one special case: its object
+isn't an object but the direction, and is put in a byte of its own, at `38AF:6E5C`.
+
+### The regions
+
+Which thing a place in a picture is, is said by the `.RGN` files, as before. Their form is
+new, and *Gateway II* has it too: the tools read both games' regions wrongly until now.
+
+A file still starts with six bytes for each picture: where its regions start, the object
+the rest of the picture is, and how many regions. A region was six bytes, an object and a
+rectangle in bytes. Now it is an object's number, a count of points, and the points, each
+two words, across and down in pixels:
+
+```
+picture 0, the rest of it 34 bedroom
+    0, 85 to 263,121  35 desk
+    0,  0 to  85, 71  45 window
+    an outline of 8 corners, in  77, 67 to 105, 96  46 pen holder
+    an outline of 15 corners, in  79, 70 to 249,116  39 personal computer
+```
+
+Two points are a rectangle's corners. More are the corners of an outline, so a region can
+be the shape of the thing: 591 of this game's 728 regions are, the longest of 80 corners,
+and 678 of *Gateway II*'s 797. Read this way every picture's regions end where the next
+picture's start, in every file of both games.
+
+What hasn't been followed is the routine that says what part of the screen the pointer is
+in, at `18A5:218A`, and so which kinds of thing are which: that a region found in a
+picture is one of the two kinds that are objects is taken from what the routines after it
+do, and not read.
+
 ## Once a verb is settled
 
 **A verb is an action, and it is performed by the routine the games with a parser have.**
@@ -253,8 +318,6 @@ The tools' `verbs` lists each verb's routine, and `objects` with a number an obj
 
 - The speech, `XANTH_01.VOC`, which is on the CD alone.
 - The exits' table and the flags' names.
-- How a click becomes a verb and its objects: the routine around `08A7:5700` settles what
-  is meant, and what calls it, from the pictures' regions and the lists, hasn't been
-  followed.
+- The parts of the screen, and the routine that says which one the pointer is in.
 - The `.HLP` files.
 - The game hasn't been run on the PC.
