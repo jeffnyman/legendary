@@ -33,7 +33,7 @@ from .gallery import write_index
 from .game import GameFolder
 from .grammar import NO_TURN, Form, action_flags, describe_flags, read_grammar
 from .handlers import action_routines, keyed_routines, object_routines
-from .iso import Disc
+from .iso import Disc, Entry
 from .le import LeExecutable, is_linear
 from .loads import (
     POINTER_SEGMENT,
@@ -1080,50 +1080,84 @@ def animations(args: argparse.Namespace) -> None:
         print(f"written to {args.out}")
 
 
-def _disc_of(folder: GameFolder) -> tuple[str, str] | None:
-    """A CD's image beside a game, in its folder or the `cd` in it, and the game's folder on the disc."""
-    places = [folder.path, os.path.join(folder.path, "cd"), os.path.join(folder.path, "CD")]
-    image = next(
-        (
-            os.path.join(place, name)
-            for place in places
-            if os.path.isdir(place)
-            for name in sorted(os.listdir(place))
-            if name.lower().endswith((".iso", ".img", ".bin"))
-        ),
-        None,
-    )
+def _discs_of(folder: GameFolder) -> tuple[list[str], str] | None:
+    """The CDs' images beside a game, in its folder or the `cd` in it, and the game's folder on them."""
+    places = [folder.path] + [
+        os.path.join(folder.path, name) for name in sorted(os.listdir(folder.path)) if name.lower() == "cd"
+    ]
+    images = [
+        os.path.join(place, name)
+        for place in places
+        if os.path.isdir(place)
+        for name in sorted(os.listdir(place))
+        if name.lower().endswith((".iso", ".img", ".bin"))
+    ]
     settings = folder.find("legend.ini")
-    if image is None or settings is None:
+    if not images or settings is None:
         return None
-    # GAMEDATA=D:\GW2\ is where the game looks for what its own folder hasn't got
+    # GAMEDATA=D:\GW2\ is where the game looks for what its own folder hasn't got. Mission Critical
+    # has no such line, and names the CD's folder as where its speech is, VOCDATA=D:\MISSION\
+    named = {}
     for line in folder.read(settings).decode("latin-1").splitlines():
         key, _, value = line.partition("=")
-        if key.strip().upper() == "GAMEDATA":
-            return image, value.strip().split(":", 1)[-1].strip("\\/")
-    return None
+        named[key.strip().upper()] = value.strip().split(":", 1)[-1].strip("\\/")
+    inside = named.get("GAMEDATA") or named.get("VOCDATA")
+    return (images, inside) if inside else None
+
+
+def _disc_files(cd: Disc, there: Entry, under: str = "") -> list[tuple[str, Entry]]:
+    """Every file under a folder of a disc, each with its path from that folder."""
+    found = []
+    for entry in cd.entries(there):
+        path = os.path.join(under, entry.name)
+        found += _disc_files(cd, entry, path) if entry.folder else [(path, entry)]
+    return found
+
+
+def _has(path: str, name: str) -> bool:
+    """Whether a folder has a file by that path, whatever its case."""
+    for part in name.split(os.sep):
+        actual = (
+            {each.lower(): each for each in os.listdir(path)}.get(part.lower())
+            if os.path.isdir(path)
+            else None
+        )
+        if actual is None:
+            return False
+        path = os.path.join(path, actual)
+    return True
 
 
 def disc(args: argparse.Namespace) -> None:
-    """What a game's CD has that its folder hasn't: listed, or copied into the folder."""
+    """What a game's CDs have that its folder hasn't: listed, or copied into the folder."""
     folder = GameFolder(args.folder)
-    found = _disc_of(folder)
+    found = _discs_of(folder)
     if found is None:
         raise ValueError(f"{args.folder}: no CD's image is beside it, or LEGEND.INI doesn't say where on it")
-    image, inside = found
-    cd = Disc(image)
-    there = cd.find(inside)
-    if there is None or not there.folder:
-        raise ValueError(f"{os.path.basename(image)} has no folder {inside}")
-    files = [entry for entry in cd.entries(there) if not entry.folder]
-    missing = [entry for entry in files if folder.find(entry.name) is None]
-    print(f"{os.path.basename(image)}, folder {inside}: {len(files)} files")
-    print(f"{len(missing)} of them the game's folder hasn't:")
-    for entry in missing:
-        print(f"  {entry.name:14} {entry.size:9}")
-        if args.copy:
-            _write(folder.path, entry.name, cd.read(entry))
-    if args.copy and missing:
+    images, inside = found
+    # a file that's on more than one CD of a game is wanted once
+    taken: set[str] = set()
+    copied = False
+    for image in images:
+        cd = Disc(image)
+        there = cd.find(inside)
+        if there is None or not there.folder:
+            raise ValueError(f"{os.path.basename(image)} has no folder {inside}")
+        files = _disc_files(cd, there)
+        missing = [
+            (path, entry)
+            for path, entry in files
+            if path.lower() not in taken and not _has(folder.path, path)
+        ]
+        taken.update(path.lower() for path, _ in files)
+        print(f"{os.path.basename(image)}, folder {inside}: {len(files)} files")
+        print(f"{len(missing)} of them the game's folder hasn't:")
+        for path, entry in missing:
+            print(f"  {path:14} {entry.size:9}")
+            if args.copy:
+                _write(os.path.join(folder.path, os.path.dirname(path)), entry.name, cd.read(entry))
+                copied = True
+    if copied:
         print(f"copied to {folder.path}")
 
 

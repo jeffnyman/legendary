@@ -212,6 +212,9 @@ python -m legendary_tools vocab <the game's folder>
   folder on the disc has that the game's own folder hasn't; `LEGEND.INI` says which folder
   that is. With `--copy` it copies those files into the game's folder, which is then whole:
   nothing else here reads the image, and a game's folder can be kept without it.
+  [*Mission Critical*](../docs/mission-critical.md#the-three-cds) came on three CDs, and with
+  the three images there it does that for each, folders inside the game's folder too, and a
+  file that's on more than one CD once.
 - **`animations`** lists the animations among a game's `.PIC` files, which *Gateway II*
   has: Autodesk Animator's `.FLI` files, each with its frames, size and length. With
   `--out`, it writes each to the folder as an animated PNG file, which a browser plays.
