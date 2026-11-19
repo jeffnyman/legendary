@@ -50,7 +50,10 @@ python -m legendary_tools sentence <the game's folder>
 ```
 
 - **`exe`** prints each program's MZ header: its image, what's in the file after it, the memory
-  it asks for, and where it starts.
+  it asks for, and where it starts. For a 32-bit program bound to DOS/4GW, as
+  [*Mission Critical*](../docs/mission-critical.md#how-the-program-is-built) is, it goes on to
+  the linear executable in the file: its objects, where each expects to load, where it starts,
+  and how many addresses it holds.
 - **`overlays`** prints the linker and its loader's table: each overlay under the place it
   loads at, with its size, its relocations, and where it is in which file. For a .RTLink
   program it also counts the records the program and its run-time library are kept as.
@@ -62,7 +65,10 @@ python -m legendary_tools sentence <the game's folder>
   the word before it, which is the offset when the place is a far pointer's. It finds what
   points into a segment: `refs <folder> 2701` finds the table of exits that uses the
   fireplace's message.
-- **`dump`** prints memory in hex and as text.
+  For a 32-bit program it takes an address, and lists the places that hold it, in the code or in
+  the data: `refs <folder> c0594` finds the one routine that names `RESTART.DAT`.
+- **`dump`** prints memory in hex and as text. A 32-bit program has no segments, so its
+  address is one number, as `c0594`.
 - **`dis`** prints instructions. A far call to a thunk is marked with the overlay and routine
   it goes to, and an instruction with a segment in it is marked as having one. An instruction
   that takes a string's pointer from an array has the string written beside it, as
@@ -83,6 +89,9 @@ python -m legendary_tools sentence <the game's folder>
   string [as a far pointer no text is at](../docs/spellcasting-301.md#how-the-program-names-a-string),
   it lists every place that does, in code or in data, and says how many of the file's
   strings are named.
+
+For a 32-bit program `dis` reads 32-bit instructions, and writes beside one the text that an
+address in it points to. `overlays`, `thunks` and `segments` have nothing to say of one.
 
 `segments`, `dump` and `dis` build the program's memory first: the root, the data, and the
 overlays `--overlay` names, which can't be two that load at the same place. Given a routine's

@@ -51,6 +51,13 @@ class GameFolder:
             raise ValueError(f"{self.path}: no file ending in main.exe")
         return beside[0]
 
+    def linear_program(self) -> str | None:
+        """The game itself where it's a 32-bit program, as MISSION.EXE is: the largest such here."""
+        from .le import is_linear  # noqa: PLC0415
+
+        found = [path for path in self.ending(".exe") if is_linear(self.read(path))]
+        return max(found, key=os.path.getsize) if found else None
+
     def overlays_file(self) -> str | None:
         """The file of the game's overlays, where it has one of its own."""
         program = os.path.basename(self.main_program())

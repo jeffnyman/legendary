@@ -34,6 +34,7 @@ from .game import GameFolder
 from .grammar import NO_TURN, Form, action_flags, describe_flags, read_grammar
 from .handlers import action_routines, keyed_routines, object_routines
 from .iso import Disc
+from .le import LeExecutable, is_linear
 from .loads import (
     POINTER_SEGMENT,
     StringNames,
@@ -82,6 +83,8 @@ from .tour import CLICK, read_tour
 
 def _program(folder: GameFolder) -> Program:
     """The game's program, read as the linker that made it left it."""
+    if folder.linear_program() and not folder.ending("main.exe"):
+        raise ValueError(f"{folder.linear_program()}: a 32-bit program, with no overlays or segments")
     exe = folder.read(folder.main_program())
     found = folder.overlays_file()
     ovl = folder.read(found) if found else None
@@ -93,6 +96,19 @@ def _program(folder: GameFolder) -> Program:
         return Plink86Program(exe, ovl)
     except ValueError as error:
         raise ValueError(f"{folder.main_program()}: {error}") from error
+
+
+def _linear(folder: GameFolder) -> LeExecutable | None:
+    """The game's program where it's a 32-bit one, which has no segments and no overlays."""
+    path = folder.linear_program()
+    return LeExecutable(folder.read(path)) if path else None
+
+
+def _flat(text: str) -> int:
+    try:
+        return int(text, 16)
+    except ValueError:
+        raise ValueError(f"{text}: an address in a 32-bit program is one number, in hex, as 16d60") from None
 
 
 def _address(text: str) -> tuple[int, int]:
@@ -118,6 +134,20 @@ def exe(args: argparse.Namespace) -> None:
         print(f"  after the image     {mz.trailing:7} bytes")
         print(f"  memory at the least    {mz.memory_paragraphs:04x} paragraphs")
         print(f"  starts at           {mz.cs:04x}:{mz.ip:04x}, stack {mz.ss:04x}:{mz.sp:04x}")
+        if is_linear(mz.data):
+            _linear_header(LeExecutable(mz.data))
+
+
+def _linear_header(program: LeExecutable) -> None:
+    print(f"  a 32-bit program    at {program.header:#07x} in the file, {program.page_count} pages")
+    for each in program.objects:
+        kind = "code" if each.is_code else "data"
+        print(
+            f"    object {each.number}, {kind}     {each.base:08x}-{each.end:08x}, {each.size} bytes,"
+            f" {each.pages} pages of them in the file"
+        )
+    print(f"    starts at         {program.entry:08x}, stack {program.stack:08x}")
+    print(f"    addresses in it   {len(program.fixups())}")
 
 
 def overlays(args: argparse.Namespace) -> None:
@@ -172,6 +202,13 @@ def segments(args: argparse.Namespace) -> None:
 
 def refs(args: argparse.Namespace) -> None:
     """The places that name a segment, in the root and every overlay."""
+    if linear := _linear(GameFolder(args.folder)):
+        wanted = _flat(args.segment)
+        for fixup in linear.fixups():
+            if fixup.target == wanted:
+                kind = "code" if linear.objects[0].base <= fixup.at < linear.objects[0].end else "data"
+                print(f"{fixup.at:08x}  {kind}")
+        return
     program = _program(GameFolder(args.folder))
     wanted = int(args.segment, 16)
 
@@ -192,6 +229,14 @@ def refs(args: argparse.Namespace) -> None:
 
 def dump(args: argparse.Namespace) -> None:
     """Memory at an address, in hex, with the overlays given loaded."""
+    if linear := _linear(GameFolder(args.folder)):
+        start = _flat(args.address)
+        memory = linear.read(start, args.count)
+        for row in range(0, len(memory), 16):
+            chunk = memory[row : row + 16]
+            text = "".join(chr(byte) if 0x20 <= byte < 0x7F else "." for byte in chunk)
+            print(f"{start + row:08x}  {chunk.hex(' '):47}  {text}")
+        return
     program = _program(GameFolder(args.folder))
     image = program.image(*args.overlay)
     segment, offset = _address(args.address)
@@ -208,6 +253,9 @@ def dis(args: argparse.Namespace) -> None:
         import capstone  # noqa: PLC0415
     except ImportError:
         raise ValueError("dis needs capstone: pip install capstone") from None
+    if linear := _linear(GameFolder(args.folder)):
+        _dis_linear(linear, _flat(args.address), args.count)
+        return
     program = _program(GameFolder(args.folder))
     segment, offset = _address(args.address)
     numbers = list(args.overlay)
@@ -248,6 +296,37 @@ def dis(args: argparse.Namespace) -> None:
             f"{segment:04x}:{instruction.address:04x}  {code.hex():<18}"
             f" {instruction.mnemonic} {instruction.op_str}{note}"
         )
+
+
+def _dis_linear(program: LeExecutable, start: int, count: int) -> None:
+    """Instructions of a 32-bit program, with the text each address in them points to."""
+    import capstone  # noqa: PLC0415
+
+    targets = {fixup.at: fixup.target for fixup in program.fixups()}
+    disassembler = capstone.Cs(capstone.CS_ARCH_X86, capstone.CS_MODE_32)
+    for _, instruction in zip(range(count), disassembler.disasm(program.read(start, 16 * count), start)):
+        note = ""
+        for index in range(instruction.size):
+            target = targets.get(instruction.address + index)
+            if target is not None and (text := _text_at(program, target)):
+                note = f"  ; {text!r}"
+        print(
+            f"{instruction.address:08x}  {instruction.bytes.hex():<22}"
+            f" {instruction.mnemonic} {instruction.op_str}{note}"
+        )
+
+
+def _text_at(program: LeExecutable, address: int) -> str | None:
+    """The text at an address, where there's a run of it that a zero ends."""
+    each = program.object_at(address)
+    if each is None or each.is_code:
+        return None
+    memory = program.read(address, 60)
+    end = memory.find(b"\0")
+    text = memory if end < 0 else memory[:end]
+    if len(text) < 3 or any(byte < 0x20 or byte > 0x7E for byte in text):
+        return None
+    return text.decode("ascii")
 
 
 # a word at an offset alone, in ES's segment or, with no segment named, in DS's
@@ -1315,12 +1394,12 @@ def main() -> None:
     command(overlays)
     command(thunks, overlay="one")
     command(segments, overlay="many")
-    command(refs).add_argument("segment", help="the segment, in hex")
+    command(refs).add_argument("segment", help="the segment, in hex; an address for a 32-bit program")
     sub = command(dump, overlay="many")
-    sub.add_argument("address", help="segment:offset, in hex")
+    sub.add_argument("address", help="segment:offset, in hex; one number for a 32-bit program")
     sub.add_argument("count", type=int, nargs="?", default=256, help="how many bytes (256)")
     sub = command(dis, overlay="many")
-    sub.add_argument("address", help="segment:offset, in hex")
+    sub.add_argument("address", help="segment:offset, in hex; one number for a 32-bit program")
     sub.add_argument("count", type=int, nargs="?", default=40, help="how many instructions (40)")
     command(actions).add_argument(
         "number", type=int, nargs="?", help="only this action, with every command that makes it"
