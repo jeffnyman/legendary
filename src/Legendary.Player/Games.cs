@@ -129,12 +129,12 @@ internal static class Games
     // an 8088 at 4.77 MHz, an AT, and a 386 or better
     private const int Pc = 300, At = 3000, Fast = 30000;
 
-    private const string Untried = "not yet tried";
 
     /// <summary>
     /// Where a game that came on a CD finds the files it reads from the disc. Its LEGEND.INI
-    /// says where it looks, as <c>GAMEDATA=D:\GW2\</c>. When the game's folder has its
-    /// pictures the files have been copied in, and the folder serves; otherwise an image of
+    /// says where it looks, as <c>GAMEDATA=D:\GW2\</c>, or <c>VOCDATA=D:\MISSION\</c> for a game
+    /// that has only its speech and films there. When the game's folder has its
+    /// pictures, or that game's speech, the files have been copied in, and the folder serves; otherwise an image of
     /// the CD beside the game does, in the folder or in a <c>cd</c> inside it. Null for a
     /// game that reads nothing from a CD, or when neither is there.
     /// </summary>
@@ -150,17 +150,22 @@ internal static class Games
             return null;
         }
 
-        foreach (string line in File.ReadLines(settings))
+        // Mission Critical has no GAMEDATA: its pictures are installed, and what it reads from the
+        // CD is its speech, where VOCDATA says, with its filmed scenes in a directory under that
+        string[] lines = File.ReadAllLines(settings);
+        foreach (var (key, copied) in new[] { ("GAMEDATA", ".PIC"), ("VOCDATA", ".VOC") })
         {
-            string[] parts = line.Split('=', 2);
-            if (parts.Length != 2 || !parts[0].Trim().Equals("GAMEDATA", StringComparison.OrdinalIgnoreCase)
-                || !parts[1].Trim().StartsWith("D:", StringComparison.OrdinalIgnoreCase))
+            string? value = lines.Select(line => line.Split('=', 2))
+                .Where(parts => parts.Length == 2 && parts[0].Trim().Equals(key, StringComparison.OrdinalIgnoreCase))
+                .Select(parts => parts[1].Trim())
+                .FirstOrDefault(value => value.StartsWith("D:", StringComparison.OrdinalIgnoreCase));
+            if (value is null)
             {
                 continue;
             }
 
-            string directory = parts[1].Trim()[2..].Trim('\\', '/');
-            if (In(folder, file => file.EndsWith(".PIC", StringComparison.OrdinalIgnoreCase)) is not null)
+            string directory = value[2..].Trim('\\', '/');
+            if (In(folder, file => file.EndsWith(copied, StringComparison.OrdinalIgnoreCase)) is not null)
             {
                 return (directory, null);
             }
@@ -259,7 +264,10 @@ internal static class Games
         new("xanth", "Companions of Xanth", 1993, ["XANTH.EXE"], "XANTH.EXE", At,
             "starts and plays, with its pictures, music and speech, by the mouse; not yet played through",
             World: Legendary.Core.Worlds.WorldMap.Xanth),
-        new("mcritic", "Mission Critical", 1995, ["MISSION.EXE"], "MISSION.EXE", Fast, Untried),
+        // a 32-bit program that brings DOS/4GW with it; its speech and films are a gigabyte and
+        // more on three CDs, and with all of them copied into its folder it never asks for one
+        new("mcritic", "Mission Critical", 1995, ["MISSION.EXE"], "MISSION.EXE", Fast,
+            "starts, in VESA's 640 by 480, and plays its opening film with sound; not yet played"),
     ];
 
     /// <summary>The speed of a program the player doesn't know: an AT's.</summary>
