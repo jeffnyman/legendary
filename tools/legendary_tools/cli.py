@@ -61,7 +61,7 @@ from .program import Image, Program
 from .regions import read_regions
 from .rtlink import RtlinkProgram, is_rtlink, library_name
 from .sentence import read_sentence_grammar
-from .sound import read_songs, read_sound
+from .sound import SPEECH_RATE, read_songs, read_sound, read_speech
 from .timers import (
     EVERY_TURN,
     TIMER_NAMES,
@@ -1034,7 +1034,7 @@ def music(args: argparse.Namespace) -> None:
 
 
 def sounds(args: argparse.Namespace) -> None:
-    """The sounds in the game's .RS files: listed, or written to a folder as WAV files."""
+    """The sounds in the game's .RS files, and the speech in its .VOC file: listed, or written as WAV."""
     folder = GameFolder(args.folder)
     for path in folder.ending(".rs"):
         sound = read_sound(folder.read(path))
@@ -1045,6 +1045,18 @@ def sounds(args: argparse.Namespace) -> None:
         )
         if args.out:
             _write(args.out, os.path.splitext(os.path.basename(path))[0].lower() + ".wav", sound.wav())
+    for path in folder.ending(".voc"):
+        speech = read_speech(path)
+        name = os.path.basename(path)
+        total = sum(speech.seconds(line) for line in range(len(speech)))
+        spoken = sum(1 for line in range(len(speech)) if speech.seconds(line))
+        print(f"{name:14} {spoken} lines of speech, {total / 60:.0f} minutes at {SPEECH_RATE} a second")
+        if args.out:
+            stem = os.path.splitext(name)[0].lower()
+            for line in range(len(speech)):
+                if not speech.seconds(line):
+                    continue  # a number with no line
+                _write(os.path.join(args.out, stem), f"{line:04}.wav", speech.wav(line))
     if args.out:
         print(f"written to {args.out}")
 

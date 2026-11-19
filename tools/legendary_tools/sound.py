@@ -26,10 +26,22 @@ Legend licensed. It has 32 bytes and then the sound:
 
 Each byte is how long the speaker is pushed out for in a pulse 72 ticks of the PC's timer long,
 so from 0 to 72, and a pulse comes 16,572 times a second. A byte of 0 ends the sound.
+
+A .VOC file is the speech of a game on a CD, and isn't Creative's file of that name. It
+starts with a word, a count, and that many offsets of four bytes, the last of them the
+file's length; so one fewer lines than the count, and a line can be empty. A line is from
+its offset to the next, and is the sound and nothing else: a byte a sample, with 128 for
+silence, as a Sound Blaster plays them. Every line starts at a multiple of 4,096, the
+header being filled out with FF and a line with silence.
+
+Nothing in the file says how fast it is played. The Sound Blaster's driver in the program
+has the RealSound speeds and no others, 16,572 a second and its half and so on, and the
+voices are the pitch of voices at the fastest of them and too low at the next.
 """
 
 from __future__ import annotations
 
+import os
 import struct
 from dataclasses import dataclass
 
@@ -126,3 +138,47 @@ def read_sound(data: bytes) -> Sound:
     # the player stops at a zero
     end = widths.find(b"\0")
     return Sound(repeat, widths if end < 0 else widths[:end])
+
+
+SPEECH_RATE = round(TIMER_HZ / PULSE_TICKS)
+
+
+@dataclass(frozen=True)
+class Speech:
+    """A .VOC file's lines, read from the file as they are asked for: it is a big file."""
+
+    path: str
+    offsets: tuple[int, ...]  # where each line starts, and after the last where it ends
+
+    def __len__(self) -> int:
+        return len(self.offsets) - 1
+
+    def seconds(self, line: int) -> float:
+        """How long a line is, with the silence it is filled out with."""
+        return (self.offsets[line + 1] - self.offsets[line]) / SPEECH_RATE
+
+    def samples(self, line: int) -> bytes:
+        """A line's samples, without the silence at its end, which fills it out."""
+        with open(self.path, "rb") as file:
+            file.seek(self.offsets[line])
+            return file.read(self.offsets[line + 1] - self.offsets[line]).rstrip(b"\x80")
+
+    def wav(self, line: int) -> bytes:
+        """A line as a WAV file's bytes: eight bits, one channel."""
+        samples = self.samples(line)
+        header = struct.pack(
+            "<4sI4s4sIHHIIHH4sI", b"RIFF", 36 + len(samples), b"WAVE", b"fmt ", 16, 1, 1,
+            SPEECH_RATE, SPEECH_RATE, 1, 8, b"data", len(samples),
+        )  # fmt: skip
+        return header + samples
+
+
+def read_speech(path: str) -> Speech:
+    """A .VOC file's lines."""
+    size = os.path.getsize(path)
+    with open(path, "rb") as file:
+        (count,) = struct.unpack("<H", file.read(2))
+        offsets = struct.unpack(f"<{count}I", file.read(4 * count))
+    if not offsets or offsets[-1] != size or any(a > b for a, b in zip(offsets, offsets[1:])):
+        raise ValueError("not a file of speech: its offsets don't go up to its length")
+    return Speech(path, offsets)

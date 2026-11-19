@@ -236,7 +236,8 @@ python -m legendary_tools vocab <the game's folder>
   [docs/spellcasting-101.md](../docs/spellcasting-101.md#what-is-where-in-a-picture).
 - **`sounds`** lists the `.RS` files: each sound's length, how many times each of its bytes
   is played, and so how long it lasts. With `--out`, it writes each to the folder as a WAV
-  file. Both are in
+  file. Where a game has a `.VOC` file of speech, as *Companions of Xanth* has, it counts its
+  lines and writes each as a WAV file too, in a folder of the file's name. Both are in
   [docs/spellcasting-101.md](../docs/spellcasting-101.md#the-music-and-the-sounds), and both
   read *Timequest* too.
 - **`strings`** prints the table that starts `...STR.DAT`: each block's size unpacked, its size
