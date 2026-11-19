@@ -245,6 +245,38 @@ public class SoundBlasterTests
     }
 
     [Fact]
+    public void The_last_sample_of_a_block_is_held_a_moment_and_then_dies_away()
+    {
+        // one sample at the top of its swing, as a driver plays to find the card's interrupt
+        _memory[0x3000] = 0xFF;
+        SetUpChannel1(0x3000, 1);
+        Dsp(0x40, 156, 0x14, 0, 0);
+        _card.Render(new int[2 * 10]);
+        Assert.Equal(1, _interrupts);
+        Assert.False(_card.Playing);
+
+        // a hundredth of a second on it is still there, for a program that plays its next block
+        // from the interrupt
+        var mix = new int[2 * 441];
+        _card.Render(mix);
+        Assert.Equal(127 << 8, mix[^1]);
+
+        // and a tenth of a second on it has gone, as it has from a real card's output
+        mix = new int[2 * 4410];
+        _card.Render(mix);
+        Assert.Equal(0, mix[^1]);
+    }
+
+    [Fact]
+    public void Direct_output_stays_where_it_was_put()
+    {
+        Dsp(0x10, 0xFF);
+        var mix = new int[2 * 44_100];
+        _card.Render(mix);
+        Assert.Equal(127 << 8, mix[^1]);
+    }
+
+    [Fact]
     public void An_auto_initialize_block_interrupts_at_each_end_until_told_to_stop()
     {
         SetUpChannel1(0x4000, 200, autoInitialize: true);

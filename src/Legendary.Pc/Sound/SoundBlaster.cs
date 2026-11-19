@@ -74,6 +74,10 @@ internal sealed class SoundBlaster : ISoundSource
     private bool _interruptPending, _wideInterruptPending;
     private bool _signed, _halveRate, _sixteenBit;
 
+    // the samples' times since a block played to its end, while its last sample is still held; 0
+    // when none is
+    private int _ended;
+
     // the output: where between the last two samples the output is, and those two
     private long _position;
     private long _step;
@@ -210,6 +214,7 @@ internal sealed class SoundBlaster : ISoundSource
             case 0x10:
                 // direct output: one sample, now
                 _left16 = _right16 = (_arguments[0] - 128) << 8;
+                _ended = 0;
                 _lastLeft = _left16;
                 _lastRight = _right16;
                 break;
@@ -338,6 +343,7 @@ internal sealed class SoundBlaster : ISoundSource
     {
         _sixteenBit = sixteenBit;
         _halveRate = halveRate;
+        _ended = 0;
         UpdateStep();
         _length = length;
         _bytesLeft = length;
@@ -419,6 +425,24 @@ internal sealed class SoundBlaster : ISoundSource
         _lastRight = _right16;
         if (!_playing || _paused)
         {
+            if (_ended > 0 && ++_ended > Math.Max(2, _rate / 50))
+            {
+                // a block ended a fiftieth of a second ago, and the converter still holds its
+                // last sample; but the card's output is coupled through a capacitor, which lets
+                // no steady level through, so what is heard of a held sample dies away. Without
+                // that, a driver that finds the card's interrupt by playing one sample of
+                // whatever is in memory, as Miles's does, leaves the speakers held hard over
+                // until the next sound. A program that plays one block after another starts the
+                // next long before this, and its sound is as it was
+                _left16 -= _left16 / 16;
+                _right16 -= _right16 / 16;
+                if (Math.Abs(_left16) < 16 && Math.Abs(_right16) < 16)
+                {
+                    _left16 = _right16 = 0;
+                    _ended = 0;
+                }
+            }
+
             return;
         }
 
@@ -478,6 +502,7 @@ internal sealed class SoundBlaster : ISoundSource
         {
             _playing = false;
             _silence = false;
+            _ended = 1;
         }
     }
 
