@@ -35,8 +35,9 @@ silence, as a Sound Blaster plays them. Every line starts at a multiple of 4,096
 header being filled out with FF and a line with silence.
 
 Nothing in the file says how fast it is played. The Sound Blaster's driver in the program
-has the RealSound speeds and no others, 16,572 a second and its half and so on, and the
-voices are the pitch of voices at the fastest of them and too low at the next.
+has a table of the speeds it can play at, as millionths of a second a sample: the four
+RealSound speeds, and 91 and 45, which are 10,989 and 22,222 a second. The speech is taken
+to be the last, 22,222, by ear: the call that plays a line hasn't been found.
 """
 
 from __future__ import annotations
@@ -140,7 +141,7 @@ def read_sound(data: bytes) -> Sound:
     return Sound(repeat, widths if end < 0 else widths[:end])
 
 
-SPEECH_RATE = round(TIMER_HZ / PULSE_TICKS)
+SPEECH_RATE = 1_000_000 // 45  # the Sound Blaster's time for a sample, 45 millionths of a second
 
 
 @dataclass(frozen=True)

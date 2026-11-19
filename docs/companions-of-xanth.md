@@ -420,15 +420,14 @@ is from its offset to the next and is the sound alone, a byte a sample with 128 
 silence, as a Sound Blaster plays it. Every line starts at a multiple of 4,096: the header
 is filled out with `FF`, and a line with silence.
 
-**How fast it plays is worked out, not read.** Nothing in the file says. The Sound
-Blaster's driver in the program takes its speeds from a table at `38AF:4218`, of 60, 120,
-181 and 241 millionths of a second a sample, which are the RealSound speeds: 16,572 a
-second, and that played two, three and four times over. The pitch of the voices, measured
-across the file, is mostly 140 to 180 a second at the fastest, which is a voice, and half
-that at the next, which isn't. So 16,572 it is taken to be, and the file is 191 minutes,
-with a line of seven seconds in the middle and one of nearly six minutes the longest. The
-call that plays a line, and so the speed it asks for, hasn't been found; nor has what
-gives a line its number.
+**How fast it plays is by ear, not read.** Nothing in the file says. The Sound Blaster's
+driver in the program takes its speeds from a table at `38AF:4218`, of millionths of a
+second a sample: 60, 120, 181 and 241, which are the RealSound speeds, and then 91 and 45,
+which are 10,989 and 22,222 a second. The pitch of the voices fits 16,572 and 22,222 both,
+and played at each, it is 22,222 that sounds right and 16,572 slow. At that the file is
+143 minutes, with a line of five seconds in the middle and one of nearly four and a half
+minutes the longest. The call that plays a line, and so the speed it asks for, hasn't been
+found; nor has what gives a line its number.
 
 The tools' `sounds` counts the lines, and with `--out` writes each as a WAV file.
 
