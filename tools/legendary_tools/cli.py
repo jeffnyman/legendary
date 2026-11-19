@@ -81,6 +81,7 @@ from .timers import (
     timer_code,
 )
 from .tour import CLICK, read_tour
+from .world32 import TYPE_NAMES, Thing, World
 
 
 def _program(folder: GameFolder) -> Program:
@@ -571,6 +572,9 @@ def _show_mouse(table: ObjectTable, found: GameObject) -> None:
 def verbs(args: argparse.Namespace) -> None:
     """The verbs of a game played with the mouse: each one's number and name, and the pairs it takes."""
     folder = GameFolder(args.folder)
+    if linear := _linear(folder):
+        _verbs_32(World(linear, folder.read(folder.one("object.dat"))))
+        return
     table = _object_table(folder, _program(folder))
     if not table.verbs:
         raise ValueError(f"{args.folder}: the game has no table of verbs")
@@ -658,9 +662,94 @@ def _show_object(program: Program, table: ObjectTable, found: GameObject) -> Non
     print("  record: " + " ".join(words))
 
 
+def _verbs_32(world: World) -> None:
+    """Mission Critical's verbs: each one's action, and how many objects have it."""
+    takes = {0: "nothing", 1: "an object", 2: "two objects"}
+    for verb in world.verbs:
+        own = sum(1 for thing in world.objects if thing.action == verb.action)
+        listed = sum(1 for thing in world.objects if verb.action in thing.actions)
+        name = f"{verb.name} ... {verb.between}" if verb.between else verb.name
+        routine = f"{world.routines[verb.action]:08x}" if verb.action in world.routines else "no routine"
+        print(
+            f"{verb.number:3}  {name:22} takes {takes[verb.objects]:12} action {verb.action:2}"
+            f"  a click's on {own:3}, listed by {listed:3}  {routine}"
+        )
+
+
+def _show_thing(world: World, thing: Thing) -> None:
+    """One of Mission Critical's objects in full."""
+    names = {verb.action: verb.name for verb in reversed(world.verbs)}
+    print(f"{thing.number}  {thing.name or '(no name)'}")
+    if thing.second_name:
+        print(f"  also      {thing.second_name}")
+    print(f"  type      {thing.type}, a {TYPE_NAMES.get(thing.type, 'kind not known')}")
+    print(f"  record    {len(thing.record)} bytes at {thing.address:08x}: {thing.record.hex(' ')}")
+    flags = [str(flag) for flag in range(len(world.flags)) if world.has_flag(thing, flag)]
+    print(f"  flags     {', '.join(flags) or 'none'}")
+    if thing.place:
+        print(f"  in        {thing.place} {world.get(thing.place).name}, on its list {thing.relation}")
+    for index, first in enumerate(thing.lists):
+        members = ", ".join(f"{member.number} {member.name}" for member in world.on_list(first))
+        if members:
+            print(f"  list {index}    {members}")
+    if thing.action:
+        print(f"  a click   {names.get(thing.action, thing.action)}")
+    if thing.actions:
+        print(f"  offers    {', '.join(str(names.get(action, action)) for action in thing.actions)}")
+    if thing.routine:
+        print(f"  routine   {thing.routine}")
+    for direction, file, picture in thing.views:
+        print(f"  facing {DIRECTIONS[direction]}: picture {picture} of file {file}")
+    for way in thing.exits:
+        where = f"{way.target} {world.get(way.target).name}" if way.kind == 1 else f"routine {way.target}"
+        facing = f", facing {DIRECTIONS[way.facing]}" if 0 < way.facing < len(DIRECTIONS) else ""
+        print(f"  {DIRECTIONS[way.direction]}: {where}{facing}")
+
+
+def _objects_32(args: argparse.Namespace, world: World) -> None:
+    """Mission Critical's objects: all of them, one in full, or the rooms with what's in them."""
+    if args.number is not None:
+        _show_thing(world, world.get(args.number))
+        return
+    if args.tree:
+        shown: set[int] = set()
+
+        def show(thing: Thing, depth: int) -> None:
+            if thing.number in shown:
+                return
+            shown.add(thing.number)
+            print(f"{'  ' * depth}{thing.number} {thing.name}")
+            for first in thing.lists:
+                for member in world.on_list(first):
+                    show(member, depth + 1)
+
+        for thing in world.objects:
+            if thing.type == 1:
+                show(thing, 0)
+        return
+    if args.saved:
+        raise ValueError("--saved isn't read for a 32-bit program yet")
+    print(
+        "types: "
+        + "; ".join(
+            f"{kind}: {size} bytes, {places} places, {lists} lists"
+            for kind, (places, lists, size) in sorted(world.types.items())
+        )
+    )
+    print(f"{world.count} objects, {len(world.flags)} flags, {len(world.verbs)} verbs")
+    for thing in world.objects:
+        where = f"  in {thing.place} {world.get(thing.place).name}" if thing.place else ""
+        print(
+            f"{thing.number:4}  {thing.type}  {thing.name or '(routine ' + str(thing.routine) + ')'}{where}"
+        )
+
+
 def objects(args: argparse.Namespace) -> None:
     """The game's objects as it starts: all of them, one in full, or the rooms with what's in them."""
     folder = GameFolder(args.folder)
+    if linear := _linear(folder):
+        _objects_32(args, World(linear, folder.read(folder.one("object.dat"))))
+        return
     program = _program(folder)
     vocabulary = folder.find("vocab.dat")
     table = _object_table(folder, program, data.vocabulary(folder.read(vocabulary)) if vocabulary else None)

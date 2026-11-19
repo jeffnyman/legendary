@@ -101,6 +101,8 @@ address from `thunks` and no overlay, `dis` loads the overlay that routine is in
 python -m legendary_tools dis ../../legend/sc101/game 3670:054e
 ```
 
+- **`objects`** reads [*Mission Critical*'s](../docs/mission-critical.md#the-objects) too, from
+  its 32-bit program: the list, one object in full with a room's views and exits, and `--tree`.
 - **`objects`** lists the game's objects as it starts, from the program's memory: each
   one's number, type, flags, names, and what it's in. It starts with the types. With a number,
   it prints that object in full: its flags, the nouns and adjectives it's called by, its routine,
@@ -221,7 +223,9 @@ python -m legendary_tools vocab <the game's folder>
 - **`verbs`** lists the verbs of a game played with the mouse,
   [*Companions of Xanth*](../docs/companions-of-xanth.md#the-verbs): each one's number,
   name and how many objects it takes, with how many objects have it as the verb a click
-  does and how many list it, and then the pairs of objects that verbs of two take.
+  does and how many list it, and then the pairs of objects that verbs of two take. For
+  [*Mission Critical*](../docs/mission-critical.md#the-verbs) it gives each verb's action and
+  the action's routine.
 - **`fonts`** lists the fonts in each `.FNT` file, which the games from *Spellcasting 301*
   have: how high each is, how many characters, and how wide. With `--out`, it writes each to
   the folder as two PNG files, all its characters and a line set in it. The format is in
