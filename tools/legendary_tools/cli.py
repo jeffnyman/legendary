@@ -475,7 +475,8 @@ def _routine_of(program: Program, number: int) -> str:
 def _show_mouse(table: ObjectTable, found: GameObject) -> None:
     """What a game played with the mouse keeps of an object: its picture and its verbs."""
     if found.picture:
-        print(f"  picture: {found.picture}")
+        # a picture's number is its file's and its place in the file: all are of file 1
+        print(f"  its icon: picture {found.picture & 0xFF} of file {found.picture >> 8}")
     if found.verb:
         print(f"  a click on it: {table.verb_name(found.verb)}")
     if found.verbs:

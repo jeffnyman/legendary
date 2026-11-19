@@ -374,8 +374,9 @@ class GameObject:
     also_here: list[tuple[int, bool]] = field(default_factory=list)
     seen_from: list[tuple[int, bool]] = field(default_factory=list)
     routine: int = 0  # the number of its routine, from 1, in a game that numbers them; 0 for none
-    # in a game played with the mouse: the picture shown for it, 0 for none; the verb a click
-    # on it does; and the other verbs it takes
+    # in a game played with the mouse: the small picture shown for it, its file's number times
+    # 256 and its place in the file, 0 for none; the verb a click on it does; and the other
+    # verbs it takes
     picture: int = 0
     verb: int = 0
     verbs: list[int] = field(default_factory=list)
