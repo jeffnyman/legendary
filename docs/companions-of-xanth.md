@@ -557,7 +557,14 @@ keeps no time of day, and the watch says the turn alone.
 **It needs nothing new of the PC.** As *Gateway II* does, it asks for its files at
 `D:\XANTH\` and keeps its saved games in `C:\XANTH\`, and the player makes both the
 game's own folder. It takes the mouse through a handler of its own, which draws the
-pointer, and Escape cuts short each line of the demons' wager that the game opens with.
+pointer, and Escape cuts short the demons' wager that the game opens with, and then its
+titles.
+
+**Its Sound Blaster has to be on the IRQ its settings say.** `LEGEND.INI` has `SOUND=BLASTER
+7 220`, which the installer wrote from the card's jumpers, and the game waits on IRQ 7 for
+each block of a line of speech to end. The PC's card was always on IRQ 5, and the game
+spoke the first three quarters of a second of the demons' first line and stopped. The
+card's IRQ can now be set, and the player sets it from the game's settings.
 
 **The game says how fast its speech is.** It reads a line from `XANTH_01.VOC` 16,384
 bytes at a time and gives each to the Sound Blaster at 22,222 samples a second, which is
