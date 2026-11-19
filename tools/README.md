@@ -153,8 +153,10 @@ python -m legendary_tools dis ../../legend/sc101/game 3670:054e
   [a name for each](../docs/timequest.md#what-each-timer-does), and
   [*Spellcasting 301*'s](../docs/spellcasting-301.md#what-each-timer-does) 65,
   [*Gateway*'s](../docs/gateway.md#what-each-timer-does) 108 and
-  [*Eric the Unready*'s](../docs/eric-the-unready.md#what-each-timer-does) 72 and
-  [*Gateway II*'s](../docs/gateway-ii.md#what-each-timer-does) 58.
+  [*Eric the Unready*'s](../docs/eric-the-unready.md#what-each-timer-does) 72,
+  [*Gateway II*'s](../docs/gateway-ii.md#what-each-timer-does) 58 and
+  [*Companions of Xanth*'s](../docs/companions-of-xanth.md#the-timers) 45, of which 27 have
+  a name.
 
 - **`sentence`** prints the grammar the parser matches a command against, rule by rule, with
   the names the program has for the rules: `<noun_phrase> ::= <pe_article>

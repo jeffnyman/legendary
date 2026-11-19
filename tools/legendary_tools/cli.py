@@ -23,6 +23,7 @@ from .flags import (
     GAME_GATEWAY,
     GAME_GATEWAY2,
     GAME_TIMEQUEST,
+    GAME_XANTH,
     describe_flag,
     flag_name,
     flag_uses,
@@ -71,6 +72,7 @@ from .timers import (
     TIMER_NAMES_GATEWAY,
     TIMER_NAMES_GATEWAY2,
     TIMER_NAMES_TIMEQUEST,
+    TIMER_NAMES_XANTH,
     timer_calls,
     timer_code,
 )
@@ -681,19 +683,23 @@ def _flag_said(table: ObjectTable, flag: int) -> str:
     return f"{name} (bit {bit}, for {types})"
 
 
-def flags(args: argparse.Namespace) -> None:
-    """The objects' flags: what has each as the game starts, and where the program tests or changes it."""
-    folder = GameFolder(args.folder)
-    program = _program(folder)
+def _table_and_shapes(folder: GameFolder, program: Program) -> tuple[ObjectTable, dict[int, str]]:
+    """The objects, and what each action is called: the command that makes it, or the verb."""
     if folder.ending("vocab.dat"):
         words = data.vocabulary(folder.read(folder.one("vocab.dat")))
         table = _object_table(folder, program, words)
         made = _shapes(read_grammar(program, words), words)
-        shapes = {number: found[0] for number, found in made.items()}
-    else:
-        # a game played with the mouse: its actions are its verbs
-        table = _object_table(folder, program)
-        shapes = {number: table.verb_name(number) for number in table.verbs}
+        return table, {number: found[0] for number, found in made.items()}
+    # a game played with the mouse: its actions are its verbs
+    table = _object_table(folder, program)
+    return table, {number: table.verb_name(number) for number in table.verbs}
+
+
+def flags(args: argparse.Namespace) -> None:
+    """The objects' flags: what has each as the game starts, and where the program tests or changes it."""
+    folder = GameFolder(args.folder)
+    program = _program(folder)
+    table, shapes = _table_and_shapes(folder, program)
     names = {found.number: found.name for found in table.objects}
     uses, missed = flag_uses(program, names, shapes)
     most = max(found.flag_count for found in table.objects)
@@ -726,10 +732,8 @@ def timers(args: argparse.Namespace) -> None:
     """The game's timers: each routine it puts by to run on a later turn, and who starts and stops it."""
     folder = GameFolder(args.folder)
     program = _program(folder)
-    words = data.vocabulary(folder.read(folder.one("vocab.dat")))
-    table = _object_table(folder, program, words)
+    table, shapes = _table_and_shapes(folder, program)
     names = {found.number: found.name for found in table.objects}
-    shapes = {number: made[0] for number, made in _shapes(read_grammar(program, words), words).items()}
     calls = timer_calls(program, names, shapes)
     # the names of the numbers are each game's own
     numbered = {
@@ -739,6 +743,7 @@ def timers(args: argparse.Namespace) -> None:
         GAME_GATEWAY: TIMER_NAMES_GATEWAY,
         GAME_ERIC: TIMER_NAMES_ERIC,
         GAME_GATEWAY2: TIMER_NAMES_GATEWAY2,
+        GAME_XANTH: TIMER_NAMES_XANTH,
     }.get(table.game or "", {})
     found = sorted({(call.number or 0, call.timer) for call in calls if call.timer})
     for number, timer in found:

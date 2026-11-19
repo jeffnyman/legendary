@@ -116,6 +116,9 @@ _FRAMELESS = b"\x33\xc0\x9a"
 _FRAMELESS_UNCHECKED = b"\xb8\x40\x00\x50\x2b\xc0\x50"
 # and the same from the later compiler, which clears a register with xor
 _FRAMELESS_UNCHECKED_LATER = b"\xb8\x40\x00\x50\x33\xc0\x50"
+# Companions of Xanth's clears the table itself: push di / xor ax,ax / mov es,[variable] /
+# mov cx,20h / mov di,<table> / rep stosw
+_CLEARS_ITSELF = re.compile(rb"\x57\x33\xc0\x8e\x06..\xb9\x20\x00\xbf..\xf3\xab", re.DOTALL)
 _NOTICE = b"MS Run-Time Library"
 
 
@@ -175,6 +178,14 @@ def find_timers(program: Program) -> Timers:
         for match in re.finditer(re.escape(_PROLOGUE), root[:runs])
         if match.start() >= segment * 16
     ]
+    if len(starts) > len(_KINDS):
+        # Companions of Xanth has them in a segment with most of its code: the four before
+        # the one that runs them, and before those the one that empties the table
+        starts = starts[-len(_KINDS) :]
+        cleared = [found.start() for found in _CLEARS_ITSELF.finditer(root, segment * 16, starts[0])]
+        if not cleared:
+            raise ValueError("the routine that empties the timers' table wasn't found")
+        return Timers(segment, {cleared[-1]: "empties", **dict(zip(starts, _KINDS))}, tuple(numbered))
     empties = root.find(_FRAMELESS, segment * 16, starts[0] if starts else runs)
     for other in (_FRAMELESS_UNCHECKED, _FRAMELESS_UNCHECKED_LATER):
         if empties < 0:
@@ -718,6 +729,38 @@ TIMER_NAMES_GATEWAY2 = {
     56: "the radio's messages, turn by turn",
     57: "the hijacking's own",
     58: "a strange creature emerges",
+}
+
+
+# Companions of Xanth's, by number: those whose routine says what it is, by what it prints
+TIMER_NAMES_XANTH = {
+    2: "the courier brings the package",
+    3: "the telephone rings",
+    5: "a companion beckons through the cavern door",
+    6: "the cherry bomb goes off",
+    8: "the butter melts",
+    9: "doubts about the companion chosen",
+    12: "a cough drop falls from the bush",
+    13: "Edsel's offer refused: the game is lost",
+    14: "the eye scream melts",
+    15: "a door shimmers in the desert",
+    20: "the firefly escapes in the barrow",
+    25: "the agony moss's pain",
+    26: "the cracker dough in the oven",
+    27: "the firecracker explodes",
+    28: "the wineskin, given and snatched back",
+    31: "the well overflows",
+    32: "the virus stops Com-Pewter",
+    34: "the sword waved in the desert",
+    35: "the castle's little door slams closed",
+    36: "Jenny's song",
+    37: "the cricket at the pier",
+    38: "the Gap Dragon comes nearer",
+    39: "Stanley's firestorm",
+    40: "Fracto's snowstorm",
+    42: "the telephone rings, as the game starts",
+    43: "Kim takes The Prize",
+    44: "a voice from Nada's arms in the dungeon",
 }
 
 
