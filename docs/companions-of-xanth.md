@@ -328,6 +328,10 @@ be the shape of the thing: 591 of this game's 728 regions are, the longest of 80
 and 678 of *Gateway II*'s 797. Read this way every picture's regions end where the next
 picture's start, in every file of both games.
 
+The player's side reads them too, and the game bears the reading out: the tour clicks the
+Post-It at 235, 71 on the screen, the picture starts at 51, 4, and the last region of the
+bedroom's that has that place in it is the Post-It's outline.
+
 ### The parts of the screen
 
 The screen is 320 by 200, and the routine at `08A7:09AC`, called after each turn, lays it
