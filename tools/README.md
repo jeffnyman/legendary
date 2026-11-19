@@ -220,6 +220,9 @@ python -m legendary_tools vocab <the game's folder>
 - **`animations`** lists the animations among a game's `.PIC` files, which *Gateway II*
   has: Autodesk Animator's `.FLI` files, each with its frames, size and length. With
   `--out`, it writes each to the folder as an animated PNG file, which a browser plays.
+- **`flags`** reads [*Mission Critical*'s](../docs/mission-critical.md#the-flags) too: each
+  flag's name where it's known, its bit and types, what starts with it, and how often the
+  program tests, sets and clears it.
 - **`scenes`** lists [*Mission Critical*'s filmed scenes](../docs/mission-critical.md#the-filmed-scenes),
   its `.Q` files: each one's version, frames, length, and whether it has sound. With a name,
   as `mc700`, only that one. With `--out`, it writes each as an animated PNG file, which a

@@ -51,6 +51,32 @@ _EXITS = re.compile(rb"\x8a\x83(....)\x88\x44\x24.\x31\xc0\x8a\x93....\x66\x8b\x
 # add eax,eax / sub eax,2 / add eax,<lists>: where an object's list of actions starts
 _ACTION_LISTS = re.compile(rb"\x01\xc0\x83\xe8\x02\x05(....)", re.DOTALL)
 
+# what each flag is, where the program's use of it says. 1 to 4 are how a name is written and
+# 19 picks `herself`; Open asks 12 and sets 16 and 5, and Close clears 16; Look in asks 13 and
+# 16; 17 is every room and 20 both people. 10 is tested, set and cleared
+# by the objects' own routines and nothing else, as the game before's flag 10 is
+FLAG_NAMES = {
+    1: "takes some",
+    2: "its name takes no article",
+    3: "plural",
+    4: "its name takes an",
+    5: "touched",
+    6: "seen",
+    10: "its routine's own mark",
+    12: "can be opened and closed",
+    13: "can be seen through",
+    16: "open",
+    17: "a room",
+    18: "things can be on it",
+    19: "female",
+    20: "a person",
+}
+
+# call <test>, <set> or <clear> with the flag's number just put in EDX
+_FLAG_USE = re.compile(
+    rb"\xba(.)\x00\x00\x00(?:\x31\xc0)?(?:\x66\xa1....|\x66\x8b.{1,6}?|\x89.|\xb8....)?\xe8(....)", re.DOTALL
+)
+
 TYPE_NAMES = {1: "room", 2: "thing", 3: "holder", 4: "fixture", 5: "person", 6: "routine alone"}
 
 
@@ -218,8 +244,25 @@ class World:
         return self.objects[number - 1]
 
     def has_flag(self, thing: Thing, flag: int) -> bool:
-        bit, kinds = self.flags[flag]
+        """Whether an object has a flag; they are numbered from 1, as the program numbers them."""
+        bit, kinds = self.flags[flag - 1]
         return bool(kinds >> (thing.type - 1) & 1 and thing.flags >> bit & 1)
+
+    def flag_uses(self) -> dict[int, list[int]]:
+        """For each flag, how often the program tests, sets and clears it by its number."""
+        code = next(each for each in self.program.objects if each.is_code)
+        contents = self.program.contents(code)
+        # the three routines: each asks for the flag's place, masks by its bit, and differs after
+        routines = [
+            code.base + found.start()
+            for found in re.finditer(rb"\x53\x51\x83\xec\x04\x81\xe2\xff\xff\x00\x00", contents)
+        ][:3]
+        uses = {flag: [0, 0, 0] for flag in range(1, len(self.flags) + 1)}
+        for found in _FLAG_USE.finditer(contents):
+            target = code.base + found.end() + struct.unpack("<i", found[2])[0]
+            if target in routines and found[1][0] in uses:
+                uses[found[1][0]][routines.index(target)] += 1
+        return uses
 
     def on_list(self, first: int) -> list[Thing]:
         """The objects on a list, from its first."""

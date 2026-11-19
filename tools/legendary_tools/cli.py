@@ -82,6 +82,7 @@ from .timers import (
     timer_code,
 )
 from .tour import CLICK, read_tour
+from .world32 import FLAG_NAMES as FLAG_NAMES_32
 from .world32 import TYPE_NAMES, Thing, World
 from .xmi import read_xmi
 
@@ -664,6 +665,22 @@ def _show_object(program: Program, table: ObjectTable, found: GameObject) -> Non
     print("  record: " + " ".join(words))
 
 
+def _flags_32(world: World) -> None:
+    """Mission Critical's flags: each one's bit and types, what starts with it, and how often it's used."""
+    uses = world.flag_uses()
+    for flag, (bit, kinds) in enumerate(world.flags, 1):
+        types = ", ".join(str(kind) for kind in sorted(world.types) if kinds >> (kind - 1) & 1)
+        have = [thing for thing in world.objects if world.has_flag(thing, flag)]
+        tested, set_, cleared = uses[flag]
+        print(f"flag {flag}: {FLAG_NAMES_32.get(flag, 'not known')}")
+        print(f"  bit {bit}, for types {types}; tested {tested} times, set {set_}, cleared {cleared}")
+        some = ", ".join(f"{thing.number} {thing.name}" for thing in have[:8])
+        print(
+            f"  {len(have)} objects start with it"
+            + (f": {some}" + (", ..." if len(have) > 8 else "") if have else "")
+        )
+
+
 def _verbs_32(world: World) -> None:
     """Mission Critical's verbs: each one's action, and how many objects have it."""
     takes = {0: "nothing", 1: "an object", 2: "two objects"}
@@ -686,7 +703,11 @@ def _show_thing(world: World, thing: Thing) -> None:
         print(f"  also      {thing.second_name}")
     print(f"  type      {thing.type}, a {TYPE_NAMES.get(thing.type, 'kind not known')}")
     print(f"  record    {len(thing.record)} bytes at {thing.address:08x}: {thing.record.hex(' ')}")
-    flags = [str(flag) for flag in range(len(world.flags)) if world.has_flag(thing, flag)]
+    flags = [
+        f"{flag} ({FLAG_NAMES_32[flag]})" if flag in FLAG_NAMES_32 else str(flag)
+        for flag in range(1, len(world.flags) + 1)
+        if world.has_flag(thing, flag)
+    ]
     print(f"  flags     {', '.join(flags) or 'none'}")
     if thing.place:
         print(f"  in        {thing.place} {world.get(thing.place).name}, on its list {thing.relation}")
@@ -871,6 +892,9 @@ def _table_and_shapes(folder: GameFolder, program: Program) -> tuple[ObjectTable
 def flags(args: argparse.Namespace) -> None:
     """The objects' flags: what has each as the game starts, and where the program tests or changes it."""
     folder = GameFolder(args.folder)
+    if linear := _linear(folder):
+        _flags_32(World(linear, folder.read(folder.one("object.dat"))))
+        return
     program = _program(folder)
     table, shapes = _table_and_shapes(folder, program)
     names = {found.number: found.name for found in table.objects}
