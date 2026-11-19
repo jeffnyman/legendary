@@ -213,12 +213,51 @@ program of the day could play, and says for itself: one channel, 16 bits, 22,050
 second. A line starts at a multiple of 2,048, a CD's sector, and zeros fill it out after
 its WAVE ends. The tools' `sounds` counts them and, with `--out`, writes each as it is.
 
-Which text a line speaks is in the program, not the file, and isn't followed yet. The
-routine at `00084200` looks a line's number up in the file's offsets, and seven places call
-it. One of them takes the number from a table at `000d6302`, 412 entries of five bytes: a
-word from 8002h to 8057h, a byte counting up from 0 under each, and a line, 567 to 977. That
-reads as 86 conversations and what is said in each, but what the word and the byte are
-hasn't been found.
+### What a line says
+
+Which text a line speaks is in the program, not the file, as it is in *Companions of
+Xanth*, and the two games keep their talk much the same way. The routine at `000847d0`
+speaks a line by its number, and `00084200` looks the number up in the file's offsets.
+
+*Mission Critical* speaks both sides of a conversation. What is said back to the player is
+a table at `000d396c`, 545 records of eight bytes: the second word is a text's number and
+the third leads on to what can be said next. A record's place in the table is the number
+of its sound, so lines 0 to 544 are these, and 363 of them have a sound.
+
+What the player can say is in sets. A set is five bytes at `000d56c0`: how many things,
+where the first is in a table of four bytes a thing at `000d4c8a`, and a routine's number.
+A thing is a text's number and where it leads: to a record of the first table, or, from
+8000h, to another set. There are 113 sets. The player's own lines are spoken, which
+*Companions of Xanth*'s are not, and a table at `000d6302` says which sound each is: 412
+entries of five bytes, the set as 8000h and its number, which thing of the set, and the
+line. Those are lines 567 to 977, and 385 have a sound.
+
+A text's number is a place in a table of four bytes at `000d2688`. An entry there is F0h in
+its top byte with a block of `MCSTR.DAT` and a string of it below, here block 0;
+or, for a few, the address of text in the program. From 8000h a number is a routine that
+makes the text, as it is in the earlier game.
+
+So line 0 is the door of a stateroom that isn't yours, `This stateroom is protected by
+the Privacy Laws`; line 577 is the player asking `What is Damage Control Condition Zebra?`;
+and line 17 is the answer, `Condition Zebra is the most serious of the four damage
+containment and control procedures`. How long each text is goes with how long its line
+lasts: over the 363 replies the two correlate at 0.99.
+
+The other lines, 545 to 566 and 978 up, are named in the code where they are spoken, and
+few are followed. Where the program shows a text and speaks a line there and then, with
+nothing between, the text's number is pushed for the routine that shows it and the line's
+number put in EAX for `000847d0` straight after, and the tools read those: four lines. The
+credits that open the game have a table of their own at `000dcc54`, a line and the address
+of its text, eight bytes each, which isn't read.
+
+| Lines | What | Have a sound | Text known |
+|---|---|---|---|
+| 0 to 544 | What is said back | 363 | 363 |
+| 545 to 566 | Not found | 17 | 0 |
+| 567 to 977 | What the player says | 385 | 385 |
+| 978 to 1,295 | Named in the code | 312 | 4 |
+
+That is 752 of the 1,077. `speech` lists every line with what it says.
 
 ## Running it
 
@@ -315,5 +354,5 @@ it. That is as far as it has been taken: nothing has been clicked.
 ## Still to do
 
 Everything but the above: which picture each change is to, and kind 4; the music; what
-each line of speech says; the filmed scenes; the objects and the verbs; the variables'
+the 325 lines of speech named in the code say; the filmed scenes; the objects and the verbs; the variables'
 names; the battle game; and playing it past its first picture.
