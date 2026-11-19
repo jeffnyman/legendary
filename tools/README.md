@@ -225,7 +225,9 @@ python -m legendary_tools vocab <the game's folder>
 - **`fonts`** lists the fonts in each `.FNT` file, which the games from *Spellcasting 301*
   have: how high each is, how many characters, and how wide. With `--out`, it writes each to
   the folder as two PNG files, all its characters and a line set in it. The format is in
-  [the notes](../docs/spellcasting-301.md#the-fonts).
+  [the notes](../docs/spellcasting-301.md#the-fonts), and what
+  [*Mission Critical*'s add to it](../docs/mission-critical.md#the-fonts): fonts with one
+  table, and one in colors.
 - **`music`** lists the songs in each `.MUS` file: each one's size and which of its two
   formats it's in, with a MIDI file's track names. With `--out`, it writes each to the folder
   as it is, a `.mid` file for the MT-32 and, for the AdLib, a `.rol` file in *Spellcasting
