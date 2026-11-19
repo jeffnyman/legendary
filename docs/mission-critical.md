@@ -63,9 +63,10 @@ UniVBE 5.1, and a demo of *Shannara*.
 | [The fonts](#the-fonts) | 13 |
 | [The pictures](#the-pictures) | 40 files, 2,984 pictures |
 | [The speech](#the-speech) | 3 files, 1,077 lines, two hours |
+| [The objects](#the-objects) | 872, in six types |
+| [The verbs](#the-verbs) | 58, each making an action of its own |
 
-And what they don't: the music, which is no longer in `.MUS` files; the speech and the filmed
-scenes; and the objects, whose table has to be found in the program first.
+And what they don't: the music, which is no longer in `.MUS` files, and the filmed scenes.
 
 ## How the program is built
 
@@ -119,6 +120,120 @@ The data starts with names that no earlier game had in it: `Debris Cut`, `Bomb A
 the story's variables under the names its writers gave them, kept for a debugging screen.
 After them are the verbs, `Activate`, `Analyze`, `Ascend`, as *Companions of Xanth* has
 them. Neither has been followed yet.
+
+## The objects
+
+The world is the earlier games' world of objects, and is kept as
+[*Companions of Xanth*](companions-of-xanth.md) keeps its own. Its tables are not in the
+program's data but in its code object, where Watcom puts what never changes; the records
+they point to are in the data. Three tables stand one after another, at `0001a620`:
+
+| Table | An entry | What |
+|---|---|---|
+| The types | 3 bytes, 6 of them | How many places an object of the type can be in, how many lists of other objects it can hold, and its record's size |
+| The flags | 3 bytes, 20 of them | Which bit of a record's two bytes of flags, and a word with a bit for each type that has it |
+| The objects | 5 bytes, 872 of them | An object's type, and the address of its record |
+
+A word after them, at `0001b778`, is the count of objects, and they are numbered from 1.
+
+| Type | Size | Places | Lists | How many | What it reads as |
+|---|---|---|---|---|---|
+| 1 | 31 | 0 | 1 | 200 | A room |
+| 2 | 25 | 1 | 1 | 213 | A thing |
+| 3 | 29 | 1 | 2 | 111 | A thing that holds others |
+| 4 | 14 | 0 | 1 | 270 | A fixture, which is nowhere and so everywhere it's wanted |
+| 5 | 27 | 1 | 3 | 2 | A person: you, and Tran |
+| 6 | 2 | 0 | 0 | 76 | A routine's number and nothing else |
+
+The names of the types are a reading of what has them, not the program's.
+
+A record of types 1 to 5 starts with two words, where the object's name and its second
+name start in `OBJECT.DAT`, counted from 1, and its two bytes of flags. What follows is the
+type's own, and comes from the routines at `00013890` to `00014430`, one to get and one to
+set each field, each with a table of where the field is for each type:
+
+| Field | Room | Thing | Holder | Fixture | Person |
+|---|---|---|---|---|---|
+| The object it's in, then which of that one's lists, a byte, then the next on the list | | 6 | 6 | | 6 |
+| The first object on each of its lists | 6 | 0Bh | 0Bh | 6 | 0Bh |
+| The action a click does | | 13h | 17h | 8 | 15h |
+| Where its list of actions starts | | 15h | 19h | 0Ah | 17h |
+| Its routine's number | 18h | 17h | 1Bh | 0Ch | 19h |
+| A room's four views | 8 | | | | |
+| How many exits, a byte, and the first's row | 1Ch | | | | |
+
+Some words between those are read and written by routines too, and what they are for
+isn't known: at 0Dh and 0Fh in a thing, 0Fh, 11h and 13h in a holder, 11h in a person,
+and one at 1Ah, 11h, 15h and 13h in a room, a thing, a holder and a person.
+
+So object 1 is `you`, also `me`, a person in room 147, a Corridor, carrying the Captain's
+note. A click on you is Talk to. The objects' routines are numbered to 734, as each
+came to be written: yours is 1.
+
+### The rooms
+
+The game is seen through your eyes, and a room is what is seen from one place, facing one
+way or another. A room has up to four views, four bytes each: the direction faced, and a
+picture, as the number of its `.PIC` file and its number in that. The Bridge Entrance
+faces south with picture 2 of `MC002.PIC`, the door, and north with picture 4. There are
+444 views in the 200 rooms.
+
+A room's exits are rows of one table, ten bytes each, at `0001b77c`, the room holding how
+many it has and its first row. A row is the direction, a kind, a word, and for some a
+second word that reads as the direction faced on arriving. Kind 1 is a room, and 313 of the
+439 exits are that; kind 4 is a routine, the other 126, which the routine at `00019370`
+calls to say whether the way is open and where it goes. Northeast from the Bridge Entrance
+is the Bridge. The directions are the earlier games' twelve: the compass's eight, up, down,
+in and out.
+
+The room you are in is the word at `000cc624`.
+
+### The state it starts from
+
+The routine at `0001dc7c` writes the state and reads it, and its list of what to write
+accounts for `RESTART.DAT` to the byte:
+
+| Bytes | What |
+|---|---|
+| 32 | That start it |
+| 18,730 | The records of the 872 objects |
+| 3,066 | 77 saved variables, a table of each one's address and size at `00016880` |
+| 4 | A long at `000cc58c` |
+| 48 | At `000e2b88` |
+
+21,880 in all. The largest variable is 545 bytes at `000d374a`, a byte for each thing
+that [can be said back to you](#what-a-line-says).
+
+`objects` lists them, shows one in full, and with `--tree` shows each room with what is in
+it.
+
+## The verbs
+
+The verbs are a table of eleven bytes each at `000171e0`, 58 of them: the address of the
+verb's name, of the word that goes between its two objects, or nothing, how many objects
+it takes, and the number of the action it makes.
+
+```
+  1  Activate               takes an object    action 30
+  2  Analyze ... with       takes two objects  action 54
+ 26  Look at                takes an object    action  1
+ 51  Take                   takes an object    action  2
+ 58  Wait                   takes nothing      action 11
+```
+
+After them are the actions' routines, six bytes each, an action's number and the address
+of its routine: 61 of them. Every action a verb makes has one but Pour ... on, and four
+have a routine and no verb: 10, 12, 14 and 15.
+
+An object names actions, not verbs. It has the one a click on it does, which for 512 of
+the objects is Look at, for 52 Open, and for 14 Use. And it has where its own list starts
+in one table of words for every object, at `000cc86c`, each list ending in a zero: the
+actions it offers when it's clicked. 343 objects have a list. This is the list the
+[guided tour](#what-the-tools-read-as-it-is) shows: click the Emergency Stores Cabinet,
+and its verbs appear.
+
+`verbs` lists them, with each one's action and its routine, and how many objects have it
+as a click's action or on their list.
 
 ## The pictures
 
@@ -354,5 +469,5 @@ it. That is as far as it has been taken: nothing has been clicked.
 ## Still to do
 
 Everything but the above: which picture each change is to, and kind 4; the music; what
-the 325 lines of speech named in the code say; the filmed scenes; the objects and the verbs; the variables'
-names; the battle game; and playing it past its first picture.
+the 325 lines of speech named in the code say; the filmed scenes; what an action's routine and an object's do, and the
+fields of a record not yet named; the flags' and the variables' names; the battle game; and playing it past its first picture.

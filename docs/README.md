@@ -54,7 +54,8 @@ hold.
   three CDs of speech and filmed scenes; and text, regions and a guided tour that are read
   by what reads *Companions of Xanth*'s. Its 2,984 pictures are packed as LHA packs a file,
   and two in three of them are changes to another picture, to be exclusive-ored over it.
-  Its speech is 1,077 lines, each a WAVE file, and its talk is kept as *Companions of
+  Under the mouse it is still the world of objects: 872 of them, 58 verbs, and rooms that
+  are views. Its speech is 1,077 lines, each a WAVE file, and its talk is kept as *Companions of
   Xanth*'s is, with the player's own side spoken too. It runs, on the PC's DPMI host, once that lets it
   emulate an 8087, and the card has VESA's 640 by 480.
 - [Spellcasting 201: The Sorcerer's Appliance](spellcasting-201.md): 1991. The same system,
