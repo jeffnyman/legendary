@@ -66,7 +66,7 @@ from .regions import read_regions
 from .rtlink import RtlinkProgram, is_rtlink, library_name
 from .sentence import read_sentence_grammar
 from .sound import read_songs, read_sound, read_speech
-from .speech import speech_texts
+from .speech import speech_texts, speech_texts_32
 from .timers import (
     EVERY_TURN,
     TIMER_NAMES,
@@ -966,23 +966,22 @@ def pictures(args: argparse.Namespace) -> None:
 def speech(args: argparse.Namespace) -> None:
     """The lines of the game's speech, in its .VOC file: how long each is, and what it says."""
     folder = GameFolder(args.folder)
-    # a 32-bit program names its lines some other way, not yet found
-    texts = (
-        {}
-        if folder.linear_program()
-        else speech_texts(_program(folder), data.StringFile(folder.read(folder.one("str.dat"))))
-    )
+    text_file = data.StringFile(folder.read(folder.one("str.dat")))
+    linear = _linear(folder)
+    texts = speech_texts_32(linear, text_file) if linear else speech_texts(_program(folder), text_file)
     files = folder.ending(".voc")
+    every: set[int] = set()
     for path in files:
         lines = read_speech(path)
         spoken = [line for line in range(len(lines)) if lines.seconds(line)]
+        every.update(spoken)
         if len(files) > 1:
             print(os.path.basename(path))
         for line in spoken:
             said = _shown(texts[line], 90) if line in texts else "(its text isn't known)"
             print(f"{line:4}  {lines.seconds(line):5.1f}s  {said}")
-        known = sum(1 for line in spoken if line in texts)
-        print(f"\n{len(spoken)} lines; the text of {known} is known", file=sys.stderr)
+    known = sum(1 for line in every if line in texts)
+    print(f"\n{len(every)} lines; the text of {known} is known", file=sys.stderr)
 
 
 def tour(args: argparse.Namespace) -> None:

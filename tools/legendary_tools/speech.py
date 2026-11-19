@@ -15,6 +15,20 @@ pointer to its text.
 
 The rest are named in the code where they are said, a constant put in the word the game
 keeps for the line to speak, and those aren't followed here.
+
+Mission Critical talks the same way, and speaks both sides. What is said back to the player
+is a table of records of eight bytes, the second word the text's number and the third what
+can be said next; a record's own place in the table is the number of its sound, as it is in
+Companions of Xanth. What the player can say is in sets: a set is five bytes, how many
+things, where the first is in a table of four bytes a thing, a text's number and where it
+leads, and a routine's number. The player's own lines are spoken too, and a table of five
+bytes says which sound each is: the set, as 8000h and its number, which thing of the set,
+and the line. A text's number is a place in a table of four bytes: F0h in the top byte with
+a block and a string of the text file below it, or the address of text in the program.
+
+And where the program shows a text and speaks a line there and then, the two are side by
+side in the code: the text's number pushed for the routine that shows it, and the line's put
+in EAX for the one that speaks it.
 """
 
 from __future__ import annotations
@@ -23,6 +37,7 @@ import re
 import struct
 
 from .data import StringFile
+from .le import LeExecutable
 from .program import Program
 
 # cmp [bp+6],8000h / jb <a text> / ... / mov es,[variable] / mov bx,[bp+6] / add bx,bx /
@@ -91,4 +106,101 @@ def speech_texts(program: Program, strings: StringFile) -> dict[int, str]:
                 said = text(memory, at + 2)
                 if said is not None and len(said) > 1:
                     found[line] = said
+    return found
+
+
+# cmp bx,[eax+table] / jne / cmp dl,[eax+table+2] / jne / mov ax,[eax+table+3] / pop ebx / ret /
+# add eax,5 / cmp eax,<size>: the line the player speaks, by its set and which thing of it
+_SPOKEN = re.compile(
+    rb"\x66\x3b\x98(....)\x75.\x3a\x90....\x75.\x66\x8b\x80....\x5b\xc3\x83\xc0\x05\x3d(....)", re.DOTALL
+)
+# cmp eax,8000h / jb / call [edx+routines] / pop edx / ret / mov eax,[edx+texts]: a text by its number
+_TEXTS_32 = re.compile(rb"\x3d\x00\x80\x00\x00\x72\x08\xff\x92....\x5a\xc3\x8b\x82(....)", re.DOTALL)
+# mov edx,<sets> / lea eax,[eax+eax*4] / ... / mov ax,[edx+1] / mov edx,<things>: a set, and its things
+_SETS = re.compile(rb"\xba(....)\x8d\x04\x80.{0,24}?\x66\x8b\x42\x01\xba(....)\xc1\xe0\x02", re.DOTALL)
+# mov ebp,<replies> / shl edx,3: what is said back, eight bytes each
+_REPLIES = re.compile(rb"\xbd(....)\xc1\xe2\x03", re.DOTALL)
+# xor edx,edx / mov dx,[count] / cmp eax,edx / jae / add eax,<states>: how many of those there are
+_REPLY_COUNT = re.compile(rb"\x31\xd2\x66\x8b\x15(....)\x39\xd0\x73.\x05....\x59\x5b\xc3", re.DOTALL)
+# push <text> / call <show> / add esp,4 / xor edx,edx / mov eax,<line> / call <speak>
+_SHOWN_AND_SPOKEN = re.compile(
+    rb"\x68(...\xf0)\xe8....\x83\xc4\x04\x31\xd2\xb8(..)\x00\x00\xe8(....)", re.DOTALL
+)
+
+
+def speech_texts_32(program: LeExecutable, strings: StringFile) -> dict[int, str]:
+    """The text each line of Mission Critical's speech says, by the line's number, where it's known."""
+    code_object = next(each for each in program.objects if each.is_code)
+    code = program.contents(code_object)
+    blocks: dict[int, list[str]] = {}
+
+    def long_at(address: int) -> int:
+        return struct.unpack("<I", program.read(address, 4))[0]
+
+    def word_at(address: int) -> int:
+        return struct.unpack("<H", program.read(address, 2))[0]
+
+    def named(number: int) -> str | None:
+        """The text a number in the file's own form names: a block and a string."""
+        block, string = number >> 16 & 0xFF, number & 0xFFFF
+        if number >> 24 != 0xF0 or block >= len(strings.blocks):
+            return None
+        if block not in blocks:
+            blocks[block] = strings.strings(strings.block(block))
+        return blocks[block][string] if string < len(blocks[block]) else None
+
+    def text(number: int) -> str | None:
+        """A text by its number in the program's table; None for one a routine makes."""
+        if number >= 0x8000:
+            return None
+        found = long_at(texts + 4 * number)
+        if found >> 24 == 0xF0:
+            return named(found)
+        where = program.object_at(found)
+        if where is None or where.is_code:
+            return None
+        plain = program.read(found, 400).split(b"\0")[0]
+        return plain.decode("latin-1") if plain else None
+
+    found: dict[int, str] = {}
+    spoken, sets, replies, count, table = (
+        _SPOKEN.search(code),
+        _SETS.search(code),
+        _REPLIES.search(code),
+        _REPLY_COUNT.search(code),
+        _TEXTS_32.search(code),
+    )
+    if not (spoken and sets and replies and count and table):
+        return found
+    (texts,) = struct.unpack("<I", table[1])
+    # what is said back: a record's place is its line
+    (reply_at,) = struct.unpack("<I", replies[1])
+    for line in range(word_at(struct.unpack("<I", count[1])[0])):
+        said = text(word_at(reply_at + 8 * line + 2))
+        if said:
+            found[line] = said
+    # what the player says: the set, which thing of it, and the line
+    spoken_at, size = struct.unpack("<I", spoken[1])[0], struct.unpack("<I", spoken[2])[0]
+    set_at, thing_at = struct.unpack("<I", sets[1])[0], struct.unpack("<I", sets[2])[0]
+    for at in range(spoken_at, spoken_at + size, 5):
+        which, thing, line = struct.unpack("<HBH", program.read(at, 5))
+        if which < 0x8000 or not line:
+            continue
+        first = word_at(set_at + 5 * (which - 0x8000) + 1)
+        said = text(word_at(thing_at + 4 * (first + thing)))
+        if said:
+            found.setdefault(line, said)
+    # and the lines spoken where their text is shown
+    speakers: dict[int, int] = {}
+    pairs = []
+    for match in _SHOWN_AND_SPOKEN.finditer(code):
+        target = code_object.base + match.end() + struct.unpack("<i", match[3])[0]
+        speakers[target] = speakers.get(target, 0) + 1
+        pairs.append((target, struct.unpack("<I", match[1])[0], struct.unpack("<H", match[2])[0]))
+    # the routine that speaks is the one most of them call: another plays sounds by number
+    speak = max(speakers, key=lambda target: speakers[target]) if speakers else None
+    for target, number, line in pairs:
+        said = named(number)
+        if target == speak and said:
+            found.setdefault(line, said)
     return found
