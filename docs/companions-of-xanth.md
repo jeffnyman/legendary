@@ -6,7 +6,7 @@ pictures and on lists of verbs and things.
 
 This is the start of the first look: what is in the game's folder, what of it the tools
 already read, how its program is built, its objects, and the verbs it has in place of a
-parser. What is known for certain is said plainly; what
+parser, and how an action is performed. What is known for certain is said plainly; what
 is inferred says so. Addresses are `segment:offset` in hex, with segments relative to where
 the program loads. Every one of them can be looked at with the [tools](../tools/README.md).
 
@@ -207,11 +207,54 @@ a picture of another file, so it hasn't been seen to be anything else.
 The tools' `verbs` command lists the verbs and the pairs, and `objects` with a number says
 an object's icon, its own verb and its list.
 
+## Once a verb is settled
+
+**A verb is an action, and it is performed by the routine the games with a parser have.**
+Under the mouse and the pictures the game is the one Legend had been writing since
+*Spellcasting 101*: something makes an action and up to two objects, and a routine
+performs them, asking each object concerned and then the action itself. Here the something
+is a click where it was a sentence.
+
+The routine is at `08A7:3C27`, and it is *Gateway II*'s to its warning, `[Warning:
+infinite perform recursion terminated.]`, which this game has too.
+
+| What | Where |
+|---|---|
+| The routine that performs an action | `08A7:3C27` |
+| How many are being performed, one inside another | `38AF:0100` |
+| The action, a word now, where it was a byte | `38AF:6A06` |
+| Its object and its second object | `38AF:6A04`, `6A02` |
+| The routine that calls an object's routine | `08A7:711A` |
+| The routine that calls the one before an action | `08A7:54B4` |
+| The routine that calls an action's own | `08A7:54D9` |
+
+It makes the same ten calls in the same order: four to objects' routines, one to the
+routine that comes before the action, four more to objects', and the action's own, and
+stops at the first that answers.
+
+**An action's routine is found by the action's number**, in a table of six bytes each, the
+number and a far pointer, at `22F6:02C8`, between the verbs and the pairs. The games
+before went straight to the entry by the number. There are 88, every one in an overlay.
+Three verbs have none, `Enter`, `Mail` and `Press`, so what those do is all in the
+objects' routines; and two actions have a routine and no verb, 43 and 57, which are two
+of the three numbers the table of verbs leaves out, so they are done and never chosen.
+
+**Two actions have a routine that comes before**, `Give ... to` and `Put ... on`, called
+by a switch and not from a table.
+
+**An object's routine** is called by the number in its record, as from *Spellcasting
+301*, from a table of far pointers: 448 routines, for 492 of the 498 objects, in 45 of the
+70 overlays, which is likely why the overlays are small and many; that an overlay is a
+place and what is in it hasn't been checked.
+
+The tools' `verbs` lists each verb's routine, and `objects` with a number an object's.
+
 ## Still to do
 
 - The speech, `XANTH_01.VOC`, which is on the CD alone.
-- The exits' table, the routines' table and the flags' names.
-- How a verb and its objects, once chosen, are performed: the routine around `08A7:5700`
-  settles what is meant, and what it hands on to hasn't been followed.
+- The exits' table and the flags' names.
+- How a click becomes a verb and its objects: the routine around `08A7:5700` settles what
+  is meant, and what calls it, from the pictures' regions and the lists, hasn't been
+  followed.
 - The `.HLP` files.
 - The game hasn't been run on the PC.
