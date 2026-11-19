@@ -353,6 +353,12 @@ internal static class Program
             Composite = profile.Composite ?? false,
         };
 
+        if (Games.SoundBlasterInterruptOf(game.Folder) is { } interrupt)
+        {
+            // the card's jumper, set to what the game's settings say it is
+            machine.SoundBlasterInterrupt = interrupt;
+        }
+
         if (Games.SaveDirectoryOf(game.Folder) is { } saveDirectory)
         {
             // where the game was installed to, which it writes RESTART.DAT in as it starts and

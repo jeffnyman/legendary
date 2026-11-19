@@ -51,6 +51,12 @@ public sealed class WorldWatchXanthTests : IDisposable
 
         // as the player sets it up, from the game's LEGEND.INI: the CD's folder and the folder
         // the game was installed to are both the game's own
+        // and the Sound Blaster's IRQ is the one its settings say, 7, which it waits on for each
+        // block of a line of speech to end
+        Assert.Equal(7, Games.SoundBlasterInterruptOf(folder));
+        machine.SoundBlasterInterrupt = 7;
+        int blocks = 0;
+        machine.Log = line => blocks += line.StartsWith("sound blaster: 16384 bytes at 22222 Hz", StringComparison.Ordinal) ? 1 : 0;
         machine.ServeCdFolder("XANTH");
         machine.Mount("XANTH", folder);
         machine.Load("XANTH.EXE", "");
@@ -88,10 +94,11 @@ public sealed class WorldWatchXanthTests : IDisposable
             Run(3);
         }
 
-        // the demons' wager, which Escape cuts short, a line at a time: five of them, and a
-        // sixth would ask whether to quit
-        Run(30);
-        for (int key = 0; key < 5; key++)
+        // the demons' wager, which Escape cuts short, and then the titles: a third Escape
+        // would ask whether to quit
+        // which they are left to speak the start of
+        Run(52);
+        for (int key = 0; key < 2; key++)
         {
             machine.PressKey(Escape);
             Run(0.05);
@@ -107,6 +114,9 @@ public sealed class WorldWatchXanthTests : IDisposable
 
         // and the compass, to the northwest
         Click(12, 135);
+
+        // the demons speak: a line is more than its first block, three quarters of a second
+        Assert.True(blocks > 10, $"{blocks} blocks of speech were played");
 
         string[] lines = said.ToString().Split('\n', StringSplitOptions.RemoveEmptyEntries);
         Assert.StartsWith("world: the game is in memory, loaded at ", lines[0], StringComparison.Ordinal);

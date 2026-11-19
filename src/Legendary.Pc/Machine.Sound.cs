@@ -95,6 +95,22 @@ public sealed partial class Machine
         return _mt32.Description;
     }
 
+    /// <summary>
+    /// The IRQ the Sound Blaster interrupts on, which on the card was a jumper: 5 unless set,
+    /// and 2, 3, 5 or 7. A program is told the card's by its own settings, not by the card, so
+    /// the two have to agree: one waiting on another IRQ plays a first block of a sound and
+    /// never hears that it ended.
+    /// </summary>
+    public int SoundBlasterInterrupt
+    {
+        get => _soundBlasterInterrupt;
+        set => _soundBlasterInterrupt = value is 2 or 3 or 5 or 7
+            ? value
+            : throw new ArgumentOutOfRangeException(nameof(value), value, "a Sound Blaster's IRQ is 2, 3, 5 or 7");
+    }
+
+    private int _soundBlasterInterrupt = 5;
+
     private void InstallSound()
     {
         _speaker = new PcSpeaker(_timer);
@@ -103,10 +119,10 @@ public sealed partial class Machine
         _mpu = new Mpu401(line => Log?.Invoke(line));
 
         // the Sound Blaster's digital sound, through DMA channel 1 (8-bit) or 5 (16-bit, the
-        // second controller's channel 1), interrupting on IRQ 5
+        // second controller's channel 1), interrupting on the IRQ its jumper is set to
         _dma = new DmaController(Read, Write);
         _wideDma = new DmaController(Read, Write, wide: true);
-        _soundBlaster = new SoundBlaster(_dma, 1, SampleRate, () => _pic.Raise(5), line => Log?.Invoke(line), _wideDma, 1);
+        _soundBlaster = new SoundBlaster(_dma, 1, SampleRate, () => _pic.Raise(SoundBlasterInterrupt), line => Log?.Invoke(line), _wideDma, 1);
         _sources.Add(_soundBlaster);
     }
 

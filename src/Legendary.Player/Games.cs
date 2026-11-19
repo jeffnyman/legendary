@@ -199,6 +199,32 @@ internal static class Games
         return null;
     }
 
+    /// <summary>
+    /// The IRQ a game expects its Sound Blaster on, when its LEGEND.INI says, as
+    /// <c>SOUND=BLASTER 7 220</c>: the installer wrote there what the card's jumpers were, and
+    /// the game waits on that IRQ for each block of a sound to end. Null when it names none,
+    /// or one a card can't have.
+    /// </summary>
+    public static int? SoundBlasterInterruptOf(string folder)
+    {
+        string? settings = Directory.Exists(folder)
+            ? Directory.EnumerateFiles(folder).FirstOrDefault(file => Path.GetFileName(file).Equals("LEGEND.INI", StringComparison.OrdinalIgnoreCase))
+            : null;
+        foreach (string line in settings is null ? [] : File.ReadLines(settings))
+        {
+            string[] parts = line.Split('=', 2);
+            if (parts.Length == 2 && parts[0].Trim().Equals("SOUND", StringComparison.OrdinalIgnoreCase)
+                && parts[1].Split(' ', StringSplitOptions.RemoveEmptyEntries) is [var card, var interrupt, ..]
+                && card.Equals("BLASTER", StringComparison.OrdinalIgnoreCase)
+                && int.TryParse(interrupt, out int irq) && irq is 2 or 3 or 5 or 7)
+            {
+                return irq;
+            }
+        }
+
+        return null;
+    }
+
     /// <summary>Every game the player knows, in the order the menu shows them: by year.</summary>
     public static readonly KnownGame[] Known =
     [
