@@ -60,4 +60,73 @@ public sealed class RegionFileTests
             .Sum(file => new RegionFile(File.ReadAllBytes(file)).Pictures.Sum(picture => picture.Regions.Count));
         Assert.Equal(906, count);
     }
+
+    /// <summary>A picture with a rectangle and a triangle, in the later games' form.</summary>
+    [Fact]
+    public void ReadsOutlinesFromAFileMadeHere()
+    {
+        byte[] file =
+        [
+            6, 0, 9, 0, 2, 0,
+            0x2C, 0x01, 2, 0, 10, 0, 20, 0, 30, 0, 40, 0,
+            0x2D, 0x01, 3, 0, 100, 0, 50, 0, 140, 0, 50, 0, 100, 0, 90, 0,
+        ];
+
+        var picture = Assert.Single(new RegionFile(file).Pictures);
+        Assert.Equal((0, 9, 2), (picture.Picture, picture.Object, picture.Regions.Count));
+
+        // two points are a rectangle's corners, in pixels
+        var box = picture.Regions[0];
+        Assert.Equal((300, false), (box.Object, box.IsOutline));
+        Assert.Equal([(10, 20), (30, 40)], box.Points);
+        Assert.True(box.Contains(10, 20) && box.Contains(30, 40));
+        Assert.False(box.Contains(9, 20) || box.Contains(31, 40));
+
+        // more are an outline: a place in its rectangle can be outside it
+        var triangle = picture.Regions[1];
+        Assert.Equal((301, true), (triangle.Object, triangle.IsOutline));
+        Assert.True(triangle.Contains(105, 55));
+        Assert.False(triangle.Contains(135, 85));
+    }
+
+    [Fact]
+    public void GatewayIIsAndXanthsRegions()
+    {
+        foreach (var (game, pictures, regions, outlines) in new[] { ("gateway2/game", 99, 797, 678), ("xanth/game", 74, 728, 591) })
+        {
+            if (TestData.Game(game) is not { } folder)
+            {
+                continue;
+            }
+
+            var files = Directory.EnumerateFiles(folder)
+                .Where(file => file.EndsWith(".rgn", StringComparison.OrdinalIgnoreCase))
+                .Select(file => new RegionFile(File.ReadAllBytes(file))).ToList();
+            var all = files.SelectMany(file => file.Pictures).ToList();
+            Assert.Equal(pictures, all.Count);
+            Assert.Equal(regions, all.Sum(picture => picture.Regions.Count));
+            Assert.Equal(outlines, all.Sum(picture => picture.Regions.Count(region => region.IsOutline)));
+            Assert.All(all.SelectMany(picture => picture.Regions), region => Assert.NotNull(region.Points));
+        }
+    }
+
+    [Fact]
+    public void XanthsBedroom()
+    {
+        if (TestData.Game("xanth/game") is not { } folder || TestData.File(folder, "xanth_02.rgn") is not { } path)
+        {
+            return;
+        }
+
+        // the bedroom: the desk is a rectangle across the bottom, and the Post-It an outline
+        // on the computer, where the game's own tour clicks it
+        var bedroom = new RegionFile(File.ReadAllBytes(path)).Pictures[0];
+        Assert.Equal((0, 34), (bedroom.Picture, bedroom.Object));
+        Assert.Equal((35, false), (bedroom.Regions[0].Object, bedroom.Regions[0].IsOutline));
+        Assert.Equal([(0, 85), (263, 121)], bedroom.Regions[0].Points);
+
+        // the picture is at 51, 4 on the screen, and the tour clicks the Post-It at 235, 71
+        var postIt = bedroom.Regions.Last(region => region.Contains(235 - 51, 71 - 4));
+        Assert.Equal((44, true), (postIt.Object, postIt.IsOutline));
+    }
 }
