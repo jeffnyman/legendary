@@ -83,6 +83,9 @@ public sealed class World
     private readonly byte[] _names;
     private (int Bit, int Types)[]? _flags;
 
+    // for a 32-bit game: how far its code and its data are in memory from where its file has them
+    private readonly int _code, _data;
+
     /// <summary>A world in a memory, with its program loaded at a segment.</summary>
     /// <param name="read">The memory, by linear address.</param>
     /// <param name="map">The game's map.</param>
@@ -104,8 +107,19 @@ public sealed class World
         _names = file.Length < 2 ? [] : file.Slice(2, Math.Min(file[0] | (file[1] << 8), file.Length - 2)).ToArray();
     }
 
+    // a 32-bit game's world, with its code and data where they were found
+    private World(Func<int, byte> read, WorldMap map, int code, int data, ReadOnlyMemory<byte> names)
+        : this(read, map, 0, names)
+    {
+        _code = code;
+        _data = data;
+    }
+
     /// <summary>Where the game keeps what.</summary>
     public WorldMap Map { get; }
+
+    /// <summary>For a 32-bit game, where in memory its table of types was found; 0 for the others.</summary>
+    public int FoundAt => Map.Flat is { } flat ? _code + flat.TypesAddress : 0;
 
     /// <summary>The segment the game's program is loaded at.</summary>
     public ushort LoadSegment { get; }
@@ -114,13 +128,15 @@ public sealed class World
     /// Whether the game is there: its count of objects is where the map says, and is the
     /// map's. It isn't before the game has loaded, or once something else has the memory.
     /// </summary>
-    public bool IsThere => DataWord(Map.CountOffset) == Map.ObjectCount && (Word(Entry(1) + 2) | Word(Entry(1) + 4)) != 0;
+    public bool IsThere => Map.Flat is { } flat
+        ? Word(_code + flat.CountAddress) == Map.ObjectCount && TypesAreAt(_read, _code + flat.TypesAddress, flat)
+        : DataWord(Map.CountOffset) == Map.ObjectCount && (Word(Entry(1) + 2) | Word(Entry(1) + 4)) != 0;
 
     /// <summary>The room the player is in, an object's number.</summary>
-    public int Room => DataWord(Map.RoomOffset);
+    public int Room => Map.Flat is { } flat ? Word(_data + flat.RoomAddress) : DataWord(Map.RoomOffset);
 
     /// <summary>Who is acting: the player's own object.</summary>
-    public int Actor => DataWord(Map.ActorOffset);
+    public int Actor => Map.Flat is { } flat ? Word(_data + flat.ActorAddress) : DataWord(Map.ActorOffset);
 
     /// <summary>The turns taken.</summary>
     public int Moves => Map.MovesOffset == 0 ? 0 : DataWord(Map.MovesOffset);
@@ -182,22 +198,22 @@ public sealed class World
     private ushort StateSegment => Map.StateSegment ?? Map.ActionSegment;
 
     /// <summary>The number of the action last performed, or being performed.</summary>
-    public int Action => _read(Linear(StateSegment, Map.ActionOffset));
+    public int Action => Map.Flat is { } flat ? Word(_data + flat.ActionAddress) : _read(Linear(StateSegment, Map.ActionOffset));
 
     /// <summary>That action's object, or 0.</summary>
-    public int ActionObject => Word(Linear(StateSegment, Map.ObjectOffset));
+    public int ActionObject => Word(Map.Flat is { } flat ? _data + flat.ObjectAddress : Linear(StateSegment, Map.ObjectOffset));
 
     /// <summary>That action's second object, or 0.</summary>
-    public int ActionSecondObject => Word(Linear(StateSegment, Map.SecondObjectOffset));
+    public int ActionSecondObject => Word(Map.Flat is { } flat ? _data + flat.SecondObjectAddress : Linear(StateSegment, Map.SecondObjectOffset));
 
     /// <summary>
     /// Where the routine that performs an action starts, a linear address: the program is
     /// there each time it is about to perform one.
     /// </summary>
-    public int PerformAddress => Linear(Map.PerformSegment, Map.PerformOffset);
+    public int PerformAddress => Map.Flat is { } flat ? _code + flat.PerformAddress : Linear(Map.PerformSegment, Map.PerformOffset);
 
     /// <summary>How many actions are being performed, one inside another; 0 between them.</summary>
-    public int PerformDepth => DataWord(Map.DepthOffset);
+    public int PerformDepth => Map.Flat is { } flat ? Word(_data + flat.DepthAddress) : DataWord(Map.DepthOffset);
 
     /// <summary>
     /// Where the routine starts that adds what the pointer is on to the command being made, a
@@ -260,6 +276,10 @@ public sealed class World
     {
         ArgumentNullException.ThrowIfNull(read);
         ArgumentNullException.ThrowIfNull(map);
+        if (map.Flat is { } flat)
+        {
+            return FindFlat(read, size, map, flat, names);
+        }
 
         // the notice is 8 bytes into a segment, so only those addresses are looked at
         for (int at = (map.DataSegment * 16) + 8; at + Notice.Length <= size; at += 16)
@@ -288,6 +308,56 @@ public sealed class World
         return null;
     }
 
+    // a 32-bit program is loaded a page at a time, so its table of types is as far into a
+    // page of memory as it is into one of its own: only those addresses are looked at. The
+    // records' addresses in the table of objects are already memory's, so the first of them
+    // says where the data is
+    private static World? FindFlat(Func<int, byte> read, int size, WorldMap map, FlatWorld flat, ReadOnlyMemory<byte> names)
+    {
+        for (int at = 0x10_0000 + (flat.TypesAddress & 0xFFF); at + flat.Types.Count <= size; at += 0x1000)
+        {
+            if (!TypesAreAt(read, at, flat))
+            {
+                continue;
+            }
+
+            int code = at - flat.TypesAddress, entry = code + flat.TableAddress;
+            int first = read(entry + 1) | (read(entry + 2) << 8) | (read(entry + 3) << 16) | (read(entry + 4) << 24);
+            var world = new World(read, map, code, first - flat.FirstRecord, names);
+            if (world.IsThere)
+            {
+                return world;
+            }
+        }
+
+        return null;
+    }
+
+    private static bool TypesAreAt(Func<int, byte> read, int at, FlatWorld flat)
+    {
+        for (int index = 0; index < flat.Types.Count; index++)
+        {
+            if (read(at + index) != flat.Types[index])
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    // where an object's record is: a far pointer in its entry, or for a 32-bit game an address
+    private int Record(int entry) => Map.Flat is null
+        ? (Word(entry + 4) * 16) + Word(entry + 2)
+        : Word(entry + 1) | (Word(entry + 3) << 16);
+
+    /// <summary>
+    /// What a 32-bit game's routine that performs an action was called with: Watcom's
+    /// compiler passes the three in registers.
+    /// </summary>
+    public static (int Action, int Object, int SecondObject) PerformArguments(uint eax, uint edx, uint ebx) =>
+        ((ushort)eax, (ushort)edx, (ushort)ebx);
+
     /// <summary>An object, as it is now.</summary>
     /// <exception cref="ArgumentOutOfRangeException">There is no object of that number.</exception>
     public WorldObject Object(int number)
@@ -298,7 +368,7 @@ public sealed class World
         // the table's entry: its type, a byte that's zero, and a far pointer to its record
         int entry = Entry(number);
         int type = _read(entry);
-        int record = (Word(entry + 4) * 16) + Word(entry + 2);
+        int record = Record(entry);
 
         // the game's own table says how many places and lists a type has, and its record's size
         int about = TypeEntry(type);
@@ -309,8 +379,9 @@ public sealed class World
             return new WorldObject(number, type, Text(Word(record + 2), Word(record)) ?? "", Text(Word(record + 6), Word(record + 4)), [], -1, 0, []);
         }
 
-        string name = (layout.Names == 4 ? Named(Word(record)) : Text(Word(record + 2), Word(record))) ?? "";
-        string? second = layout.Names == 4 ? Named(Word(record + 2)) : Text(Word(record + 6), Word(record + 4));
+        // a record with no names is a routine's number and nothing else
+        string name = (layout.Names == 0 ? "a routine alone" : layout.Names == 4 ? Named(Word(record)) : Text(Word(record + 2), Word(record))) ?? "";
+        string? second = layout.Names == 0 ? null : layout.Names == 4 ? Named(Word(record + 2)) : Text(Word(record + 6), Word(record + 4));
         return new WorldObject(
             number, type, name, second,
             layout.Places < 0 ? [] : Words(record + layout.Places, places),
@@ -329,7 +400,7 @@ public sealed class World
         ArgumentOutOfRangeException.ThrowIfGreaterThan(number, Map.ObjectCount);
         int entry = Entry(number);
         int type = _read(entry);
-        int record = (Word(entry + 4) * 16) + Word(entry + 2);
+        int record = Record(entry);
         if (!Map.Layouts.TryGetValue(type, out var layout))
         {
             return new ObjectState(0, 0, 0, -1);
@@ -372,10 +443,24 @@ public sealed class World
         ArgumentOutOfRangeException.ThrowIfLessThan(room, 1);
         ArgumentOutOfRangeException.ThrowIfGreaterThan(room, Map.ObjectCount);
         int entry = Entry(room);
-        int record = (Word(entry + 4) * 16) + Word(entry + 2);
+        int record = Record(entry);
         if (!Map.Layouts.TryGetValue(_read(entry), out var layout) || (layout.Exits < 0 && layout.ExitStart < 0))
         {
             return [];
+        }
+
+        if (layout.ExitStart >= 0 && Map.Flat is { } flat)
+        {
+            // ten bytes a row: a direction, a kind, and a room or a routine's number
+            var ways = new List<WorldExit>();
+            for (int row = 0, first = Word(record + layout.ExitStart); first > 0 && row < _read(record + layout.ExitCount); row++)
+            {
+                int at = _code + flat.ExitsAddress + (10 * (first - 1 + row));
+                int kind = _read(at + 1), value = Word(at + 2);
+                ways.Add(new WorldExit(_read(at), kind, kind == 1 ? value : 0, 0, null, kind == 4 ? value : -1));
+            }
+
+            return ways;
         }
 
         if (layout.ExitStart >= 0)
@@ -436,7 +521,7 @@ public sealed class World
     }
 
     /// <summary>The direction the action of going is to go in: its number.</summary>
-    public int Direction => _read(Linear(StateSegment, Map.DirectionOffset));
+    public int Direction => _read(Map.Flat is { } flat ? _data + flat.DirectionAddress : Linear(StateSegment, Map.DirectionOffset));
 
     /// <summary>
     /// What is in an object, on each of its lists in turn: the objects' numbers. An object
@@ -602,10 +687,14 @@ public sealed class World
             : new((Word(at + 2) - LoadSegment) & 0xFFFF, Word(at), (short)Word(at + 4));
 
     // an object's entry in the table of objects
-    private int Entry(int number) => Linear(Map.TableSegment, Map.TableOffset + (6 * (number - 1)));
+    private int Entry(int number) => Map.Flat is { } flat
+        ? _code + flat.TableAddress + (5 * (number - 1))
+        : Linear(Map.TableSegment, Map.TableOffset + (6 * (number - 1)));
 
     // a type's entry in the table of types, which can be reckoned from before its segment's start
-    private int TypeEntry(int type) => Linear(Map.TypesSegment ?? Map.DataSegment, (ushort)(Map.TypesOffset + (3 * type)));
+    private int TypeEntry(int type) => Map.Flat is { } flat
+        ? _code + flat.TypesAddress + (3 * (type - 1))
+        : Linear(Map.TypesSegment ?? Map.DataSegment, (ushort)(Map.TypesOffset + (3 * type)));
 
     // the game's table of flags, read once: it is the program's own and doesn't change
     private (int Bit, int Types)[] FlagTable()
@@ -615,6 +704,14 @@ public sealed class World
             _flags = new (int, int)[Map.FlagCount + 1];
             for (int flag = 1; flag <= Map.FlagCount; flag++)
             {
+                if (Map.Flat is { } flat)
+                {
+                    // three bytes a flag, the first flag's first
+                    int entry = _code + flat.FlagsAddress + (3 * (flag - 1));
+                    _flags[flag] = (_read(entry) & 63, Word(entry + 1));
+                    continue;
+                }
+
                 int at = Linear(Map.FlagsSegment, Map.FlagsOffset + (4 * flag));
                 _flags[flag] = (_read(at) & 63, Word(at + 2));
             }

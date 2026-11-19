@@ -14,7 +14,8 @@ namespace Legendary.Core.Worlds;
 /// <param name="Exits">A room's: a far pointer to its exits, six bytes each.</param>
 /// <param name="Names">
 /// The size of the two names every record starts with: 8 for two far pointers into the
-/// program, or 4 for two words, each where a name starts in the file of names, from 1.
+/// program, or 4 for two words, each where a name starts in the file of names, from 1; or 0
+/// for a record that has none.
 /// </param>
 /// <param name="ExitStart">
 /// A room's, in a game that keeps every room's exits in one table: the number of its first
@@ -23,6 +24,34 @@ namespace Legendary.Core.Worlds;
 public sealed record RecordLayout(
     int Size, int Places = -1, int Relation = -1, int Next = -1, int Lists = -1, int FlagBytes = 2, int ExitCount = -1, int Exits = -1,
     int Names = 8, int ExitStart = -1);
+
+/// <summary>
+/// Where a 32-bit game keeps its world, for a program with no segments: every place an address
+/// as the program's file has it, before it's loaded. Such a program is two objects, its code
+/// and its data, each loaded wherever there was room, so an address is in one or the other.
+/// </summary>
+/// <param name="Types">
+/// The table of types, three bytes each, as the file has it: it is in the code and never
+/// changes, so it is also how the program is known when it's found in memory.
+/// </param>
+/// <param name="TypesAddress">Where that table is, in the code.</param>
+/// <param name="FlagsAddress">The table of flags, three bytes each: a bit, and a word of the types that have it.</param>
+/// <param name="TableAddress">The table of objects, five bytes each: a type, and the address of a record.</param>
+/// <param name="CountAddress">The word that is how many objects there are.</param>
+/// <param name="ExitsAddress">The table of exits, ten bytes a row.</param>
+/// <param name="PerformAddress">The routine that performs an action: the action in EAX, its objects in EDX and EBX.</param>
+/// <param name="FirstRecord">Where the first object's record is, in the data.</param>
+/// <param name="RoomAddress">The word that is the room the player is in.</param>
+/// <param name="ActorAddress">The word that is who is acting.</param>
+/// <param name="ActionAddress">The word that is the action being performed.</param>
+/// <param name="ObjectAddress">Its first object.</param>
+/// <param name="SecondObjectAddress">Its second.</param>
+/// <param name="DepthAddress">How many actions deep the game is.</param>
+/// <param name="DirectionAddress">The byte that is the direction of an exit being taken.</param>
+public sealed record FlatWorld(
+    IReadOnlyList<byte> Types, int TypesAddress, int FlagsAddress, int TableAddress, int CountAddress, int ExitsAddress,
+    int PerformAddress, int FirstRecord, int RoomAddress, int ActorAddress,
+    int ActionAddress, int ObjectAddress, int SecondObjectAddress, int DepthAddress, int DirectionAddress);
 
 /// <summary>Whose routine the game has asked about an action it is performing.</summary>
 public enum Asked
@@ -231,6 +260,10 @@ public sealed record AnswerPoint(ushort Offset, Asked Asked);
 /// an object, a word each.
 /// </param>
 /// <param name="PointerOffset">In the data, where the game keeps its pointer: across, and after it down.</param>
+/// <param name="Flat">
+/// For a 32-bit game, where its world is by address: the segments and offsets above are then
+/// not used, and are zero.
+/// </param>
 /// <param name="StateSegment">
 /// The segment the action, its direction and its two objects are in, with the word a token
 /// is and the form found, when it isn't <paramref name="ActionSegment"/>: <i>Gateway II</i>
@@ -274,7 +307,8 @@ public sealed record WorldMap(
     ushort ClocksSegment = 0, ushort ClocksOffset = 0, ushort HomeClockOffset = 0,
     IReadOnlyList<string>? PlaceNames = null, int Times = 0, ushort? FoundSegment = null,
     int ExitVariableAt = 2, ushort FinderSegment = 0, ushort FinderOffset = 0, int FoundSize = 6,
-    ushort DaysOffset = 0, ushort? StateSegment = null, ushort ClickOffset = 0, ushort PointerOffset = 0)
+    ushort DaysOffset = 0, ushort? StateSegment = null, ushort ClickOffset = 0, ushort PointerOffset = 0,
+    FlatWorld? Flat = null)
 {
     /// <summary>
     /// Whether the places in the program where a command is parsed are known. A map can have
@@ -1647,4 +1681,110 @@ public sealed record WorldMap(
         FlagsSegment: 0x23A1, FlagsOffset: 0x000C, FlagCount: 23,
         ExitsSegment: 0x23A1, ExitsOffset: 0x10FA, DoorsSegment: 0x38AF, DoorsOffset: 0x084E,
         TimerSize: 4, ClockStep: 1, StateSegment: 0x38AF, ClickOffset: 0x0594, PointerOffset: 0x69E4);
+
+    /// <summary>
+    /// <i>Mission Critical</i> (1995): a 32-bit program, with its world by address. It has no
+    /// parser, no clock and no count of turns that are known, and its timers aren't found.
+    /// </summary>
+    public static WorldMap MissionCritical { get; } = new(
+        DataSegment: 0, TableSegment: 0, ObjectCount: 872, CountOffset: 0, TypesOffset: 0,
+        RoomOffset: 0, ActorOffset: 0, MovesOffset: 0, ClockOffset: 0,
+        ActionSegment: 0, ActionOffset: 0, ObjectOffset: 0, SecondObjectOffset: 0,
+        PerformSegment: 0, PerformOffset: 0, DepthOffset: 0, Answers: [],
+        JumpBackOffset: 0, GoAction: -1, DirectionOffset: 0,
+        Directions: Spellcasting101.Directions,
+        GrammarSegment: 0, FormsOffset: 0, SecondsOffset: 0, VocabularyFile: "VOCAB.DAT",
+        // the verbs, by the action each makes: the dots are where the first object goes
+        ActionNames: new Dictionary<int, string>
+        {
+            [1] = "Look at",
+            [2] = "Take",
+            [3] = "Put ... on",
+            [4] = "Open",
+            [5] = "Close",
+            [6] = "Talk to",
+            [7] = "Look",
+            [8] = "Enter",
+            [9] = "Go to",
+            [11] = "Wait",
+            [13] = "Exit",
+            // no verb makes it: it is what a click to walk on performs, as the game was seen to
+            [15] = "Walk on",
+            [16] = "Use",
+            [17] = "Ascend",
+            [18] = "Descend",
+            [19] = "Sit on",
+            [20] = "Press",
+            [21] = "Break",
+            [22] = "Pull",
+            [23] = "Turn off",
+            [24] = "Lie on",
+            [25] = "Remove",
+            [26] = "Plug ... in",
+            [27] = "Read",
+            [28] = "Push",
+            [29] = "Smell",
+            [30] = "Activate",
+            [31] = "Operate",
+            [32] = "Look in",
+            [33] = "Clear",
+            [34] = "Climb over",
+            [35] = "Touch",
+            [36] = "Ignite",
+            [37] = "Put out",
+            [38] = "Open ... with",
+            [39] = "Break ... with",
+            [40] = "Clear ... with",
+            [41] = "Spray ... on",
+            [42] = "Plug ... with",
+            [43] = "Plug",
+            [44] = "Turn on",
+            [45] = "Listen to",
+            [46] = "Put on",
+            [47] = "Disassemble ... with",
+            [48] = "Attach ... to",
+            [49] = "Melt ... with",
+            [50] = "Smash ... with",
+            [51] = "Empty",
+            [52] = "Shoot ... at",
+            [53] = "Traverse",
+            [54] = "Analyze ... with",
+            [55] = "Cut ... with",
+            [56] = "Drink from",
+            [57] = "Program ... with",
+            [58] = "Put ... on",
+            [59] = "Fix ... with",
+            [60] = "Eat",
+            [61] = "Pour ... on",
+            [62] = "Give ... to",
+        },
+        TokenSegment: 0, TokenOffset: 0, AfterStopOffset: 0, AfterAndOffset: 0, TokenWordOffset: 0,
+        WordTokens: new Dictionary<int, string>(), MarkTokens: new Dictionary<int, string>(), EndTokens: [],
+        FormOffset: 0, FormIndexOffset: 0, FormActionOffset: 0, FoundOffset: 0, LotsOffset: 0, LotSize: 12, LotCountOffset: 0,
+        TimersOffset: 0, TimerCountOffset: 0, TimerIndexOffset: 0,
+        TimerSegment: 0, TimerStartOffset: 0, TimerStopOffset: 0, TimerRunOffset: 0,
+        TimerNames: new Dictionary<int, string>(),
+        PlaceType: 1, PersonType: 5,
+        FlagNames: new Dictionary<int, string>(),
+        PlaceFlagNames: new Dictionary<int, string>(),
+        PersonFlagNames: new Dictionary<int, string>(),
+        StateFlags: [],
+        // from the routines that get and set each field for each type
+        Layouts: new Dictionary<int, RecordLayout>
+        {
+            [1] = new(31, Lists: 0x06, ExitCount: 0x1C, ExitStart: 0x1D, Names: 4),
+            [2] = new(25, Places: 0x06, Relation: 0x08, Next: 0x09, Lists: 0x0B, Names: 4),
+            [3] = new(29, Places: 0x06, Relation: 0x08, Next: 0x09, Lists: 0x0B, Names: 4),
+            [4] = new(14, Lists: 0x06, Names: 4),
+            [5] = new(27, Places: 0x06, Relation: 0x08, Next: 0x09, Lists: 0x0B, Names: 4),
+            [6] = new(2, FlagBytes: 0, Names: 0),
+        },
+        NamesFile: "OBJECT.DAT", FlagCount: 20,
+        Flat: new FlatWorld(
+            // six types: places, lists, and a record's size
+            Types: [0, 1, 31, 1, 1, 25, 1, 2, 29, 0, 1, 14, 1, 3, 27, 0, 0, 2],
+            TypesAddress: 0x1A620, FlagsAddress: 0x1A632, TableAddress: 0x1A670, CountAddress: 0x1B778, ExitsAddress: 0x1B77C,
+            PerformAddress: 0x15210, FirstRecord: 0xCDB40, RoomAddress: 0xCC624, ActorAddress: 0xCC626,
+            ActionAddress: 0xE37AA, ObjectAddress: 0xE37B2, SecondObjectAddress: 0xE37B0, DepthAddress: 0xCC5C0,
+            DirectionAddress: 0xE37B4));
 }
