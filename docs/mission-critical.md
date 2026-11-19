@@ -62,6 +62,7 @@ UniVBE 5.1, and a demo of *Shannara*.
 | The guided tour | 2,391 events, 10 clicks |
 | [The fonts](#the-fonts) | 13 |
 | [The pictures](#the-pictures) | 40 files, 2,984 pictures |
+| [The speech](#the-speech) | 3 files, 1,077 lines, two hours |
 
 And what they don't: the music, which is no longer in `.MUS` files; the speech and the filmed
 scenes; and the objects, whose table has to be found in the program first.
@@ -188,6 +189,37 @@ the 256 colors, set for five of them, 219 to 223, and then those five colors, gr
 dark to darker. The letters are drawn in those on a slab of color 254, which the font
 doesn't bring: it is whatever the screen has there.
 
+## The speech
+
+Each CD has a file of speech, and `disc --copy` puts all three in the game's folder. They
+start as [*Companions of Xanth*'s file](companions-of-xanth.md#the-speech) does: a count,
+1,297 in each, and that many offsets, the last the file's length; so 1,296 numbers for
+lines, the same numbers in all three files. A file has the lines its CD's part of the game
+speaks, and the rest are empty there.
+
+| File | Lines | How long |
+|---|---|---|
+| `MC001.VOC` | 66 | 3 minutes |
+| `MC002.VOC` | 724 | 66 minutes |
+| `MC003.VOC` | 408 | 50 minutes |
+
+Thirteen lines are in the first file and in each of the others, and 108 in both of those;
+a line in two files is the same size in each. Between them the three have 1,077 of the
+1,296, and 219 numbers have no line on any CD.
+
+What a line is has changed. In *Companions of Xanth* it is samples and nothing else, with
+nothing to say how fast they go. Here a line is a whole RIFF WAVE file, the kind any
+program of the day could play, and says for itself: one channel, 16 bits, 22,050 samples a
+second. A line starts at a multiple of 2,048, a CD's sector, and zeros fill it out after
+its WAVE ends. The tools' `sounds` counts them and, with `--out`, writes each as it is.
+
+Which text a line speaks is in the program, not the file, and isn't followed yet. The
+routine at `00084200` looks a line's number up in the file's offsets, and seven places call
+it. One of them takes the number from a table at `000d6302`, 412 entries of five bytes: a
+word from 8002h to 8057h, a byte counting up from 0 under each, and a line, 567 to 977. That
+reads as 86 conversations and what is said in each, but what the word and the byte are
+hasn't been found.
+
 ## Running it
 
 [The PC](the-pc.md) came with a 386's protected mode and a DPMI host that none of the
@@ -282,6 +314,6 @@ it. That is as far as it has been taken: nothing has been clicked.
 
 ## Still to do
 
-Everything but the above: which picture each change is to, and kind 4; the music, the speech and its
-text, the filmed scenes, the objects and the verbs, the variables' names, the battle game,
-and playing it past its first picture.
+Everything but the above: which picture each change is to, and kind 4; the music; what
+each line of speech says; the filmed scenes; the objects and the verbs; the variables'
+names; the battle game; and playing it past its first picture.
