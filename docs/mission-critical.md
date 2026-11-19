@@ -65,8 +65,9 @@ UniVBE 5.1, and a demo of *Shannara*.
 | [The speech](#the-speech) | 3 files, 1,077 lines, two hours |
 | [The objects](#the-objects) | 872, in six types |
 | [The verbs](#the-verbs) | 58, each making an action of its own |
+| [The music](#the-music) | 3 files, 38 songs in each and one more in one, 78 minutes |
 
-And what they don't: the music, which is no longer in `.MUS` files, and the filmed scenes.
+And what they don't: the filmed scenes.
 
 ## How the program is built
 
@@ -304,6 +305,37 @@ the 256 colors, set for five of them, 219 to 223, and then those five colors, gr
 dark to darker. The letters are drawn in those on a slab of color 254, which the font
 doesn't bring: it is whatever the screen has there.
 
+## The music
+
+The music is no longer in `.MUS` files, and no longer in a form of Legend's at all. The
+three `.XMI` files are the extended MIDI of the Miles drivers the game plays its sound
+through: the same songs three times, arranged for three kinds of card. By their names
+those are a card with an FM chip, `FM.XMI`; a General MIDI one, `GM.XMI`; and one that
+plays SoundFonts, the Sound Blaster AWE32, `SF.XMI`. The program opens one of the three, in the
+routine that sets up the music driver `MDI.INI` names; how it chooses isn't followed. Each has 38 songs, 78 minutes of them, and `GM.XMI` has a 39th.
+
+A file is chunks as Electronic Arts' IFF has them, four letters and a length with its big
+end first. `FORM XDIR` holds `INFO`, the count of songs, and `CAT XMID` holds a `FORM XMID`
+for each. A song has `TIMB`, the instruments it wants loaded, a patch and its bank each,
+and `EVNT`, its events.
+
+The events are a MIDI track's, changed three ways:
+
+- The time between events isn't a number before each one: it is bytes below 80h, added
+  together, and none at all when events fall together.
+- A note is one event and not two. After its key and how hard, it has how long it lasts,
+  and nothing ever turns it off.
+- Time isn't in beats. A tick is one 120th of a second, whatever tempo the song sets.
+
+`music` lists the songs, each with its length and how many instruments it wants, and with
+`--out` writes each as a Standard MIDI File: one track, every note turned off when its
+time is up, at 120 ticks a second, with the song's own tempos left out as the drivers
+leave them. Every song of the three files comes out a whole MIDI file, with no note left
+on and none turned off that wasn't on.
+
+33 of the 38 songs have the marks Miles added for a part to be played over, controllers
+116 and 117. A file written here keeps the marks and plays the part once.
+
 ## The speech
 
 Each CD has a file of speech, and `disc --copy` puts all three in the game's folder. They
@@ -514,6 +546,6 @@ how a click becomes an action, and whose routine answered one.
 
 ## Still to do
 
-Everything but the above: which picture each change is to, and kind 4; the music; what
+Everything but the above: which picture each change is to, and kind 4; what
 the 325 lines of speech named in the code say; the filmed scenes; what an action's routine and an object's do, and the
 fields of a record not yet named; the flags' and the variables' names; the battle game; and playing it past its first picture.
