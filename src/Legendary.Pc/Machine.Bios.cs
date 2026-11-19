@@ -49,6 +49,13 @@ public sealed partial class Machine
     // the VGA BIOS's table of what it can do, which its state (INT 10h function 1Bh) points at
     private const ushort VideoFunctions = 0x0590;
 
+    // VESA's: the name of the card, the list of its modes, and the routine a program may call,
+    // far, to move its window on video memory without the cost of an interrupt
+    private const ushort VesaName = 0x0C00;
+    private const ushort VesaModes = 0x0C10;
+    private const ushort VesaWindow = 0x0C20;
+    private static readonly ushort[] VesaModeNumbers = [0x100, 0x101, 0x103, 0x105];
+
     // the ticks in a day: the timer's 18.2 a second for 24 hours
     internal const uint TicksPerDay = 0x1800B0;
 
@@ -171,6 +178,15 @@ public sealed partial class Machine
         // of what a VGA's BIOS offers
         WriteRom(bios + VideoFunctions, [0xFF, 0xE0, 0x0F, 0, 0, 0, 0, 0x07, 0x02, 0x08, 0xFF, 0x0E, 0, 0, 0x3F, 0]);
 
+        WriteRom(bios + VesaName, "Legendary\0"u8.ToArray());
+        WriteRom(bios + VesaModes, [.. VesaModeNumbers.SelectMany(BitConverter.GetBytes), 0xFF, 0xFF]);
+        WriteRom(bios + VesaWindow,
+        [
+            0xB8, 0x05, 0x4F,   // mov ax,4F05h
+            0xCD, 0x10,         // int 10h
+            0xCB,               // retf
+        ]);
+
         // the BIOS data area at 0040:0000, the parts programs read
         WriteWord(0x40, 0x10, 0x1021);   // equipment: a floppy drive, 80-column color video, a game port
         WriteWord(0x40, 0x13, 640);      // conventional memory in KB
@@ -252,6 +268,121 @@ public sealed partial class Machine
     {
         WriteWord(0, (uint)vector * 4, offset);
         WriteWord(0, ((uint)vector * 4) + 2, segment);
+    }
+
+    /// <summary>
+    /// INT 10h function 4Fh, the VESA BIOS extension, as version 1.2 has it: what the card is and
+    /// which modes it has, what a mode is like, setting one, and moving the 64 KB window the
+    /// processor has on a picture too big for it. The modes are four of 256 colors, a byte a
+    /// pixel, in a megabyte of memory. A function answers 004Fh in AX, or 014Fh for one it
+    /// has but couldn't do; one it hasn't leaves AX alone.
+    /// </summary>
+    private void Vesa()
+    {
+        const int Done = 0x004F, Failed = 0x014F;
+        ushort bx = (ushort)Cpu.Ebx;
+        switch (Al)
+        {
+            case 0x00:
+            {
+                // what the card is: VESA 1.2, its name, its modes, and its memory in 64 KB blocks
+                var block = new byte[256];
+                "VESA"u8.CopyTo(block);
+                BitConverter.GetBytes((ushort)0x0102).CopyTo(block, 4);
+                BitConverter.GetBytes(VesaName).CopyTo(block, 6);
+                BitConverter.GetBytes(BiosSegment).CopyTo(block, 8);
+                BitConverter.GetBytes(VesaModes).CopyTo(block, 14);
+                BitConverter.GetBytes(BiosSegment).CopyTo(block, 16);
+                BitConverter.GetBytes((ushort)16).CopyTo(block, 18);
+                WriteBytes(Cpu.Es, (ushort)Cpu.Edi, block);
+                SetAx(Done);
+                Trace("10/4F00 VESA 1.2, with a megabyte of video memory");
+                break;
+            }
+
+            case 0x01:
+            {
+                int mode = (ushort)Cpu.Ecx;
+                if (Devices.Vga.SuperSize(mode) is not var (width, height))
+                {
+                    SetAx(Failed);
+                    Trace($"10/4F01 mode {mode:X3}h: there's none");
+                    break;
+                }
+
+                var block = new byte[256];
+                void Word(int at, int value) => BitConverter.GetBytes((ushort)value).CopyTo(block, at);
+                Word(0x00, 0x1B);           // there, in color, graphics, with the rest of this filled in
+                block[0x02] = 0x07;         // window A: there, read and written
+                Word(0x04, 64);             // it moves 64 KB at a time
+                Word(0x06, 64);             // and is 64 KB
+                Word(0x08, 0xA000);
+                Word(0x0C, VesaWindow);     // the routine that moves it
+                Word(0x0E, BiosSegment);
+                Word(0x10, width);          // bytes a line
+                Word(0x12, width);
+                Word(0x14, height);
+                block[0x16] = 8;            // a character's size
+                block[0x17] = 16;
+                block[0x18] = 1;            // one plane
+                block[0x19] = 8;            // eight bits a pixel
+                block[0x1A] = 1;
+                block[0x1B] = 4;            // packed pixels
+                block[0x1E] = 1;
+                WriteBytes(Cpu.Es, (ushort)Cpu.Edi, block);
+                SetAx(Done);
+                Trace($"10/4F01 mode {mode:X3}h: {width} by {height} in 256 colors");
+                break;
+            }
+
+            case 0x02:
+            {
+                // bit 15 asks for the memory to be kept
+                int mode = bx & 0x7FFF;
+                if (mode >= 0x100 && Devices.Vga.SuperSize(mode) is null)
+                {
+                    SetAx(Failed);
+                    Trace($"10/4F02 set VESA mode {mode:X3}h: there's none");
+                    break;
+                }
+
+                _vga.SetMode(mode, clear: (bx & 0x8000) == 0);
+                WriteByte(0x40, 0x49, (byte)mode);
+                WriteWord(0x40, 0x4A, (ushort)(mode >= 0x100 ? DisplayWidth / 8 : mode is 0 or 1 or 4 or 5 or 0x0D or 0x13 ? 40 : 80));
+                ResetText(mode);
+                SetAx(Done);
+                Trace($"10/4F02 set VESA mode {mode:X3}h");
+                break;
+            }
+
+            case 0x03:
+                Cpu.Ebx = (Cpu.Ebx & 0xFFFF_0000) | (ushort)_vga.Mode;
+                SetAx(Done);
+                break;
+
+            case 0x05:
+                // the window: BH 0 moves window BL to DX, counted in 64 KB, and BH 1 asks where it is
+                if ((bx & 0xFF) != 0)
+                {
+                    SetAx(Failed);
+                }
+                else if ((bx >> 8) == 0)
+                {
+                    _vga.Bank = (ushort)Cpu.Edx;
+                    SetAx(Done);
+                }
+                else
+                {
+                    Cpu.Edx = (Cpu.Edx & 0xFFFF_0000) | (ushort)_vga.Bank;
+                    SetAx(Done);
+                }
+
+                break;
+
+            default:
+                Trace($"10/4F{Al:X2} isn't a VESA function the card has");
+                break;
+        }
     }
 
     private byte Ah => (byte)(Cpu.Eax >> 8);
@@ -395,7 +526,12 @@ public sealed partial class Machine
                 // loaded: it isn't, which the caller tells from DX coming back as it went
                 break;
             case 0x4F:
-                // VESA: there's none, which a caller tells from AL not being 4Fh
+                if (_cga is null)
+                {
+                    Vesa();
+                }
+
+                // with a CGA there's no VESA, which a caller tells from AL not being 4Fh
                 break;
             case 0xFE or 0xFF:
                 // TopView's video buffer, and its update, which DESQview and Windows answered for

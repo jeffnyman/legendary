@@ -34,6 +34,11 @@ internal sealed class Vga
 
     private readonly byte[] _memory = new byte[0x4_0000];
     private readonly byte[] _text = new byte[0x8000];
+
+    // a megabyte more, for VESA's modes of 256 colors: the processor sees 64 KB of it at A0000h,
+    // whichever sixteenth the program has asked for
+    private readonly byte[] _super = new byte[0x10_0000];
+    private int _bank;
     private readonly byte[] _dac = new byte[768];
 
     private readonly byte[] _sequencer = new byte[5];
@@ -77,6 +82,27 @@ internal sealed class Vga
         Cga2,     // 640 by 200 in 2 colors, the same way, a bit a pixel
         Planar,   // 16 colors, a bit of each pixel in each of the four planes
         Linear,   // 256 colors, mode 13h and Mode X
+        Super,    // 256 colors and more of them than a VGA has memory for: VESA's modes, a byte a pixel
+    }
+
+    /// <summary>The size of one of VESA's modes of 256 colors, 100h and up; null for a mode that isn't one the card has.</summary>
+    public static (int Width, int Height)? SuperSize(int mode) => mode switch
+    {
+        0x100 => (640, 400),
+        0x101 => (640, 480),
+        0x103 => (800, 600),
+        0x105 => (1024, 768),
+        _ => null,
+    };
+
+    /// <summary>
+    /// Which 64 KB of a VESA mode's memory the processor sees at A0000h. A picture of 640 by
+    /// 480 is 300 KB, and real mode has room for a window of 64: the program moves it.
+    /// </summary>
+    public int Bank
+    {
+        get => _bank;
+        set => _bank = value & 0x0F;
     }
 
     private static Kind KindOf(int mode) => mode switch
@@ -85,6 +111,7 @@ internal sealed class Vga
         6 => Kind.Cga2,
         0x0D or 0x0E or 0x10 or 0x12 => Kind.Planar,
         0x13 => Kind.Linear,
+        >= 0x100 => Kind.Super,
         _ => Kind.Text,
     };
 
@@ -99,6 +126,11 @@ internal sealed class Vga
         }
 
         uint offset = address & 0xFFFF;
+        if (Mode >= 0x100)
+        {
+            return _super[(_bank << 16) | (int)offset];
+        }
+
         if (Chained)
         {
             return _memory[offset];
@@ -141,6 +173,12 @@ internal sealed class Vga
         }
 
         uint offset = address & 0xFFFF;
+        if (Mode >= 0x100)
+        {
+            _super[(_bank << 16) | (int)offset] = value;
+            return;
+        }
+
         if (Chained)
         {
             _memory[offset] = value;
@@ -379,8 +417,11 @@ internal sealed class Vga
             graphics.CopyTo(_graphics, 0);
             _miscellaneous = planar.Miscellaneous;
         }
-        else if (mode == 0x13)
+        else if (mode == 0x13 || mode >= 0x100)
         {
+            // VESA's modes of 256 colors start as mode 13h does, registers and colors, and are
+            // drawn from their own memory at their own size
+            _bank = 0;
             // the values of IBM's VGA BIOS for mode 13h
             byte[] sequencer = [0x03, 0x01, 0x0F, 0x00, 0x0E];
             byte[] crtc =
@@ -410,7 +451,7 @@ internal sealed class Vga
             _miscellaneous = 0x67;
         }
 
-        _attribute[0x10] = (byte)(mode == 0x13 ? 0x41 : KindOf(mode) == Kind.Text ? 0x0C : 0x01);
+        _attribute[0x10] = (byte)(mode == 0x13 || mode >= 0x100 ? 0x41 : KindOf(mode) == Kind.Text ? 0x0C : 0x01);
         _attribute[0x12] = 0x0F;
         _pelMask = 0xFF;
         DefaultPalette(mode);
@@ -419,6 +460,7 @@ internal sealed class Vga
         {
             // text is cleared to spaces, light gray on black; the graphics modes to color 0
             Array.Clear(_memory);
+            Array.Clear(_super);
             bool text = KindOf(mode) == Kind.Text;
             for (int i = 0; i < _text.Length; i += 2)
             {
@@ -439,7 +481,7 @@ internal sealed class Vga
     private void DefaultPalette(int mode)
     {
         Array.Clear(_dac);
-        if (mode == 0x13)
+        if (mode == 0x13 || mode >= 0x100)
         {
             for (int i = 0; i < 16; i++)
             {
@@ -592,6 +634,7 @@ internal sealed class Vga
                 case Kind.Text: return (640, 400);
                 case Kind.Cga4: return (320, 200);
                 case Kind.Cga2: return (640, 200);
+                case Kind.Super: return SuperSize(Mode) ?? (640, 480);
             }
 
             int width = (_crtc[0x01] + 1) * (KindOf(Mode) == Kind.Linear ? 4 : 8);
@@ -628,6 +671,13 @@ internal sealed class Vga
                 return;
             case Kind.Planar:
                 RenderPlanar(pixels, width, height, palette);
+                return;
+            case Kind.Super:
+                for (int i = 0; i < width * height; i++)
+                {
+                    pixels[i] = palette[_super[i]];
+                }
+
                 return;
         }
 

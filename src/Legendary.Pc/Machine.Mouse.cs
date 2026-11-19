@@ -214,7 +214,7 @@ public sealed partial class Machine
     /// </summary>
     private void ResetMouse()
     {
-        int rows = VideoMode switch { 0x0F or 0x10 => 350, 0x11 or 0x12 => 480, _ => 200 };
+        int rows = VideoMode switch { 0x0F or 0x10 => 350, 0x11 or 0x12 => 480, >= 0x100 => DisplayHeight, _ => 200 };
         _mouseMinX = 0;
         _mouseMaxX = 639;
         _mouseMinY = 0;
