@@ -272,18 +272,24 @@ in the picture or in a list, and the game puts the pieces together.
 |---|---|
 | Where the pointer is, across and down | `38AF:69E4`, `69E6` |
 | The sentence being made: its verb, object and second object | `38AF:0050`, `0052`, `0054` |
-| The routine that looks at what the pointer is on | `08A7:175F` |
+| The routine that looks at what the pointer is over, all the time | `08A7:175F` |
+| The routine that takes a click | `08A7:18A1` |
 | The routine that adds a piece to the sentence | `08A7:0594` |
 | The routine that settles it, and makes its words | `08A7:55D3` |
 | The command settled: its verb, object and second object | `38AF:69FA`, `6A0A`, `6A08` |
 
-**What the pointer is on.** The routine at `08A7:175F` hands the pointer's place to one
-that says which part of the screen it is in, which item of that part, and what kind of
-thing that is. Two kinds are an object, and a routine gives its number from the part and
-the item; one kind is a verb, from the list of them. Anything else is nothing.
+**What the pointer is on.** The routine at `08A7:175F` runs all the time, whether or not
+anything is clicked. It hands the pointer's place to one that says which part of the
+screen it is in, which item of that part, and what kind of thing that is. Two kinds are an
+object, and a routine gives its number from the part and the item; one kind is a verb,
+from the list of them. Anything else is nothing. With that it has the sentence made as it
+would be if this were clicked, which is why the command on the screen changes as the
+pointer moves. The routine at `08A7:18A1` does the same for a click, and then the piece is
+kept. Seen with the game running: over the computer, the first is called with object 39,
+again and again; the click on `Take` is the second, with verb 68.
 
-**Putting the pieces together.** The routine at `08A7:0594` is given the sentence so far
-and what was just pointed at, a verb or an object. A verb becomes the sentence's verb if
+**Putting the pieces together.** The routine at `08A7:0594` is given whether this is a
+click, the sentence so far, and what is pointed at, a verb or an object. A verb becomes the sentence's verb if
 it has none. An object becomes its object if it has none, and its second object if it has
 one and this is another. Then it has the sentence settled.
 
@@ -570,6 +576,8 @@ music and its speech, and the player's `--watch` and `--panel` follow it:
 world: turn 0, in bedroom (34)
 world:   exits: northwest to entrance (51)
 world:   timer 3 (the telephone rings) started: 12 turns to go
+world:   a click at 18,9 on the verb Take
+world:   a click at 235,71 on Post-It(tm) (44), with Take chosen
 world:   action 68: Take Post-It(tm) (44)
 world:     answered by the action's own routine: 1
 world:   Post-It(tm) (44) moved: from personal computer (39), its list 2 to You (1)
@@ -580,8 +588,9 @@ world:   You (1) moved: from bedroom (34) to entrance (51)
 world:   exits: southeast to bedroom (34); west to kitchen (64); north: routine 0 decides
 ```
 
-There are no words to follow, so an action is said by its verb, and the rest is as for the
-games with a parser: who answered, what moved, which flags changed, the timers. The game
+There are no words to follow, so a command is followed by its clicks, each with where it
+was, what it was on and what was already chosen, and an action is said by its verb. The
+rest is as for the games with a parser: who answered, what moved, which flags changed, the timers. The game
 keeps no time of day, and the watch says the turn alone.
 
 **It needs nothing new of the PC.** As *Gateway II* does, it asks for its files at
@@ -605,15 +614,15 @@ running: the verbs, the compass with `WAIT`, the system's button, `MAP` and `UND
 it, the picture, the line of text, the boxes for the companions, and the things carried
 with two arrows at their right, which by their look move through them.
 
-What isn't followed is the click itself, as the parser games' words are: which thing the
-pointer is on, and the command as it is made. And where the main loop comes back to when a
-routine gives an action up hasn't been found, so that isn't said.
+A click on the compass or on a button isn't said: it doesn't go by the routine that adds
+to a command. And where the main loop comes back to when a routine gives an action up
+hasn't been found, so that isn't said either.
 
 ## Still to do
 
 - The 237 lines of speech whose text isn't read: those the code names where they are said,
   and those a routine makes the text of.
-- For the watch: the command as it is made by clicks, and where the main loop's `setjmp`
+- For the watch: clicks on the compass and the buttons, and where the main loop's `setjmp`
   returns.
 - Flags 9, 16 and 18, the 56 routines of the exits, and the eighteen timers with no name.
 - The kinds of thing on the screen that haven't been read: 2, 4, 5 and 6; and event

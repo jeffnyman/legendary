@@ -152,8 +152,9 @@ together, for the panel and the terminal's full record of the play.
 *Gateway II* can be watched the same way, with all of it: the room,
 each command's words, form and objects, each action and who answered it, the timers, and
 what changed. For *Timequest* the room comes with the place and the year, as `Rome, 44 BC`. *Companions of Xanth*,
-which has no parser, is watched without a command's words: each action is said by its verb,
-as `action 68: Take Post-It(tm) (44)`.
+which has no parser, is watched by its clicks in place of a command's words, as `a click at
+235,71 on Post-It(tm) (44), with Take chosen`, and each action is said by its verb, as
+`action 68: Take Post-It(tm) (44)`.
 
 The panel's text is small: 8 pixels, doubled once the window is 960 high. `--panel-text 1.5`
 asks for the panel with its text one and a half times that size, and any size from 1 to 4 can
