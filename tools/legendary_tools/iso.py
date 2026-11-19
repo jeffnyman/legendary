@@ -3,7 +3,8 @@
 A game from a CD keeps on its hard disk only what it must, and reads the rest from the
 disc: Gateway II's pictures are there and nowhere else. This reads a disc's image far
 enough to list a folder and take a file out of it, and no further: plain ISO 9660, with
-the names as the disc has them, in capitals and with a version after a semicolon.
+the names as the disc has them, in capitals and with a version after a semicolon. The image
+is the disc's data alone, 2,048 bytes a sector, or a raw one, 2,352 bytes a sector.
 
 A disc is sectors of 2,048 bytes. Sector 16 is the volume's descriptor, `CD001`, with the
 record of the root folder at 156. A folder is records one after another, none across a
@@ -22,6 +23,9 @@ import struct
 from dataclasses import dataclass
 
 _SECTOR = 2048
+# a raw image keeps each sector as the disc has it: 2,352 bytes, with the 2,048 of a mode 1
+# sector 16 bytes in, after its sync and header and before its error correction
+_RAW_SECTOR, _RAW_DATA = 2352, 16
 
 
 @dataclass(frozen=True)
@@ -39,16 +43,29 @@ class Disc:
 
     def __init__(self, path: str):
         self.path = path
+        self._raw = False
         volume = self._read(16 * _SECTOR, _SECTOR)
+        if volume[1:6] != b"CD001":
+            # or a raw image, as a .img or .bin with a .cue beside it is
+            self._raw = True
+            volume = self._read(16 * _SECTOR, _SECTOR)
         if volume[1:6] != b"CD001":
             raise ValueError(f"{path} isn't an ISO 9660 image")
         sector, size = struct.unpack_from("<I4xI", volume, 156 + 2)
         self.root = Entry("", sector, size, True)
 
     def _read(self, at: int, size: int) -> bytes:
+        """Bytes of the disc's data, from a place counted in its 2,048-byte sectors."""
         with open(self.path, "rb") as file:
-            file.seek(at)
-            return file.read(size)
+            if not self._raw:
+                file.seek(at)
+                return file.read(size)
+            found = bytearray()
+            while len(found) < size:
+                sector, inside = divmod(at + len(found), _SECTOR)
+                file.seek(sector * _RAW_SECTOR + _RAW_DATA + inside)
+                found += file.read(min(_SECTOR - inside, size - len(found)))
+            return bytes(found)
 
     def entries(self, folder: Entry) -> list[Entry]:
         """What a folder holds, in the disc's order."""

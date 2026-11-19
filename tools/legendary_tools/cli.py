@@ -921,7 +921,7 @@ def _disc_of(folder: GameFolder) -> tuple[str, str] | None:
             for place in places
             if os.path.isdir(place)
             for name in sorted(os.listdir(place))
-            if name.lower().endswith(".iso")
+            if name.lower().endswith((".iso", ".img", ".bin"))
         ),
         None,
     )
