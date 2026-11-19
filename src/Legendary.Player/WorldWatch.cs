@@ -99,6 +99,11 @@ internal sealed class WorldWatch(
                 Say("how the game parses a command isn't followed yet", PanelTone.Dim);
             }
 
+            if (map.ClickOffset != 0)
+            {
+                machine.Cpu.Watch((uint)_world.ClickAddress, Clicked);
+            }
+
             foreach (var point in map.Answers)
             {
                 machine.Cpu.Watch((uint)_world.AnswerAddress(point), () => Answered(point));
@@ -366,6 +371,39 @@ internal sealed class WorldWatch(
         string inside = new(' ', 2 * Math.Clamp(world.PerformDepth, 0, 8));
         Say($"  {inside}action {action}: {Said(world, action, first, second)}", PanelTone.Action);
     }
+
+    // a click, in a game played with the mouse: where, on what, and the command it adds to.
+    // The same routine is called as the pointer only passes over things, which isn't said
+    private void Clicked()
+    {
+        if (_world is not { IsThere: true } world)
+        {
+            return;
+        }
+
+        var cpu = machine.Cpu;
+        var (clicked, verb, first, second, onVerb, onObject) = world.ClickArguments((cpu.Ss * 16) + (ushort)cpu.Esp);
+        if (!clicked)
+        {
+            return;
+        }
+
+        var (x, y) = world.Pointer;
+        string on = onVerb != 0 ? $"the verb {VerbName(onVerb)}"
+            : onObject >= 1 && onObject <= map.ObjectCount ? Name(world, onObject)
+            : "nothing";
+
+        // the command before the click: its verb, when it isn't the one just clicked, and its objects
+        string[] had =
+        [
+            .. verb != 0 && verb != onVerb ? new[] { VerbName(verb) } : [],
+            .. new[] { first, second }.Where(number => number >= 1 && number <= map.ObjectCount && number != onObject).Select(number => Name(world, number)),
+        ];
+        Say($"  a click at {x},{y} on {on}" + (had.Length == 0 ? "" : $", with {string.Join(" and ", had)} chosen"));
+    }
+
+    private string VerbName(int verb) =>
+        map.ActionNames.TryGetValue(verb, out string? name) ? name : string.Create(CultureInfo.InvariantCulture, $"verb {verb}");
 
     // how the parser came to take a word off the line: as the command's next, or to see what
     // comes after a full stop or an "and"

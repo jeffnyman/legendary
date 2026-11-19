@@ -200,6 +200,24 @@ public sealed class World
     public int PerformDepth => DataWord(Map.DepthOffset);
 
     /// <summary>
+    /// Where the routine starts that adds what the pointer is on to the command being made, a
+    /// linear address, for a game played with the mouse.
+    /// </summary>
+    public int ClickAddress => Linear(Map.PerformSegment, Map.ClickOffset);
+
+    /// <summary>Where the game's pointer is: across and down, in pixels.</summary>
+    public (int X, int Y) Pointer => (DataWord(Map.PointerOffset), DataWord((ushort)(Map.PointerOffset + 2)));
+
+    /// <summary>
+    /// What that routine is given, for a program that is at <see cref="ClickAddress"/>:
+    /// whether this is a click, the command so far, and the verb or the object pointed at,
+    /// read from its stack, above the far address it returns to.
+    /// </summary>
+    /// <param name="stack">The linear address of the top of the stack, SS:SP.</param>
+    public (bool Clicked, int Verb, int Object, int SecondObject, int OnVerb, int OnObject) ClickArguments(int stack) =>
+        (Word(stack + 4) != 0, Word(stack + 6), Word(stack + 8), Word(stack + 10), Word(stack + 12), Word(stack + 14));
+
+    /// <summary>
     /// The action about to be performed and its objects, for a program that is at
     /// <see cref="PerformAddress"/>: the routine's arguments, read from its stack, where they
     /// are above the far address it returns to.

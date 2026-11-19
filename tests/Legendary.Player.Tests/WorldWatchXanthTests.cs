@@ -131,6 +131,11 @@ public sealed class WorldWatchXanthTests : IDisposable
         // an action is said by its verb, and performed as the games with a parser perform one
         int take = Array.IndexOf(lines, "world:   action 68: Take Post-It(tm) (44)");
         Assert.True(take > 0);
+
+        // and the clicks that made it are said first: the verb, and then the thing
+        Assert.Equal(
+            ["world:   a click at 18,9 on the verb Take", "world:   a click at 235,71 on Post-It(tm) (44), with Take chosen"],
+            lines[(take - 2)..take]);
         Assert.Contains("world:     answered by the action's own routine: 1", lines[take..]);
         Assert.Contains("world:   Post-It(tm) (44) moved: from personal computer (39), its list 2 to You (1)", lines);
         Assert.Contains("world:   Post-It(tm) (44): flag 5, touched, set", lines);

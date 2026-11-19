@@ -223,6 +223,14 @@ public sealed record AnswerPoint(ushort Offset, Asked Asked);
 /// In the data, for a game that counts days and not turns, how many days have passed. With
 /// it, <paramref name="MovesOffset"/> is 0: the game keeps no count of turns.
 /// </param>
+/// <param name="ClickOffset">
+/// For a game played with the mouse, where the routine starts that adds what was pointed at
+/// to the command being made, in the segment of the routine that performs: 0 for a game
+/// with none. It is called far, with whether this is a click or the pointer only passing,
+/// the command so far (its verb, object and second object) and what is pointed at, a verb or
+/// an object, a word each.
+/// </param>
+/// <param name="PointerOffset">In the data, where the game keeps its pointer: across, and after it down.</param>
 /// <param name="StateSegment">
 /// The segment the action, its direction and its two objects are in, with the word a token
 /// is and the form found, when it isn't <paramref name="ActionSegment"/>: <i>Gateway II</i>
@@ -266,7 +274,7 @@ public sealed record WorldMap(
     ushort ClocksSegment = 0, ushort ClocksOffset = 0, ushort HomeClockOffset = 0,
     IReadOnlyList<string>? PlaceNames = null, int Times = 0, ushort? FoundSegment = null,
     int ExitVariableAt = 2, ushort FinderSegment = 0, ushort FinderOffset = 0, int FoundSize = 6,
-    ushort DaysOffset = 0, ushort? StateSegment = null)
+    ushort DaysOffset = 0, ushort? StateSegment = null, ushort ClickOffset = 0, ushort PointerOffset = 0)
 {
     /// <summary>
     /// Whether the places in the program where a command is parsed are known. A map can have
@@ -1638,5 +1646,5 @@ public sealed record WorldMap(
         TableOffset: 0x006C, TypesSegment: 0x23A1, NamesFile: "OBJECT.DAT",
         FlagsSegment: 0x23A1, FlagsOffset: 0x000C, FlagCount: 23,
         ExitsSegment: 0x23A1, ExitsOffset: 0x10FA, DoorsSegment: 0x38AF, DoorsOffset: 0x084E,
-        TimerSize: 4, ClockStep: 1, StateSegment: 0x38AF);
+        TimerSize: 4, ClockStep: 1, StateSegment: 0x38AF, ClickOffset: 0x0594, PointerOffset: 0x69E4);
 }
