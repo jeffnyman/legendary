@@ -5,7 +5,7 @@ ones before it: seen through the player's own eyes, walked through picture by pi
 filmed scenes, and with a battle game inside it.
 
 This is the start of the first look: what is in the game's folder and on its three CDs, what
-of it the tools already read, and how its program is built. What is known for certain is said
+of it the tools already read, how its program is built, and what it took to run. What is known for certain is said
 plainly; what is inferred says so. The program is a 32-bit one, so an address is one number
 in hex and not a `segment:offset`. Every one of them can be looked at with the
 [tools](../tools/README.md).
@@ -124,7 +124,7 @@ them. Neither has been followed yet.
 [The PC](the-pc.md) came with a 386's protected mode and a DPMI host that none of the
 earlier games use, and DOS/4GW runs on them as it is: it prints its banner, version 1.97,
 asks the host for memory, and loads the game's two objects into it. The game then asked
-three things the PC didn't have, and stops now at a fourth.
+four things the PC didn't have.
 
 **The 8087.** Watcom's startup code, at `000ad3e0`, finds no coprocessor and does this:
 
@@ -156,21 +156,38 @@ that the game's folder hasn't, 535 files, three of speech and 529 scenes in `Q`,
 1.3 gigabytes. The PC then serves the game's folder as `D:\MISSION`, as it serves
 *Gateway II*'s as `D:\GW2`.
 
-With those, the game reads `LEGEND.INI`, `DIG.INI` and `MDI.INI`, loads the Miles drivers
-they name, which are 16-bit code it calls through INT 66h, starts the Sound Blaster at
-22,050 samples a second in stereo, prints `init_music()` and a row of dots, and then:
+**The video mode.** With those, the game reads `LEGEND.INI`, `DIG.INI` and `MDI.INI`,
+loads the Miles drivers they name, which are 16-bit code it calls through INT 66h, starts
+the Sound Blaster at 22,050 samples a second in stereo, prints `init_music()` and a row of
+dots, and asks the video BIOS for VESA's mode 101h: 640 by 480 in 256 colors, which a VGA
+hasn't the memory for. Without it the game said so and ended:
 
 ```
 ERROR: Unable to establish VESA graphics mode 101h.  Please load the VESA
        driver for your graphics card or try installing UniVBE 5.1
 ```
 
-Mode 101h is 640 by 480 in 256 colors, which a VGA hasn't the memory for. The game asks the
-video BIOS for VESA's information, INT 10h function 4F00h, and the PC's has none: it has a
-VGA and nothing past it. That is next.
+It asks three things, by INT 10h function 4Fh: what the card is (00h), for the mode to be
+set (02h), and what the mode is like (01h). The PC's card now has a megabyte of memory
+past the VGA's, the modes 100h, 101h, 103h and 105h, and VESA 1.2's functions for them. A
+picture of 640 by 480 is 300 KB, and the processor's window on video memory at `A0000h`
+is 64: a program moves the window, by function 05h or by calling a routine the mode's
+description names, and the card has both.
+
+With that the game runs. It plays its opening film, the planet and the ship and Legend's
+name, with sound; Escape goes past each part; it writes `RESTART.DAT`, tells how the
+Captain left you on the deck, and then:
+
+```
+You regain consciousness...
+```
+
+over the first corridor of the *Lexington*, with the row of `Help`, `Volume`, `Undo`,
+`Save`, `Restore`, `Restart`, `Quit` and `Map` above the picture and the inventory below
+it. That is as far as it has been taken: nothing has been clicked.
 
 ## Still to do
 
 Everything but the above: the pictures and the other fonts, the music, the speech and its
 text, the filmed scenes, the objects and the verbs, the variables' names, the battle game,
-and [a video card with VESA's modes](#running-it), without which it shows nothing.
+and playing it past its first picture.
