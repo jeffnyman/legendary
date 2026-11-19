@@ -151,7 +151,63 @@ list it is, all 296 of them; every room's exits start where the room before's en
 exits in all; and the routines' numbers go from 1 to 448. The letter from Pia and a
 bracelet are in the envelope, which is on the desk, which is in the bedroom.
 
-There are 23 flags, in a table as before. None has a name yet.
+There are 23 flags, in a table as before; [what they are](#the-flags) is below.
+
+## The exits
+
+A room's exits are rows of one table, as from *Timequest*: four bytes each, a direction, a
+kind and a word, at `23A1:10FA`, in the segment of the objects' table, 152 rows for 66 of the 70 rooms. The routine that walks,
+at `08A7:60CA`, goes through a room's rows for the direction.
+
+| Kind | How many | Its word |
+|---|---|---|
+| 1 | 72 | The room it leads to |
+| 2 | 3 | A row of the doors' table, at `38AF:084E`: the room, and the door, which must have flag 14, open, or the game says it isn't |
+| 4 | 77 | The number of a routine, which gives the room, or says why not and gives none |
+
+Half the exits are a routine's, where the games before had a few: an exit here mostly
+depends on something. The routines are 56 far pointers, called at `08A7:70A5`. The three
+doors are the pier's gate, a door at the fairway and the barrow's.
+
+The directions are the ten of a compass with up and down; none is `in` or `out`. The
+tools' `objects` with a room's number lists its exits.
+
+## The flags
+
+The three routines that test, set and clear a flag are at `08A7:25EA`, `2624` and `2658`,
+and the program calls them 751 times, of which the tools read 732. The names are from who
+has each flag as the game starts and what tests it; the tools' `flags` shows both.
+
+| Flag | What it is | From |
+|---|---|---|
+| 1 | Takes `some` | The routine that makes a name tests it; the desert, smoke, lava, mustard, snow and water have it |
+| 2 | Its name takes no article | The same; You, Grundy, Kim and the other people named |
+| 3 | Plural | The same; cliffs, meadows, pencils, flowers, dishes |
+| 4 | Its name takes `an` | The same; ocean, envelope, eye, icicles, egg, arch |
+| 5 | Touched, or for a place visited | Set on what is taken; tested of rooms, 40 times, by two routines |
+| 6 | Seen by the player | Set where a thing is named, and on what is taken, and on the room |
+| 7 | Not yet taken or moved | On 106 things; the one place that clears it is the routine that takes a thing |
+| 8 | Alive | The 19 people, and 28 things; `Poke` and `Give ... to` test it |
+| 10 | A mark its own routine keeps | Tested 190 times and set 75, nearly all by objects' own routines |
+| 11 | Things can be on it | `Put ... on` tests it of the second object; desk, table, mat, pier |
+| 12 | Can be taken | `Take` tests it |
+| 13 | Can be seen through | One window has it; `Look at` and `Open` test it |
+| 14 | Open | Tested 196 times, set 31, cleared 30; a door must have it |
+| 15 | Can be opened and closed | `Open` and `Close` test it |
+| 17 | A container | `Put ... on` tests it of the second object; envelope, icebox, boxes |
+| 19 | A place in the player's own world | Four rooms: bedroom, entrance, kitchen, screen |
+| 20 | Came in the game's box | Five things, which the game box's routine tests it of |
+| 21 | Outdoors | 39 rooms; `Throw ... at` tests it of the room |
+| 22 | Female | The routine that makes a name tests it; Kim, Nada, Jenny, the ogress, Metria, Ma Anathe |
+| 23 | A person | 16 of the people; `Give ... to` tests it, and a click on one is `Talk to` |
+
+Flags 7, 13, 19 and 20 are the least sure. Three have no name: 9, which 61 of the rooms
+have and one routine tests; 16, which nothing has at the start and a cherry bomb sets; and
+18, which 56 things that can be carried have.
+
+The words for where the player is and who is acting are the other way round from what was
+taken above them: `38AF:0256` is the room, by its being what the exits are asked of, and
+`38AF:0258` the actor.
 
 ## The verbs
 
@@ -359,7 +415,7 @@ The tools' `verbs` lists each verb's routine, and `objects` with a number an obj
 ## Still to do
 
 - The speech, `XANTH_01.VOC`, which is on the CD alone.
-- The exits' table and the flags' names.
+- Flags 9, 16 and 18, and the 56 routines of the exits.
 - What the four buttons under the verbs do, and the kinds of thing on the screen that
   haven't been read: 2, 4, 5 and 6.
 - The `.HLP` files.
