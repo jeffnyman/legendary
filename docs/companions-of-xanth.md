@@ -267,10 +267,52 @@ be the shape of the thing: 591 of this game's 728 regions are, the longest of 80
 and 678 of *Gateway II*'s 797. Read this way every picture's regions end where the next
 picture's start, in every file of both games.
 
-What hasn't been followed is the routine that says what part of the screen the pointer is
-in, at `18A5:218A`, and so which kinds of thing are which: that a region found in a
-picture is one of the two kinds that are objects is taken from what the routines after it
-do, and not read.
+### The parts of the screen
+
+The screen is 320 by 200, and the routine at `08A7:09AC`, called after each turn, lays it
+out. The numbers are in its code, and the pictures it draws are the sizes of the boxes
+it draws them in:
+
+| Part | Left, top to right, bottom | What shows it |
+|---|---|---|
+| The verbs, a list down the left | 2, 4 to 49, and as far down as the list goes | Each verb's box is added as it is written |
+| Four buttons under them | 4, 168 to 45, 195, in two rows of two | Four boxes drawn there |
+| The picture | 51, 4 to 314, 125 | 264 by 122, which is what the regions are in |
+| The words of the sentence being made, and what the game says | 51, 128 to 314, 151 | |
+| A box of 32 by 44, by its shape the compass | 51, 152 to 82, 195 | Picture 257 is drawn there, and is 32 by 44 |
+| The things carried, as icons | 88, 152 to 287, 195 | Picture 258, of 200 by 44: two rows of eight icons of 24 by 20 |
+| Two buttons, one over the other | 293, 152 to 314, 173, and 293, 173 to 314, 195 | Pictures of 22 by 44 |
+
+That the box of 32 by 44 is the compass, and what each of the four buttons is, are guesses
+from the shapes; the game hasn't been run to see.
+
+**What can be pointed at** is kept in lists the game makes as it draws, up to eight of
+them, and not in a table in the program: how many lists at `38AF:51DE`, a far pointer to
+each at `38AF:67C2`, and how many items each has at `38AF:67E2`. An item is 20 bytes:
+
+| Offset | What |
+|---|---|
+| 0 | What kind of thing it is |
+| 1 | Its flags; with `80` it can't be pointed at |
+| 2 | Its rectangle: left, top, right and bottom, a word each |
+| 10 | For an object, its number |
+| 14, 16 | For a region with an outline, how many corners, and a far pointer to them |
+
+The routine at `18A5:218A` goes through every list for the items whose rectangle the
+pointer is in, and gives the last, so what is drawn later is on top. The test, at
+`18A5:2BE2`, is the rectangle, and for a kind 3 with corners, whether the pointer is inside
+the outline too.
+
+| Kind | What | How it is known |
+|---|---|---|
+| 1 | A button | The two buttons at the right are added as this |
+| 3 | A region of the picture | The one kind tested against an outline |
+| 7 | An object's icon | Added with the object's number and a box of 24 by 20 |
+| 8 | A verb in the list | Added by the routine that writes the verbs |
+
+Kinds 3 and 7 are the two that give an object, which is the word at 10; kind 8 gives a
+verb, by where it is in the list. Kinds 2, 4, 5 and 6 are added by routines that haven't
+been read.
 
 ## Once a verb is settled
 
@@ -318,6 +360,7 @@ The tools' `verbs` lists each verb's routine, and `objects` with a number an obj
 
 - The speech, `XANTH_01.VOC`, which is on the CD alone.
 - The exits' table and the flags' names.
-- The parts of the screen, and the routine that says which one the pointer is in.
+- What the four buttons under the verbs do, and the kinds of thing on the screen that
+  haven't been read: 2, 4, 5 and 6.
 - The `.HLP` files.
 - The game hasn't been run on the PC.
