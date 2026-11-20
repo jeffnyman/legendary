@@ -23,7 +23,8 @@ in hex and not a `segment:offset`. Every one of them can be looked at with the
 | `FM.XMI`, `GM.XMI`, `SF.XMI` | The music, as the Miles drivers' extended MIDI, once each for three kinds of card |
 | `.MDI` and `.DIG` files, `MDI.INI`, `DIG.INI` | The Miles drivers for music and for digital sound, and which of each is chosen |
 | `BATTLE.DAT`, `CRUISE1.DAT`, `DRONE1.DAT` and eleven more | [The ships of the battle game](#the-battle-game), by the names the program opens them by |
-| `FTLSTARS.DAT`, `FTLLINKS.DAT`, `CSP.DAT` | [The stars of the map](#the-battle-game), and two files not read |
+| `FTLSTARS.DAT`, `FTLLINKS.DAT` | [The stars of the map](#the-battle-game), and which are joined |
+| `CSP.DAT` | [Paths that read as the reactor's coolant](#the-coolants-paths) |
 | `LEGEND.INI` | Where the game looks: `PICDATA` and `SAVEDATA` are `C:\MCRITIC\`, `VOCDATA` is `D:\MISSION\` and `QDATA` is `D:\MISSION\Q\` |
 
 `OBJECT.DAT` and `RESTART.DAT` are here as in every game before, so the world is still
@@ -69,7 +70,7 @@ UniVBE 5.1, and a demo of *Shannara*.
 | [The filmed scenes](#the-filmed-scenes) | 529 files, 41,068 frames, 70 minutes |
 | [The battle game's ships](#the-battle-game) | 14, and 166 stars |
 
-That leaves two small files, `FTLLINKS.DAT` and `CSP.DAT`.
+That is every file the game has.
 
 ## How the program is built
 
@@ -489,8 +490,38 @@ it, the distance and the two angles again in radians, and a long that goes by th
 176 for a G and 272 for an M. They are real stars, Sol first, then Alpha Centauri at 4.3
 light years and Barnard's Star at 6, out to a hundred light years. `stars` lists them.
 
-`FTLLINKS.DAT`, 2,773 bytes, by its name says which stars are joined, and `CSP.DAT` is a
-table of 77 offsets and what they point to, short runs of bytes. Neither is read.
+`FTLLINKS.DAT` is which of them a ship can go between: 59 rows of 47 bytes, the first
+not a star. A row is eleven longs and three bytes of nothing: a number of the star's own,
+from 10 to 978; which star it is, by its place in `FTLSTARS.DAT`; a number from 24 to 28;
+a 0, 1 or 2; and up to seven rows it is joined to. 58 of the 166 stars are joined, by 80
+links, and every link is in both of the rows it joins. Sol is joined to Epsilon Indi
+alone, and Barnard's Star to five. Two rows are places that aren't among the stars, -2
+joined to Deneb Kaitos and -3 to 70 Ophiuchi. What the other three numbers are isn't
+known; the 0, 1 or 2 may be whose the star is. `stars` lists the joins under each star.
+
+### The coolant's paths
+
+`CSP.DAT` is 77 paths across a picture. It starts with 77 longs, where each path starts,
+and a path is steps, a byte and its words:
+
+| Step | Then | What |
+|---|---|---|
+| 2 | A word | Go on to that path. Path 74 is this and nothing else, to itself |
+| 3 | Two words | Be at a place, across and down |
+| 4 | Two words | Go to a place in a straight line |
+| 5 | Two words | Not known: 13 and 13 for most |
+| 6 | A word | Wait that long |
+| 7 | Two words | Where something is set a way, 0 to 6, go on to that path |
+| 0, 1 | | Not known |
+
+Every line whose start its own path gives, 176 of the 252, goes straight up, down or
+across, and some paths go back and forth a dozen
+times in a narrow place, as a coil does. The routine that loads the file, at `00082b50`,
+is in the part of the program that has `WARNING: System breach` and `- Recalculating -`,
+beside the names `Engine Coolant Grid` and `Automatic Valve`, and among the story's
+variables is `Solved Reactor Coolant`. So this reads as the pipes of the reactor's coolant,
+with step 7 a valve and which way it is turned: a reading, not followed in the program.
+`coolant` lists each path's steps.
 
 ## The speech
 
