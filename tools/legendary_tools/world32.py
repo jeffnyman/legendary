@@ -77,6 +77,26 @@ _FLAG_USE = re.compile(
     rb"\xba(.)\x00\x00\x00(?:\x31\xc0)?(?:\x66\xa1....|\x66\x8b.{1,6}?|\x89.|\xb8....)?\xe8(....)", re.DOTALL
 )
 
+# mov ebx,[count] / test ebx,ebx / jle / lea eax,[ebx*8] / ... / mov edx,[esi+table+4] /
+# mov eax,[esi+table]: saving each variable, by a table of eight bytes each, where and how big
+_VARIABLES = re.compile(
+    rb"\x8b\x1d(....)\x85\xdb\x7e.\x8d\x04\xdd\x00\x00\x00\x00.{0,12}?\x8b\x96....\x8b\x86(....)", re.DOTALL
+)
+# mov edx,[ebx] / mov eax,[ecx] / mov edx,[edx*8+names]: the screen of `Global Variables`, which
+# has a table of eight bytes each, a variable's address and its name's
+_NAMED = re.compile(rb"\x8b\x13\x8b\x01\x8b\x14\xd5(....)", re.DOTALL)
+
+# add eax,<sets> / pop / pop / ret / xor eax,eax / mov ax,[edx+1] / add eax,ebx / add eax,<things> /
+# pop / pop / ret / ... / add eax,<replies> / pop / pop / ret: a byte of state for each set of
+# things to say, each thing in a set, and each thing said back
+_TALK = re.compile(
+    rb"\x05(....)\x59\x5b\xc3\x31\xc0\x66\x8b\x42\x01\x01\xd8\x05(....)\x59\x5b\xc3.{0,24}?\x05(....)\x59\x5b\xc3",
+    re.DOTALL,
+)
+# xor eax,eax / mov ax,[room] / call / mov ebx,eax / mov ebp,eax / xor eax,eax / mov ax,[room]:
+# the routine that goes through the exits of the room the player is in
+_ROOM = re.compile(rb"\x31\xc0\x66\xa1(....)\xe8....\x89\xc3\x89\xc5\x31\xc0\x66\xa1\1", re.DOTALL)
+
 TYPE_NAMES = {1: "room", 2: "thing", 3: "holder", 4: "fixture", 5: "person", 6: "routine alone"}
 
 
@@ -247,6 +267,43 @@ class World:
         """Whether an object has a flag; they are numbered from 1, as the program numbers them."""
         bit, kinds = self.flags[flag - 1]
         return bool(kinds >> (thing.type - 1) & 1 and thing.flags >> bit & 1)
+
+    def saved_variables(self) -> list[tuple[int, int, str | None]]:
+        """
+        The variables the game saves, in the order it saves them: each one's address, its size,
+        and its name, where the program has one for it or what reads it here says what it is.
+        """
+        code = next(each for each in self.program.objects if each.is_code)
+        contents = self.program.contents(code)
+        found, named = _VARIABLES.search(contents), _NAMED.search(contents)
+        if not found:
+            raise ValueError("the program's table of saved variables wasn't found")
+        count_at, table = struct.unpack("<II", found[1] + found[2])
+        (count,) = struct.unpack("<I", self.program.read(count_at, 4))
+        names: dict[int, str] = {}
+        if named:
+            # the program's own names, for a screen its writers had to set and clear them
+            at = struct.unpack("<I", named[1])[0] - 4
+            while True:
+                address, name = struct.unpack("<II", self.program.read(at, 8))
+                text = self._text(name)
+                if not text or self.program.object_at(address) is None:
+                    break
+                names[address] = text
+                at += 8
+        names.setdefault(self.lists_at, "the objects' lists of actions")
+        if talk := _TALK.search(contents):
+            sets, things, replies = struct.unpack("<III", talk[1] + talk[2] + talk[3])
+            names.setdefault(sets, "the state of each set of things to say")
+            names.setdefault(things, "the state of each thing to say")
+            names.setdefault(replies, "the state of each thing said back")
+        if room := _ROOM.search(contents):
+            names.setdefault(struct.unpack("<I", room[1])[0], "the room the player is in")
+        variables = []
+        for index in range(count):
+            address, size = struct.unpack("<II", self.program.read(table + 8 * index, 8))
+            variables.append((address, size, names.get(address)))
+        return variables
 
     def flag_uses(self) -> dict[int, list[int]]:
         """For each flag, how often the program tests, sets and clears it by its number."""

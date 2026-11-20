@@ -102,7 +102,8 @@ python -m legendary_tools dis ../../legend/sc101/game 3670:054e
 ```
 
 - **`objects`** reads [*Mission Critical*'s](../docs/mission-critical.md#the-objects) too, from
-  its 32-bit program: the list, one object in full with a room's views and exits, and `--tree`.
+  its 32-bit program: the list, one object in full with a room's views and exits, `--tree`,
+  and with `--saved` the variables the game saves, each with its name where one is known.
 - **`objects`** lists the game's objects as it starts, from the program's memory: each
   one's number, type, flags, names, and what it's in. It starts with the types. With a number,
   it prints that object in full: its flags, the nouns and adjectives it's called by, its routine,

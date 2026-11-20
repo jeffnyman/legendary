@@ -758,7 +758,13 @@ def _objects_32(args: argparse.Namespace, world: World) -> None:
                 show(thing, 0)
         return
     if args.saved:
-        raise ValueError("--saved isn't read for a 32-bit program yet")
+        variables = world.saved_variables()
+        records = sum(len(thing.record) for thing in world.objects)
+        print(f"{records:6}  bytes in the records of {world.count} objects")
+        print(f"{sum(size for _, size, _ in variables):6}  in {len(variables)} saved variables:")
+        for address, size, name in variables:
+            print(f"        {address:08x}  {size:4} bytes  {name or ''}".rstrip())
+        return
     print(
         "types: "
         + "; ".join(
