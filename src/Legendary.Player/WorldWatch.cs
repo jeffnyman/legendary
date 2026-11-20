@@ -47,6 +47,10 @@ internal sealed class WorldWatch(
     private string _exits = "";
     private ObjectState[] _states = [];
 
+    // a 32-bit game's last command from a click, said once though the game takes it again on
+    // each look while the button is down; forgotten when an action is performed
+    private string? _commanded;
+
     // for the panel: the world as it is, and what was said lately, the newest last
     private List<PanelLine> _now = [];
     private readonly List<PanelLine> _lately = [];
@@ -82,9 +86,19 @@ internal sealed class WorldWatch(
                     : $"the game is in memory, its tables at {_world.FoundAt:X8}h, with {map.ObjectCount} objects",
                 PanelTone.Dim);
             machine.Cpu.Watch((uint)_world.PerformAddress, Performing);
-            if (map.Flat is not null)
+            if (map.Flat is { } flat)
             {
-                // its timers, and how a click becomes a command, aren't found yet
+                // a click, and each routine asked as an action is performed; its timers aren't found yet
+                if (flat.CommandAddress != 0)
+                {
+                    machine.Cpu.Watch((uint)_world.ClickAddress, Commanded);
+                }
+
+                foreach (var point in flat.Answers ?? [])
+                {
+                    machine.Cpu.Watch((uint)_world.CodeAddress(point.Address), () => AnsweredFlat(point));
+                }
+
                 return;
             }
 
@@ -379,11 +393,59 @@ internal sealed class WorldWatch(
         }
 
         var cpu = machine.Cpu;
+        _commanded = null;
         var (action, first, second) = map.Flat is null
             ? world.PerformArguments((cpu.Ss * 16) + (ushort)cpu.Esp)
             : World.PerformArguments(cpu.Eax, cpu.Edx, cpu.Ebx);
         string inside = new(' ', 2 * Math.Clamp(world.PerformDepth, 0, 8));
         Say($"  {inside}action {action}: {Said(world, action, first, second)}", PanelTone.Action);
+    }
+
+    // a click in a 32-bit game, as the command it makes: the verb, or none for the action the
+    // object gives itself, and its objects, in registers
+    private void Commanded()
+    {
+        if (_world is not { IsThere: true } world)
+        {
+            return;
+        }
+
+        var cpu = machine.Cpu;
+        int verb = (ushort)cpu.Eax, first = (ushort)cpu.Edx, second = (ushort)cpu.Ebx;
+        var (x, y) = world.Pointer;
+        string[] objects = [.. new[] { first, second }.Where(number => number >= 1 && number <= map.ObjectCount).Select(number => Name(world, number))];
+        string what = verb == 0 ? "its own action" : VerbName(verb);
+        string said = $"  a click at {x},{y} makes a command: {what}" + (objects.Length == 0 ? "" : $", on {string.Join(" and ", objects)}");
+        if (said != _commanded)
+        {
+            Say(_commanded = said);
+        }
+    }
+
+    // a routine asked as a 32-bit game performs an action has answered: the answer in EAX
+    private void AnsweredFlat(FlatAnswer point)
+    {
+        if (_world is not { IsThere: true } world)
+        {
+            return;
+        }
+
+        int answer = (ushort)machine.Cpu.Eax;
+        if (answer == 0 && point.Asked != Asked.Action)
+        {
+            return;
+        }
+
+        string who = point.Asked switch
+        {
+            Asked.Object when world.AskedObject(point) is var number && number >= 1 && number <= map.ObjectCount =>
+                $"{Name(world, number)}, asked as {Why(point.Why)}",
+            Asked.Object => $"an object, asked as {Why(point.Why)}",
+            Asked.Before => "the routine before the action's",
+            _ => "the action's own routine",
+        };
+        string inside = new(' ', 2 * Math.Clamp(world.PerformDepth, 0, 8));
+        Say($"  {inside}answered by {who}: {answer}");
     }
 
     // a click, in a game played with the mouse: where, on what, and the command it adds to.

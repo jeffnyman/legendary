@@ -94,8 +94,13 @@ public sealed class WorldWatchMissionCriticalTests : IDisposable
 
         Run(6);
 
-        // as the game's own tour does it: forward, down the corridor
+        // as the game's own tour starts: forward, down the corridor; and once the walk's film
+        // has played, on the ceiling, where there's nothing but the room, and then where the
+        // tour has the first of the verbs the room offers
         Click(318, 212);
+        Run(5);
+        Click(303, 55);
+        Click(31, 38);
 
         string[] lines = said.ToString().Split('\n', StringSplitOptions.RemoveEmptyEntries);
         Assert.StartsWith("world: the game is in memory, its tables at ", lines[0], StringComparison.Ordinal);
@@ -106,11 +111,23 @@ public sealed class WorldWatchMissionCriticalTests : IDisposable
         Assert.Equal("world:   here: you (1) [Captain's note (148)]", lines[2]);
         Assert.Equal("world:   exits: north to Corridor (136); south to Corridor (145); east to Corridor (149)", lines[3]);
 
-        // the click performs an action, its arguments in registers, and you are moved
+        // the click makes a command, the object giving the action, which is performed, its
+        // arguments in registers; the object's routine answers it, and you are moved
         int walk = Array.IndexOf(lines, "world:   action 15: Walk on a routine alone (65)");
         Assert.True(walk > 0, said.ToString());
+        Assert.Equal("world:   a click at 318,212 makes a command: its own action, on a routine alone (65)", lines[walk - 1]);
+        Assert.Contains("world:     answered by a routine alone (65), asked as the object: 1", lines[walk..]);
         Assert.Contains("world:   you (1) moved: from Corridor (147) to Corridor (136)", lines[walk..]);
         Assert.Contains("world: in Corridor (136)", lines[walk..]);
         Assert.Contains(lines[walk..], line => line.StartsWith("world:   here: you (1) [Captain's note (148)], Emergency Stores Cabinet (137) [", StringComparison.Ordinal));
+
+        // a click on nothing but the room makes it the command's object, and is said once,
+        // though the game takes it on each look while the button is down; the second click
+        // performs it, looking at the room, and the action's own routine answers
+        Assert.Single(lines, line => line == "world:   a click at 303,55 makes a command: its own action, on Corridor (136)");
+        int look = Array.IndexOf(lines, "world:   action 1: Look at Corridor (136)");
+        Assert.True(look > walk, said.ToString());
+        Assert.Equal("world:   a click at 31,38 makes a command: its own action, on Corridor (136)", lines[look - 1]);
+        Assert.Equal("world:     answered by the action's own routine: 1", lines[look + 1]);
     }
 }
