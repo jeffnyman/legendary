@@ -680,13 +680,22 @@ lines is what the program does with it:
 | 0 to 544 | What is said back | 363 | 363, with their text |
 | 545 to 566 | Named in the code | 17 | 1 |
 | 567 to 977 | What the player says | 385 | 385, with their text |
-| 978 to 1,295 | Named in the code | 312 | 93 |
+| 978 to 1,295 | Named in the code | 312 | 105 |
 
-So 748 of the 1,077 have their text, and 94 more are known for what they are. The 235
-left aren't handed over as a number the code spells out: they come from tables, or from a
-number added to, and aren't followed. 147 of them are under three seconds, which reads as
+One more kind is a run the program readies one after another, to play one of them at
+random: lines 1,098 to 1,109 are the clicks of the Geiger counter, object 365, and which
+is played goes by a number the game keeps that reads as how strong the radiation is.
+
+So 748 of the 1,077 have their text, and 106 more are known for what they are. The 223
+left aren't handed over as a number the code spells out: they come from tables the game
+fills as it goes, and reading those in the program is slow work for what it gives. The
+watch says them instead, as the game plays them: each line the routine at `000847d0`
+speaks and each sound the routine at `00084b30` starts, by its number. In the first
+corridor, before anything is clicked, the game plays four, lines 1,160, 1,068, 1,075 and
+1,037, three of which nothing in the code names: the corridor's own sounds, by when they come. 147 of them are under three seconds, which reads as
 more sounds; the other 88 are 22 minutes between them. They come in runs, 996 to 1,032 and
-1,234 to 1,270 the longest. `speech` lists every line with what is known of it.
+1,234 to 1,270 the longest. `speech` lists every line with what is known of it, and
+`--watch` says each as it is played.
 
 ## Running it
 
@@ -869,6 +878,6 @@ timers.
 ## Still to do
 
 Everything but the above: the picture each of 1,214 changes is to, and kind 4; what
-235 of the lines in the files of speech are; what an action's routine and an object's do, and the
+223 of the lines in the files of speech are, which the watch says as they're played; what an action's routine and an object's do, and the
 fields of a record not yet named; one of the flags, and 59 of the saved variables; the battle
 game's rules; and playing it through.
