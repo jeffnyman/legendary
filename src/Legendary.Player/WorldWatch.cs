@@ -51,6 +51,9 @@ internal sealed class WorldWatch(
     // each look while the button is down; forgotten when an action is performed
     private string? _commanded;
 
+    // the last line it was said was played, so that one played over and over is said once
+    private string? _played;
+
     // for the panel: the world as it is, and what was said lately, the newest last
     private List<PanelLine> _now = [];
     private readonly List<PanelLine> _lately = [];
@@ -97,6 +100,18 @@ internal sealed class WorldWatch(
                 foreach (var point in flat.Answers ?? [])
                 {
                     machine.Cpu.Watch((uint)_world.CodeAddress(point.Address), () => AnsweredFlat(point));
+                }
+
+                // the lines of the files of speech as they are played, each by its number: many
+                // are named nowhere else but in tables the game fills as it goes
+                if (flat.SpeakAddress != 0)
+                {
+                    machine.Cpu.Watch((uint)_world.CodeAddress(flat.SpeakAddress), () => Played("speaks line"));
+                }
+
+                if (flat.SoundAddress != 0)
+                {
+                    machine.Cpu.Watch((uint)_world.CodeAddress(flat.SoundAddress), () => Played("plays sound"));
                 }
 
                 return;
@@ -419,6 +434,22 @@ internal sealed class WorldWatch(
         if (said != _commanded)
         {
             Say(_commanded = said);
+        }
+    }
+
+    // a line of the files of speech played by its number, in EAX: said once while the same one
+    // is played again and again, as a sound that repeats is
+    private void Played(string how)
+    {
+        if (_world is not { IsThere: true })
+        {
+            return;
+        }
+
+        string said = string.Create(CultureInfo.InvariantCulture, $"  {how} {(short)machine.Cpu.Eax}");
+        if (said != _played)
+        {
+            Say(_played = said, PanelTone.Dim);
         }
     }
 

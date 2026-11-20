@@ -54,11 +54,14 @@ public sealed record RecordLayout(
 /// </param>
 /// <param name="PointerAddress">The words that are the pointer, across and then down; 0 when not known.</param>
 /// <param name="Answers">Where the routine that performs an action has just heard from a routine it asked.</param>
+/// <param name="SpeakAddress">The routine that speaks a line of the files of speech, its number in EAX; 0 when not known.</param>
+/// <param name="SoundAddress">The routine that starts a sound kept among them, its number in EAX; 0 when not known.</param>
 public sealed record FlatWorld(
     IReadOnlyList<byte> Types, int TypesAddress, int FlagsAddress, int TableAddress, int CountAddress, int ExitsAddress,
     int PerformAddress, int FirstRecord, int RoomAddress, int ActorAddress,
     int ActionAddress, int ObjectAddress, int SecondObjectAddress, int DepthAddress, int DirectionAddress,
-    int CommandAddress = 0, int PointerAddress = 0, IReadOnlyList<FlatAnswer>? Answers = null);
+    int CommandAddress = 0, int PointerAddress = 0, IReadOnlyList<FlatAnswer>? Answers = null,
+    int SpeakAddress = 0, int SoundAddress = 0);
 
 /// <summary>
 /// A place in a 32-bit game's routine that performs an action, just after a routine it asked
@@ -1829,6 +1832,7 @@ public sealed record WorldMap(
             PerformAddress: 0x15210, FirstRecord: 0xCDB40, RoomAddress: 0xCC624, ActorAddress: 0xCC626,
             ActionAddress: 0xE37AA, ObjectAddress: 0xE37B2, SecondObjectAddress: 0xE37B0, DepthAddress: 0xCC5C0,
             DirectionAddress: 0xE37B4, CommandAddress: 0x17690, PointerAddress: 0xE2B50,
+            SpeakAddress: 0x847D0, SoundAddress: 0x84B30,
             // the routine that performs an action asks the room's, then the one the player is
             // when another acts, what the actor is in, the actor's, the routine before the
             // action's, the second object's place and the object, the object's place and the

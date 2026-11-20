@@ -111,6 +111,10 @@ public sealed class WorldWatchMissionCriticalTests : IDisposable
         Assert.Equal("world:   here: you (1) [Captain's note (148)]", lines[2]);
         Assert.Equal("world:   exits: north to Corridor (136); south to Corridor (145); east to Corridor (149)", lines[3]);
 
+        // the sounds of the corridor, each by its number among the lines of the files of speech
+        Assert.Contains("world:   plays sound 1160", lines);
+        Assert.Contains("world:   plays sound 1037", lines);
+
         // the click makes a command, the object giving the action, which is performed, its
         // arguments in registers; the object's routine answers it, and you are moved
         int walk = Array.IndexOf(lines, "world:   action 15: Walk on a routine alone (65)");
