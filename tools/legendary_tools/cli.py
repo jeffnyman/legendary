@@ -16,7 +16,13 @@ import tempfile
 
 from . import data
 from .animations import is_animation, read_animation
-from .battle import read_ship, read_stars
+from .battle import Link, read_links, read_ship, read_stars
+from .coolant import BRANCH as PATH_BRANCH
+from .coolant import END as PATH_END
+from .coolant import LINE as PATH_LINE
+from .coolant import PLACE as PATH_PLACE
+from .coolant import WAIT as PATH_WAIT
+from .coolant import read_paths
 from .flags import (
     GAME_201,
     GAME_301,
@@ -1240,11 +1246,53 @@ def stars(args: argparse.Namespace) -> None:
     path = folder.find("ftlstars.dat")
     if path is None:
         raise ValueError(f"{args.folder}: no FTLSTARS.DAT is there")
-    for number, star in enumerate(read_stars(folder.read(path))):
+    found = read_stars(folder.read(path))
+    # which stars a ship can go between, where the file of that is there
+    joined = folder.find("ftllinks.dat")
+    links = read_links(folder.read(joined)) if joined else []
+    by_row = {link.row: link for link in links}
+    of_star = {link.star: link for link in links}
+
+    def named(link: Link) -> str:
+        return (
+            found[link.star].name
+            if 0 <= link.star < len(found)
+            else f"a place that isn't a star ({link.star})"
+        )
+
+    for number, star in enumerate(found):
         print(
             f"{number:3}  {star.name:22} {star.right_ascension:12} {star.declination:13}"
             f" {star.light_years:6.1f} light years  {star.kind}"
         )
+        if number in of_star:
+            to = ", ".join(named(by_row[row]) for row in of_star[number].joined if row in by_row)
+            print(f"       joined to {to}")
+    for link in links:
+        if link.star < 0:
+            to = ", ".join(named(by_row[row]) for row in link.joined if row in by_row)
+            print(f"     {named(link)}, joined to {to}")
+    if links:
+        print(f"{len(links)} of them joined, by {sum(len(link.joined) for link in links) // 2} links")
+
+
+def coolant(args: argparse.Namespace) -> None:
+    """The paths in Mission Critical's CSP.DAT, which read as its reactor's coolant: each one's steps."""
+    folder = GameFolder(args.folder)
+    path = folder.find("csp.dat")
+    if path is None:
+        raise ValueError(f"{args.folder}: no CSP.DAT is there")
+    words = {PATH_END: "on to path {}", PATH_PLACE: "at {},{}", PATH_LINE: "to {},{}", PATH_WAIT: "wait {}"}
+    for number, steps in enumerate(read_paths(folder.read(path))):
+        said = []
+        for kind, *values in steps:
+            if kind == PATH_BRANCH:
+                said.append(f"where it's set {values[0]}, path {values[1]}")
+            elif kind in words:
+                said.append(words[kind].format(*values))
+            else:
+                said.append(f"({kind}{''.join(f' {value}' for value in values)})")
+        print(f"{number:2}  {'; '.join(said)}")
 
 
 def scenes(args: argparse.Namespace) -> None:
@@ -1611,6 +1659,7 @@ def _mouse_commands(command) -> None:  # noqa: ANN001: the parser's own maker of
         "--out", metavar="FOLDER", help="draw each there as a PNG file, from three sides"
     )
     command(stars)
+    command(coolant)
     sub = command(scenes)
     sub.add_argument("name", nargs="?", help="only this scene, as mc700")
     sub.add_argument(

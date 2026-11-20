@@ -226,7 +226,10 @@ python -m legendary_tools vocab <the game's folder>
 - **`ships`** lists the ships of [*Mission Critical*'s battle game](../docs/mission-critical.md#the-battle-game),
   each a drawing in lines: its points and lines, in full and far off, and its size. With
   `--out`, it draws each as a PNG file, from above, from the side and from ahead.
-- **`stars`** lists the 166 stars of that game's map: name, place in the sky, distance and kind.
+- **`stars`** lists the 166 stars of that game's map: name, place in the sky, distance and
+  kind, and under each the stars it is joined to.
+- **`coolant`** lists the paths of that game's `CSP.DAT`, which read as
+  [its reactor's coolant](../docs/mission-critical.md#the-coolants-paths): each one's steps.
 - **`scenes`** lists [*Mission Critical*'s filmed scenes](../docs/mission-critical.md#the-filmed-scenes),
   its `.Q` files: each one's version, frames, length, and whether it has sound. With a name,
   as `mc700`, only that one. With `--out`, it writes each as an animated PNG file, which a

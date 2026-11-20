@@ -16,6 +16,17 @@ FTLSTARS.DAT is the stars a ship can go to, a hundred bytes each:
     64  what kind of star it is, as astronomers write it: G2 V
     72  three floats: how far again, and the declination and the right ascension in radians
     84  a long, by the kind of star: 176 for G, 272 for M
+
+FTLLINKS.DAT is which of those stars a ship can go between: 59 rows of 47 bytes, the first
+of them not a star. A row is eleven longs and three bytes of nothing:
+
+    0   a number of the star's own, from 10 to 978, not yet understood
+    4   which star it is, its place in FTLSTARS.DAT; -2 and -3 for two places that aren't there
+    8   a number from 24 to 28, not yet understood
+    12  0, 1 or 2, not yet understood
+    16  up to seven rows this one is joined to, by their numbers, and zeros after them
+
+Every join is in both rows it joins.
 """
 
 from __future__ import annotations
@@ -142,3 +153,29 @@ def read_stars(data: bytes) -> list[Star]:
             )
         )
     return stars
+
+
+@dataclass(frozen=True)
+class Link:
+    """A row of FTLLINKS.DAT: a star, and the rows it is joined to."""
+
+    row: int
+    own: int
+    star: int  # its place among the stars, or below 0 for a place that isn't one of them
+    level: int
+    side: int
+    joined: list[int]
+
+
+_ROW = 47
+
+
+def read_links(data: bytes) -> list[Link]:
+    """The rows of FTLLINKS.DAT after the first, which is no star."""
+    if not data or len(data) % _ROW:
+        raise ValueError("not a file of links: it isn't 47 bytes a row")
+    links = []
+    for row in range(1, len(data) // _ROW):
+        own, star, level, side, *joined = struct.unpack_from("<11i", data, _ROW * row)
+        links.append(Link(row, own, star, level, side, [other for other in joined if other]))
+    return links
