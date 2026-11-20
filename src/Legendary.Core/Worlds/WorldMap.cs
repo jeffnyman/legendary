@@ -1775,9 +1775,14 @@ public sealed record WorldMap(
             [4] = "its name takes an",
             [5] = "touched",
             [6] = "seen",
+            [7] = "not yet taken",
+            [8] = "can be taken",
             [10] = "its routine's own mark",
+            [11] = "somewhere the player can be",
             [12] = "can be opened and closed",
             [13] = "can be seen through",
+            [14] = "unlocked",
+            [15] = "things can be put in it",
             [16] = "open",
             [17] = "a room",
             [18] = "things can be on it",
@@ -1786,7 +1791,7 @@ public sealed record WorldMap(
         },
         PlaceFlagNames: new Dictionary<int, string> { [5] = "visited" },
         PersonFlagNames: new Dictionary<int, string>(),
-        StateFlags: [16],
+        StateFlags: [14, 16],
         // from the routines that get and set each field for each type
         Layouts: new Dictionary<int, RecordLayout>
         {
