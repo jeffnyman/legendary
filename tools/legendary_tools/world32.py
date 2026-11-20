@@ -53,7 +53,9 @@ _ACTION_LISTS = re.compile(rb"\x01\xc0\x83\xe8\x02\x05(....)", re.DOTALL)
 
 # what each flag is, where the program's use of it says. 1 to 4 are how a name is written and
 # 19 picks `herself`; Open asks 12 and sets 16 and 5, and Close clears 16; Look in asks 13 and
-# 16; 17 is every room and 20 both people. 10 is tested, set and cleared
+# 16; 17 is every room and 20 both people. Taking a thing clears 7 and sets 8, which Take
+# asks; Put asks 7 or 8 of what is put and 15 or 18 of where; the search for where the player
+# is stops at 11; a door's routine sets 14 once its code is given. 10 is tested, set and cleared
 # by the objects' own routines and nothing else, as the game before's flag 10 is
 FLAG_NAMES = {
     1: "takes some",
@@ -62,9 +64,14 @@ FLAG_NAMES = {
     4: "its name takes an",
     5: "touched",
     6: "seen",
+    7: "not yet taken",
+    8: "can be taken",
     10: "its routine's own mark",
+    11: "somewhere the player can be",
     12: "can be opened and closed",
     13: "can be seen through",
+    14: "unlocked",
+    15: "things can be put in it",
     16: "open",
     17: "a room",
     18: "things can be on it",
