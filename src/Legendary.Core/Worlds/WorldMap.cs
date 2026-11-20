@@ -48,10 +48,29 @@ public sealed record RecordLayout(
 /// <param name="SecondObjectAddress">Its second.</param>
 /// <param name="DepthAddress">How many actions deep the game is.</param>
 /// <param name="DirectionAddress">The byte that is the direction of an exit being taken.</param>
+/// <param name="CommandAddress">
+/// The routine a click hands a command to: the verb in EAX, or 0 for the action the object
+/// gives, and the two objects in EDX and EBX. 0 when it isn't known.
+/// </param>
+/// <param name="PointerAddress">The words that are the pointer, across and then down; 0 when not known.</param>
+/// <param name="Answers">Where the routine that performs an action has just heard from a routine it asked.</param>
 public sealed record FlatWorld(
     IReadOnlyList<byte> Types, int TypesAddress, int FlagsAddress, int TableAddress, int CountAddress, int ExitsAddress,
     int PerformAddress, int FirstRecord, int RoomAddress, int ActorAddress,
-    int ActionAddress, int ObjectAddress, int SecondObjectAddress, int DepthAddress, int DirectionAddress);
+    int ActionAddress, int ObjectAddress, int SecondObjectAddress, int DepthAddress, int DirectionAddress,
+    int CommandAddress = 0, int PointerAddress = 0, IReadOnlyList<FlatAnswer>? Answers = null);
+
+/// <summary>
+/// A place in a 32-bit game's routine that performs an action, just after a routine it asked
+/// has answered, with the answer in EAX. The object asked about isn't on the stack, as the
+/// 16-bit games have it: it is a word of the game's, or what that word's object is in.
+/// </summary>
+/// <param name="Address">Where it is, as the program's file has it.</param>
+/// <param name="Asked">Whose routine it was.</param>
+/// <param name="Why">For an object's, why it was asked, as <see cref="Asked.Object"/>'s are numbered.</param>
+/// <param name="ObjectAddress">For an object's, the word that is the object, or whose place it is.</param>
+/// <param name="PlaceOf">Whether the object asked about is what that word's object is in.</param>
+public sealed record FlatAnswer(int Address, Asked Asked, int Why = 0, int ObjectAddress = 0, bool PlaceOf = false);
 
 /// <summary>Whose routine the game has asked about an action it is performing.</summary>
 public enum Asked
@@ -1809,5 +1828,22 @@ public sealed record WorldMap(
             TypesAddress: 0x1A620, FlagsAddress: 0x1A632, TableAddress: 0x1A670, CountAddress: 0x1B778, ExitsAddress: 0x1B77C,
             PerformAddress: 0x15210, FirstRecord: 0xCDB40, RoomAddress: 0xCC624, ActorAddress: 0xCC626,
             ActionAddress: 0xE37AA, ObjectAddress: 0xE37B2, SecondObjectAddress: 0xE37B0, DepthAddress: 0xCC5C0,
-            DirectionAddress: 0xE37B4));
+            DirectionAddress: 0xE37B4, CommandAddress: 0x17690, PointerAddress: 0xE2B50,
+            // the routine that performs an action asks the room's, then the one the player is
+            // when another acts, what the actor is in, the actor's, the routine before the
+            // action's, the second object's place and the object, the object's place and the
+            // object, and last the action's own, which a table at 0x17460 finds
+            Answers:
+            [
+                new(0x152F5, Asked.Object, 1, 0xCC624),
+                new(0x1531E, Asked.Object, 1, 0xCC640),
+                new(0x1534B, Asked.Object, 1, 0xCC626, PlaceOf: true),
+                new(0x15365, Asked.Object, 2, 0xCC626),
+                new(0x15378, Asked.Before),
+                new(0x153AB, Asked.Object, 3, 0xE37B0, PlaceOf: true),
+                new(0x153C1, Asked.Object, 4, 0xE37B0),
+                new(0x153EF, Asked.Object, 5, 0xE37B2, PlaceOf: true),
+                new(0x15405, Asked.Object, 6, 0xE37B2),
+                new(0x1760C, Asked.Action),
+            ]));
 }

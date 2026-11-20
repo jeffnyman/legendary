@@ -219,10 +219,31 @@ public sealed class World
     /// Where the routine starts that adds what the pointer is on to the command being made, a
     /// linear address, for a game played with the mouse.
     /// </summary>
-    public int ClickAddress => Linear(Map.PerformSegment, Map.ClickOffset);
+    public int ClickAddress => Map.Flat is { } flat ? _code + flat.CommandAddress : Linear(Map.PerformSegment, Map.ClickOffset);
 
     /// <summary>Where the game's pointer is: across and down, in pixels.</summary>
-    public (int X, int Y) Pointer => (DataWord(Map.PointerOffset), DataWord((ushort)(Map.PointerOffset + 2)));
+    public (int X, int Y) Pointer => Map.Flat is { } flat
+        ? (Word(_data + flat.PointerAddress), Word(_data + flat.PointerAddress + 2))
+        : (DataWord(Map.PointerOffset), DataWord((ushort)(Map.PointerOffset + 2)));
+
+    /// <summary>For a 32-bit game, where in memory a place in its code is.</summary>
+    public int CodeAddress(int address) => _code + address;
+
+    /// <summary>
+    /// For a 32-bit game, the object a routine was asked about, at a place where it has just
+    /// answered: a word of the game's, or what that word's object is in. 0 when there's none.
+    /// </summary>
+    public int AskedObject(FlatAnswer point)
+    {
+        ArgumentNullException.ThrowIfNull(point);
+        int number = Word(_data + point.ObjectAddress);
+        if (!point.PlaceOf)
+        {
+            return number;
+        }
+
+        return number >= 1 && number <= Map.ObjectCount ? State(number).Place : 0;
+    }
 
     /// <summary>
     /// What that routine is given, for a program that is at <see cref="ClickAddress"/>:
