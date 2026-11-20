@@ -230,7 +230,7 @@ calls to say whether the way is open and where it goes. Northeast from the Bridg
 is the Bridge. The directions are the earlier games' twelve: the compass's eight, up, down,
 in and out.
 
-The room you are in is the word at `000cc624`.
+The room you are in is the word at `000cc624`, and the actor the word at `000cc626`.
 
 ### The state it starts from
 
@@ -824,8 +824,47 @@ named `Walk on` for that and nothing else. Its object is one of the 76 that are 
 number alone. Coming into a room sets two of [its flags](#the-flags): it is visited, and
 seen.
 
-What the watch doesn't have for this game: a count of turns or a time of day, the timers,
-how a click becomes an action, and whose routine answered one.
+### A click, and whose routine answers
+
+A click comes to the routine at `00011df0`, which reads the pointer from `000e2b50`, across
+and then down, and the button from `000e2b54`, and hands a command to the routine at
+`00017690`: the verb in EAX, or 0 for the action the object gives itself, and the two
+objects in EDX and EBX. Within sixteen pixels of either side of the picture the command
+is action 14 with -1 or 1, which by its place reads as turning. That routine puts the
+command's words together and sets it, at `000e37a8`, `000e37a6` and `000e37a4`, for the
+turn to perform. The watch says each command a click makes there,
+once, though the game takes the same click on every pass of its loop while the button is
+down.
+
+The routine that performs an action asks other routines first, in the order every game
+before asks them: the room's; the player's own, when someone else is acting; what the
+actor is in; the actor's; the routine before the action's, at `000175dc`; what the second
+object is in, and the second object; what the object is in, and the object. Each is called
+at `0001c8f4` with the object in EAX and why it is asked in EDX, numbered as *Companions of
+Xanth*'s are, and the first to answer with something other than 0 ends it. Last is the
+action's own, which `000175f8` finds in a table at `00017460`. The watch is told at the
+instruction after each call, where the answer is in EAX; the object asked about isn't on
+the stack, as it is in the 16-bit games, so it is read from the word the call took it from.
+
+So the tour's first click, and a click on the ceiling of the room it leads to:
+
+```
+world:   a click at 318,212 makes a command: its own action, on a routine alone (65)
+world:   action 15: Walk on a routine alone (65)
+world:   you (1) moved: from Corridor (147) to Corridor (136)
+world:     answered by a routine alone (65), asked as the object: 1
+world:   a click at 303,55 makes a command: its own action, on Corridor (136)
+world:   a click at 31,38 makes a command: its own action, on Corridor (136)
+world:   action 1: Look at Corridor (136)
+world:     answered by the action's own routine: 1
+```
+
+The walk is the object's own routine's work: the routine alone, number 65, answers for
+itself. The click on the ceiling makes the room the command's
+object, and the next click performs it.
+
+What the watch doesn't have for this game: a count of turns or a time of day, and the
+timers.
 
 ## Still to do
 
