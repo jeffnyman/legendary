@@ -238,8 +238,49 @@ accounts for `RESTART.DAT` to the byte:
 | 4 | A long at `000cc58c` |
 | 48 | At `000e2b88` |
 
-21,880 in all. The largest variable is 545 bytes at `000d374a`, a byte for each thing
-that [can be said back to you](#what-a-line-says).
+21,880 in all.
+
+### The variables' names
+
+Thirteen of the 77 variables have names that are the program's own. The data starts with
+them, `Debris Cut`, `Bomb Armed`, `Spoke With Admiral`, and a table at `000cc518` pairs
+fourteen addresses with fourteen names, for a screen headed `Global Variables` with `Set`
+and `Reset` under it: what the game's writers used to put the story where they wanted
+it. The screen is still in the program.
+
+| Variable | Bytes | The program's name |
+|---|---|---|
+| `000d86bc` | 1 | Debris Cut |
+| `000d91a8` | 1 | Transversed Reactor Maze |
+| `000d9c06` | 2 | Bomb Armed |
+| `000d7a98` | 1 | Fixed Hull Leak |
+| `000d7a99` | 1 | Elevator Operational |
+| `000d7a9a` | 1 | Sprayed Hull Puncture |
+| `000d7a9b` | 1 | Glued Patched |
+| `000d8340` | 1 | Pulled VR Cables Out |
+| `000d88f6` | 1 | Wearing Fixed Space Suit |
+| `000d9210` | 1 | Solved Reactor Coolant |
+| `000d7965` | 1 | Passed Hype Checklist |
+| `000d7aa0` | 1 | Spoke With Admiral |
+| `000d7aa1` | 1 | Contact With Jericho |
+
+The fourteenth, `Panning On` at `000cc704`, is a setting and isn't saved. Read in order,
+the thirteen are the game's story: the debris cut away, the hull patched, glued and
+sprayed, the elevator working, the reactor's maze and its coolant, the Admiral, the
+*Jericho*.
+
+Five more are known by what reads them:
+
+| Variable | Bytes | What |
+|---|---|---|
+| `000cc624` | 2 | The room the player is in |
+| `000d374a` | 545 | A byte of state for each [thing said back](#what-a-line-says) |
+| `000d4a7e` | 524 | And for each thing the player can say |
+| `000d564e` | 113 | And for each set of those |
+| `000cc86c` | 1,524 | [The objects' lists of actions](#the-verbs), which being saved says the game changes what an object offers |
+
+That is 18 of the 77; the other 59, most of them a byte or two, aren't known.
+`objects --saved` lists them all.
 
 `objects` lists them, shows one in full, and with `--tree` shows each room with what is in
 it.
@@ -736,5 +777,5 @@ how a click becomes an action, and whose routine answered one.
 
 Everything but the above: which picture each change is to, and kind 4; what
 the 325 lines of speech named in the code say; what an action's routine and an object's do, and the
-fields of a record not yet named; six of the flags, and the variables' names; the battle
+fields of a record not yet named; six of the flags, and 59 of the saved variables; the battle
 game's rules; and playing it through.
