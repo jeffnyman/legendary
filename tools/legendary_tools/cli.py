@@ -63,6 +63,7 @@ from .pictures import (
     RAW_PLANE,
     RAW_PLANES,
     PictureFile,
+    View,
     is_imploded,
     is_known,
     is_later,
@@ -1043,19 +1044,35 @@ _PACKINGS = {
 }
 
 
-def _picture_notes(file: PictureFile, entry: PictureEntry) -> tuple[str, str]:
+def _picture_notes(file: PictureFile, entry: PictureEntry, finding: bool) -> tuple[str, str]:
     """How a picture is packed, and what else there is to say of it."""
     packing = _PACKINGS.get(entry.packing, f"{entry.kind:#04x}")
     notes = "" if entry.has_palette and (file.ega or file.sized) else ", no palette"
     if entry.sized and (entry.across or entry.down):
         notes += f", a piece at {entry.across},{entry.down}"
-    if entry.sized and entry.kind == 3 and entry.width and file.changed(entry) is not None:
-        notes += f", a change to picture {file.changed(entry)}"
+    if entry.sized and entry.kind == 3 and entry.width and not finding:
+        notes += ", a change to another picture"
+    elif entry.sized and entry.kind == 3 and entry.width and (view := file.changed(entry)) is not None:
+        notes += f", a change to picture {view.number}" + (f" of {view.file}" if view.file else "")
     elif entry.sized and entry.kind == 3 and entry.width:
-        notes += ", a change to a picture that isn't in this file"
+        notes += ", a change to a picture that wasn't found"
     if entry.places:
         notes += f", placed {entry.places} time{'s' if entry.places > 1 else ''}"
     return packing, notes
+
+
+def _views_of(folder: GameFolder, files: list[bytes]) -> list[View]:
+    """The whole pictures of every file of Mission Critical's, which its changes are tried over."""
+    views: list[View] = []
+    for path, contents in zip(_picture_files(folder), files):
+        stem = os.path.splitext(os.path.basename(path))[0].upper()
+        try:
+            each = PictureFile(contents, ega=False)
+        except ValueError:
+            continue
+        if each.sized:
+            views += each.views(stem)
+    return views
 
 
 def pictures(args: argparse.Namespace) -> None:
@@ -1067,12 +1084,17 @@ def pictures(args: argparse.Namespace) -> None:
     later = is_later(files)
     imploded = is_imploded(files)
     known = is_known(files)
+    # which picture each change is to takes minutes to find, so it is found when it's wanted
+    finding = bool(args.out or getattr(args, "changes", False))
+    views = _views_of(folder, files) if finding else []
     for path in _picture_files(folder):
         name = os.path.splitext(os.path.basename(path))[0].lower()
         # the letter before the file's number says which display it's for
         file = PictureFile(
             folder.read(path), ega=name.rstrip("0123456789").endswith("e"), later=later, imploded=imploded
         )
+        if file.sized and finding:
+            file.changes([view for view in views if view.file != name.upper()])
         found = file.pictures()
         # the later games' files say the display in each picture, and not in the file's name
         display = "" if imploded or file.sized else f", for the {'EGA' if file.ega else 'CGA'}"
@@ -1094,7 +1116,7 @@ def pictures(args: argparse.Namespace) -> None:
                 with open(os.path.join(args.out, f"{name}_{entry.number:03}.png"), "wb") as png:
                     png.write(picture.png())
             else:
-                packing, notes = _picture_notes(file, entry)
+                packing, notes = _picture_notes(file, entry, finding)
                 print(f"  {entry.number:3}  {entry.width:3} x {entry.height:3}  {packing}{notes}")
     if args.out:
         print(f"written to {args.out}")
@@ -1679,6 +1701,15 @@ def _extract_options(extracting: argparse.ArgumentParser) -> None:
     )
 
 
+def _picture_options(sub: argparse.ArgumentParser) -> None:
+    sub.add_argument("--out", metavar="FOLDER", help="write each picture there as a PNG file")
+    sub.add_argument(
+        "--changes",
+        action="store_true",
+        help="say which picture each of Mission Critical's changes is to, which takes some minutes to find",
+    )
+
+
 def _mouse_commands(command) -> None:  # noqa: ANN001: the parser's own maker of commands
     _disc_options(command(animations), command(disc))
     command(verbs)
@@ -1753,7 +1784,7 @@ def main() -> None:
         "--out", metavar="FOLDER", help="write each song there as a .mid or .rol file"
     )
     command(sounds).add_argument("--out", metavar="FOLDER", help="write each sound there as a WAV file")
-    command(pictures).add_argument("--out", metavar="FOLDER", help="write each picture there as a PNG file")
+    _picture_options(command(pictures))
     _extract_options(command(extract))
     _mouse_commands(command)
     command(fonts).add_argument(

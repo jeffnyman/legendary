@@ -96,11 +96,17 @@ IMPLODED = 6  # the one way the games from Spellcasting 301 on pack a picture's 
 LHA, RAW_BYTES = 7, 8  # and Mission Critical's two: LHA's -lh4-, and a byte a pixel as it is
 
 _CHANGE = 3  # the kind of a picture of Mission Critical's that is a change to another
-# for finding which picture a change is to: how many pixels are looked at, how little they may
-# differ from their neighbors for the result to be a picture, how much makes it noise, and how
-# few pixels are too few to tell by
-_SAMPLES, _SMOOTH, _NOISE, _SMALL = 3000, 24.0, 40.0, 600
+# for finding which picture a change is to: how many pixels are looked at; how little the
+# changed ones may differ from their neighbors for the picture as it stands to be kept, and for
+# another to be taken; and how few pixels are too few to tell by. Over the right picture a
+# change comes to 10 to 50, and over a wrong one to 100 and more
+_SAMPLES, _SMOOTH, _NOISE, _SMALL = 3000, 50.0, 60.0, 600
 _BANDS, _FEW = 8, 20  # the bands a change is looked at in, and how few pixels of one say nothing
+# a picture stands out when it is this much smoother than the next, and takes over from the
+# picture as it stands when this much smoother than that; and how many get the full look
+_APART, _CLOSE, _SHORTLIST = 0.5, 0.9, 6
+_COLORS = 64  # how many colors a picture needs for its smoothness to mean anything
+_ACROSS = 640  # the width of a room's view, which a change in another file is tried over
 
 # Mission Critical's directory: 256 entries of twenty bytes
 _SIZED_ENTRY, _SIZED_COUNT = 20, 256
@@ -160,6 +166,26 @@ class Entry:
         if self.imploded:
             return bool(self.kind & 0x10)
         return bool(self.kind & 1) if self.later else not self.kind & 1
+
+
+@dataclass(frozen=True)
+class View:
+    """A whole picture of Mission Critical's, for a change to be put over."""
+
+    file: str  # the file it is in, by a name; nothing for the file the change is in
+    number: int
+    width: int
+    height: int
+    pixels: bytes
+    colors: bytes  # red, green and blue, a byte each, for each of the 256
+
+
+@dataclass(frozen=True)
+class Changed:
+    """What a change makes of the picture it was taken to be to."""
+
+    view: View
+    pixels: bytes
 
 
 @dataclass(frozen=True)
@@ -578,7 +604,8 @@ class PictureFile:
         self.ega = ega
         (first,) = struct.unpack_from("<I", data, 0)
         self.sized = first == _SIZED_ENTRY * _SIZED_COUNT <= len(data)
-        self._changes: dict[int, tuple[int | None, bytes | None]] | None = None
+        self._changes: dict[int, Changed] | None = None
+        self._with_others = False
         if self.sized:
             # Mission Critical's: nothing of the other games' kinds applies
             self.later, self.imploded = False, False
@@ -695,14 +722,17 @@ class PictureFile:
     def _read_sized(self, entry: Entry) -> Picture:
         """A picture of Mission Critical's: its colors if it has them, and its pixels."""
         places = [(entry.across, entry.down)] if entry.across or entry.down else []
-        pixels = self._sized_pixels(entry)
-        colors = entry
-        if entry.kind == _CHANGE and entry.width and entry.height:
-            under, changed = self.changes().get(entry.number, (None, None))
-            if under is not None and changed is not None:
-                # what the change makes of the picture it changes, in that picture's colors
-                pixels, colors = changed, self.entries[under]
-        return Picture(entry.width, entry.height, pixels, None, places, self._sized_colors(colors))
+        if (
+            entry.kind == _CHANGE
+            and entry.width
+            and entry.height
+            and (found := self.changes().get(entry.number))
+        ):
+            # what the change makes of the picture it changes, in that picture's colors
+            return Picture(entry.width, entry.height, found.pixels, None, places, found.view.colors)
+        return Picture(
+            entry.width, entry.height, self._sized_pixels(entry), None, places, self._sized_colors(entry)
+        )
 
     def _sized_pixels(self, entry: Entry) -> bytes:
         """The bytes a picture of Mission Critical's unpacks to."""
@@ -712,30 +742,45 @@ class PictureFile:
         packed = self.data[at : at + entry.size]
         return unpack_lha(packed, entry.width * entry.height) if entry.packing == LHA else packed
 
-    def changed(self, entry: Entry) -> int | None:
-        """The picture a change is taken to be to, by its number; None when none was found."""
-        return self.changes().get(entry.number, (None, None))[0]
+    def views(self, name: str) -> list[View]:
+        """The whole pictures of a file of Mission Critical's, for changes in any file to be tried over."""
+        found = []
+        for each in self.entries:
+            if each.offset and each.width and each.height and each.kind != _CHANGE:
+                colors = self._sized_colors(each)
+                # colors that are nearly all one would make anything look smooth
+                if len({colors[index : index + 3] for index in range(0, 768, 3)}) >= _COLORS:
+                    found.append(
+                        View(name, each.number, each.width, each.height, self._sized_pixels(each), colors)
+                    )
+        return found
 
-    def changes(self) -> dict[int, tuple[int | None, bytes | None]]:  # noqa: PLR0912, PLR0915
+    def changed(self, entry: Entry) -> View | None:
+        """The picture a change is taken to be to; None when none was found."""
+        found = self.changes().get(entry.number)
+        return found.view if found else None
+
+    def changes(self, others: list[View] | None = None) -> dict[int, Changed]:  # noqa: PLR0915
         """
-        For each change in a file of Mission Critical's, the picture it is taken to change and
-        what it makes of it, where it changes it.
+        For each change in a file of Mission Critical's that a picture was found for, the
+        picture and what the change makes of it, where it changes it.
 
         The file doesn't say which picture a change is to; the program knows. But a change
         put over the wrong picture makes noise, and over the right one makes a picture, so the
         right one is found by how smooth the result is: how little a pixel differs from the
         one beside it. The changes are gone through in order with the picture as it stands,
         since changes come in runs, each to what the last left. A change that makes noise of
-        that is tried over every whole picture in the file, and started again from the best.
-        One that makes noise of them all is left as it is: its picture is in another file.
+        that is tried over every whole picture of the file, and of the game's other files when
+        they are given, and started again from the smoothest, if that one stands out from the
+        rest. One that no picture stands out for is left as it is.
         """
-        if self._changes is not None:
+        if self._changes is not None and (others is None or self._with_others):
             return self._changes
-        found: dict[int, tuple[int | None, bytes | None]] = {}
-        self._changes = found
-        whole = [each for each in self.entries if each.offset and each.width and each.kind != _CHANGE]
-        pixels: dict[int, bytes] = {}
-        colors: dict[int, bytes] = {}
+        found: dict[int, Changed] = {}
+        self._changes, self._with_others = found, others is not None
+        own = self.views("")
+        candidates = own + [view for view in others or [] if view.width == _ACROSS]
+        before = {view.number: view for view in own}
 
         def fits(change: Entry, width: int, height: int) -> bool:
             return (
@@ -745,20 +790,26 @@ class PictureFile:
                 and change.down + change.height <= height
             )
 
-        def roughness(change: Entry, mask: bytes, under: bytes | bytearray, width: int, rgb: bytes) -> float:
+        def roughness(
+            change: Entry, mask: bytes, under: bytes | bytearray, view: View, samples: int
+        ) -> float:
             """
-            How much pixels differ from their neighbors with the change made, on a few thousand
-            of them: the most of any of eight bands down the change, since a change over the
+            How much the pixels a change changes differ from their neighbors once changed, on
+            so many of them: the most of any of eight bands down the change, since a change over the
             wrong picture can be right in most of it and noise in a corner.
             """
             count = change.width * change.height
-            step = max(1, count // _SAMPLES)
+            # only where the change changes something: the rest is the picture's own, and
+            # smooth whichever picture it is
+            changing = count - mask.count(0)
+            step = max(1, changing // samples, count // (20 * samples))
             totals, pairs = [0] * _BANDS, [0] * _BANDS
+            rgb = view.colors
             for index in range(0, count - 1, step):
                 column = index % change.width
-                if column == change.width - 1:
+                if column == change.width - 1 or not (mask[index] or mask[index + 1]):
                     continue
-                at = (index // change.width + change.down) * width + column + change.across
+                at = (index // change.width + change.down) * view.width + column + change.across
                 first, second = 3 * (under[at] ^ mask[index]), 3 * (under[at + 1] ^ mask[index + 1])
                 band = index * _BANDS // count
                 totals[band] += (
@@ -769,8 +820,24 @@ class PictureFile:
                 pairs[band] += 1
             return max((total / many for total, many in zip(totals, pairs) if many >= _FEW), default=0.0)
 
+        def search(change: Entry, mask: bytes) -> tuple[View | None, float, float]:
+            """The smoothest picture to put a change over, how smooth, and how smooth the next is."""
+            fitting = [view for view in candidates if fits(change, view.width, view.height)]
+            # a quick look at them all, and a full one at the few that did best
+            quick = sorted(
+                fitting,
+                key=lambda view: roughness(change, mask, view.pixels, view, _SAMPLES // 10),
+            )[:_SHORTLIST]
+            full = sorted(
+                (roughness(change, mask, view.pixels, view, _SAMPLES), index)
+                for index, view in enumerate(quick)
+            )
+            if not full:
+                return None, float("inf"), float("inf")
+            return quick[full[0][1]], full[0][0], full[1][0] if len(full) > 1 else float("inf")
+
         standing: bytearray | None = None  # the picture as the changes so far have left it
-        base: Entry | None = None
+        base: View | None = None
         for change in self.entries:
             if not (change.offset and change.kind == _CHANGE and change.width and change.height):
                 continue
@@ -779,39 +846,23 @@ class PictureFile:
             score = float("inf")
             if small:
                 # too few pixels to tell by: it is taken to change the picture as it stands, or
-                # the whole picture just before it when one has come since
-                before = next((other for other in reversed(whole) if other.number < change.number), None)
-                if before is not None and (base is None or base.number < before.number):
-                    if before.number not in pixels:
-                        pixels[before.number] = self._sized_pixels(before)
-                        colors[before.number] = self._sized_colors(before)
-                    standing, base = bytearray(pixels[before.number]), before
+                # the whole picture just before it in the file when one has come since
+                last = max((number for number in before if number < change.number), default=None)
+                if last is not None and (base is None or base.file or base.number < last):
+                    standing, base = bytearray(before[last].pixels), before[last]
                 score = 0.0
             elif standing is not None and base is not None and fits(change, base.width, base.height):
-                score = roughness(change, mask, standing, base.width, colors[base.number])
+                score = roughness(change, mask, standing, base, _SAMPLES)
             if score > _SMOOTH:
-                # noise, or nothing to change yet: every whole picture in the file is tried
-                best, best_score = None, score
-                for other in whole:
-                    if not fits(change, other.width, other.height):
-                        continue
-                    if other.number not in pixels:
-                        pixels[other.number] = self._sized_pixels(other)
-                        colors[other.number] = self._sized_colors(other)
-                    # colors that are nearly all one would make anything look smooth
-                    if len({colors[other.number][index : index + 3] for index in range(0, 768, 3)}) < 16:
-                        continue
-                    tried = roughness(change, mask, pixels[other.number], other.width, colors[other.number])
-                    if tried < best_score:
-                        best, best_score = other, tried
-                if best is not None:
-                    standing, base, score = bytearray(pixels[best.number]), best, best_score
+                # noise, or nothing to change yet: every whole picture is tried
+                best, best_score, next_score = search(change, mask)
+                stands_out = best_score <= _NOISE and best_score <= _APART * next_score
+                if best is not None and stands_out and best_score < _CLOSE * score:
+                    standing, base, score = bytearray(best.pixels), best, best_score
+                elif score > _NOISE:
+                    # no picture stands out, and what stands makes noise of it
+                    continue
             if standing is None or base is None or not fits(change, base.width, base.height):
-                found[change.number] = (None, None)
-                continue
-            if score > _NOISE and not small:
-                # it makes noise of every picture here
-                found[change.number] = (None, None)
                 continue
             start = change.down * base.width + change.across
             rows = []
@@ -825,7 +876,7 @@ class PictureFile:
                 )
                 standing[at : at + change.width] = line
                 rows.append(line)
-            found[change.number] = (base.number, b"".join(rows))
+            found[change.number] = Changed(base, b"".join(rows))
         return found
 
     def read(self, entry: Entry) -> Picture:
