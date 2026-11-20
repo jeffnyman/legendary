@@ -357,11 +357,33 @@ it was and anything else turns one color into another. The second picture of
 at the corridor's end, it is the door open and the bridge beyond it. A change is smaller
 packed than what it changes to would be, wherever most of the picture stays.
 
-Which picture a change is to, the file doesn't say: the program knows. The tools take it
-to be the last before it in the file that isn't a change and that it fits in, and write
-what the change makes of that; 908 of the changes have such a picture. The rest come in
-runs with no picture before them, each much the size of the last, which read as the
-frames of something moving, and they are written as they are.
+Which picture a change is to, the file doesn't say: the program knows, in the routines
+that draw them. The first guess here was the picture just before it in the file, and that
+is wrong as often as right: in `MC003.PIC` five views come one after another, and the
+eight changes after them belong to four of the five, not to the last.
+
+But a change put over the wrong picture makes noise, and over the right one makes a
+picture, and that can be measured: how little each pixel differs from the one beside it.
+Over the right picture a change comes to 5 to 20 on that measure; over a wrong one, 40 and
+up. So the tools go through a file's changes in order, keeping the picture as it stands,
+since changes come in runs, each to what the last left. A change that makes noise of
+that is tried over every whole picture in the file and started again from the smoothest,
+the measure taken as the worst of eight bands down the change, because a wrong picture
+can be right in most of it and noise in a corner. A change too small to judge, under 600
+pixels, is taken to be to the picture in hand.
+
+That finds a picture for 539 of the 1,942 changes that have pixels, and those are written
+as what they make of it: the eight of `MC003.PIC` come out as clean pictures of a room
+with a long table, from four sides. The other 1,403 make noise of every whole picture in their own
+file, or are in a file with none. Five files are nothing but changes, 242 of them in
+`MC012.PIC`, each with a number in the last word of its entry that reads as how long it
+is shown: the frames of things that move, drawn over a room whose picture is in another
+file. Those are written as they are. Finding their rooms would be the same measure taken
+over every view in the game, which hasn't been done.
+
+The method is a reading of the pictures and not of the program, and for the runs of small
+timed changes, the lights of a console going on one after another, it is the least sure.
+`pictures` says of each change which picture it was taken to be to.
 
 Kind 4 is 171 pictures, among them the mouse's pointers, the crew's manifest, and
 a control panel with a border of plain blue. That reads as pictures with a color that
@@ -799,7 +821,7 @@ how a click becomes an action, and whose routine answered one.
 
 ## Still to do
 
-Everything but the above: which picture each change is to, and kind 4; what
+Everything but the above: the room each of 1,403 changes is drawn over, and kind 4; what
 235 of the lines in the files of speech are; what an action's routine and an object's do, and the
 fields of a record not yet named; one of the flags, and 59 of the saved variables; the battle
 game's rules; and playing it through.
