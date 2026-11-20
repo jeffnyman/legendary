@@ -625,21 +625,38 @@ and line 17 is the answer, `Condition Zebra is the most serious of the four dama
 containment and control procedures`. How long each text is goes with how long its line
 lasts: over the 363 replies the two correlate at 0.99.
 
-The other lines, 545 to 566 and 978 up, are named in the code where they are spoken, and
-few are followed. Where the program shows a text and speaks a line there and then, with
-nothing between, the text's number is pushed for the routine that shows it and the line's
-number put in EAX for `000847d0` straight after, and the tools read those: four lines. The
-credits that open the game have a table of their own at `000dcc54`, a line and the address
-of its text, eight bytes each, which isn't read.
+The other lines, 545 to 566 and 978 up, are named in the code, and they are not all
+speech. The files of speech hold the game's sounds too, an alarm, a door, a hum, and the
+program starts those by other routines of the same part of it, `00084a50` to `00084e80`,
+which take a line's number as `000847d0` does. So what the tools can say of one of these
+lines is what the program does with it:
 
-| Lines | What | Have a sound | Text known |
+- **A sound.** 56 lines are handed to the routines that start, stop and ask after a sound.
+  Forty of them are under three seconds.
+- **Spoken, with what the game says as it speaks.** Where the program shows a text and
+  speaks a line straight after, the text's number is in the code just before the line's.
+  Five lines have one. It is what is on the screen while the line plays, which is the
+  line's own words for `Deck Two is under Damage Control Condition Zebra`, and only the
+  story around them for `You manipulate the controls on the transmitter until you can hear
+  the message`: the message itself is 42 seconds of speech, and that text isn't it.
+- **Spoken, with nothing shown.** 20 lines are handed to `000847d0` by their numbers and
+  no text is near.
+- **The ship's briefing.** A table at `000dcc54` has eight bytes a part: the line that
+  tells it, a picture, and the address of the part's title. 13 lines, `Propulsion`,
+  `Pulsedrive Engines`, `Nuclear Reactor`, `Habitat Module`: the tour of the *Lexington*.
+
+| Lines | What | Have a sound | Placed |
 |---|---|---|---|
-| 0 to 544 | What is said back | 363 | 363 |
-| 545 to 566 | Not found | 17 | 0 |
-| 567 to 977 | What the player says | 385 | 385 |
-| 978 to 1,295 | Named in the code | 312 | 4 |
+| 0 to 544 | What is said back | 363 | 363, with their text |
+| 545 to 566 | Named in the code | 17 | 1 |
+| 567 to 977 | What the player says | 385 | 385, with their text |
+| 978 to 1,295 | Named in the code | 312 | 93 |
 
-That is 752 of the 1,077. `speech` lists every line with what it says.
+So 748 of the 1,077 have their text, and 94 more are known for what they are. The 235
+left aren't handed over as a number the code spells out: they come from tables, or from a
+number added to, and aren't followed. 147 of them are under three seconds, which reads as
+more sounds; the other 88 are 22 minutes between them. They come in runs, 996 to 1,032 and
+1,234 to 1,270 the longest. `speech` lists every line with what is known of it.
 
 ## Running it
 
@@ -783,6 +800,6 @@ how a click becomes an action, and whose routine answered one.
 ## Still to do
 
 Everything but the above: which picture each change is to, and kind 4; what
-the 325 lines of speech named in the code say; what an action's routine and an object's do, and the
+235 of the lines in the files of speech are; what an action's routine and an object's do, and the
 fields of a record not yet named; one of the flags, and 59 of the saved variables; the battle
 game's rules; and playing it through.
