@@ -363,27 +363,35 @@ is wrong as often as right: in `MC003.PIC` five views come one after another, an
 eight changes after them belong to four of the five, not to the last.
 
 But a change put over the wrong picture makes noise, and over the right one makes a
-picture, and that can be measured: how little each pixel differs from the one beside it.
-Over the right picture a change comes to 5 to 20 on that measure; over a wrong one, 40 and
-up. So the tools go through a file's changes in order, keeping the picture as it stands,
+picture, and that can be measured: how little each pixel the change changes differs from
+the one beside it, once changed. Over the right picture that comes to 10 to 50; over a
+wrong one, 100 and more. Only the changed pixels are looked at, because the rest are the
+picture's own and smooth whichever picture it is: counting them let noise in a corner
+hide in a calm whole, and half of what that found was wrong.
+
+So the tools go through a file's changes in order, keeping the picture as it stands,
 since changes come in runs, each to what the last left. A change that makes noise of
-that is tried over every whole picture in the file and started again from the smoothest,
-the measure taken as the worst of eight bands down the change, because a wrong picture
-can be right in most of it and noise in a corner. A change too small to judge, under 600
-pixels, is taken to be to the picture in hand.
+that is tried over every whole picture of the game, its own file's and the 400 views of
+the rest, and started again from the smoothest, if that one is under 60 and twice as
+smooth as the next. The measure is the worst of eight bands down the change. A change too
+small to judge, under 600 pixels, is taken to be to the picture in hand.
 
-That finds a picture for 539 of the 1,942 changes that have pixels, and those are written
-as what they make of it: the eight of `MC003.PIC` come out as clean pictures of a room
-with a long table, from four sides. The other 1,403 make noise of every whole picture in their own
-file, or are in a file with none. Five files are nothing but changes, 242 of them in
-`MC012.PIC`, each with a number in the last word of its entry that reads as how long it
-is shown: the frames of things that move, drawn over a room whose picture is in another
-file. Those are written as they are. Finding their rooms would be the same measure taken
-over every view in the game, which hasn't been done.
+That finds a picture for 728 of the 1,942 changes that have pixels: 300 in their own
+file, and 428 in another. The eight of `MC003.PIC` come out as clean pictures of a room
+with a long table, from four sides. `MC012.PIC`, which is nothing but changes, 242 of
+them, has 164 found, those looked at over views of `MC011.PIC`: lightning over a plain of standing
+stones, each frame a change to the last. Its entries have a number in their last word
+that reads as how long each is shown.
 
-The method is a reading of the pictures and not of the program, and for the runs of small
-timed changes, the lights of a console going on one after another, it is the least sure.
-`pictures` says of each change which picture it was taken to be to.
+The other 1,214 are left as they are. For some no picture stands out; some are the later
+frames of a run whose first frame wasn't found, so there was nothing to go on from; and
+the measure asks a good deal, to keep from being wrong. Fourteen of the 728, picked by
+chance, were all clean pictures.
+
+The method is a reading of the pictures and not of the program, which has the answer in
+the routines that draw them. It is slow, six minutes for the game, so `pictures` does it
+when it writes the pictures and, for the listing, when asked with `--changes`: it then
+says of each change which picture it was taken to be to, and in which file.
 
 Kind 4 is 171 pictures, among them the mouse's pointers, the crew's manifest, and
 a control panel with a border of plain blue. That reads as pictures with a color that
@@ -821,7 +829,7 @@ how a click becomes an action, and whose routine answered one.
 
 ## Still to do
 
-Everything but the above: the room each of 1,403 changes is drawn over, and kind 4; what
+Everything but the above: the picture each of 1,214 changes is to, and kind 4; what
 235 of the lines in the files of speech are; what an action's routine and an object's do, and the
 fields of a record not yet named; one of the flags, and 59 of the saved variables; the battle
 game's rules; and playing it through.
