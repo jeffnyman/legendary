@@ -219,6 +219,9 @@ _HANDED = re.compile(
 )
 # a text's number put in EAX or pushed, some way before
 _TEXT_NEAR = re.compile(rb"[\x68\xb8](...\xf0)", re.DOTALL)
+# mov edx,<first> / movsx eax,dx / inc edx / call / cmp edx,<last> / jle: a run of sounds readied
+# one after another, for one of them to be played at random
+_RUN = re.compile(rb"\xba(..)\x00\x00\x0f\xbf\xc2\x42\xe8(....)\x81\xfa(..)\x00\x00\x7e", re.DOTALL)
 # mov eax,[esi+table-2] / mov edx,edi / sar eax,16 / call: the briefing's parts, the line of each
 _BRIEFING = re.compile(rb"\x8b\x86(....)\x89\xfa\xc1\xf8\x10\xe8", re.DOTALL)
 
@@ -264,6 +267,13 @@ def speech_notes_32(program: LeExecutable, strings: StringFile, lines: int) -> d
             # the routines after it in the same part of the program start, stop and ask after sounds
             sounds.setdefault(line, code_object.base + found.start())
     notes = {line: f"a sound, not speech: the program starts it at {at:08x}" for line, at in sounds.items()}
+    for found in _RUN.finditer(code):
+        first, last = struct.unpack("<H", found[1])[0], struct.unpack("<H", found[3])[0]
+        target = code_object.base + found.start() + 13 + struct.unpack("<i", found[2])[0]
+        if speak < target < speak + 0x800 and 0 < first <= last < lines:
+            at = code_object.base + found.start()
+            for line in range(first, last + 1):
+                notes.setdefault(line, f"a sound, not speech: one of {first} to {last}, readied at {at:08x}")
     for line, texts in spoken.items():
         only = next(iter(texts)) if len(texts) == 1 else None
         notes[line] = f"spoken as the game says: {only}" if only else "spoken, by its number in the code"
