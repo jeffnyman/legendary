@@ -1,0 +1,10 @@
+root = true
+
+[*.cs]
+indent_style = space
+indent_size = 4
+# a case's block is braced under its label, and not indented again
+csharp_indent_case_contents_when_block = false
+# several labels, or a short statement, can share a line
+csharp_preserve_single_line_statements = true
+csharp_preserve_single_line_blocks = true

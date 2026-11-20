@@ -57,13 +57,19 @@ public sealed partial class Intel386
 
         switch (opcode)
         {
-            case 0x80: case 0x81: case 0x82: case 0x83:
+            case 0x80:
+            case 0x81:
+            case 0x82:
+            case 0x83:
                 return ((Peek(0) >> 3) & 7) != 7 && Memory(Peek(0));
-            case 0x86: case 0x87:
+            case 0x86:
+            case 0x87:
                 return Memory(Peek(0));
-            case 0xF6: case 0xF7:
+            case 0xF6:
+            case 0xF7:
                 return ((Peek(0) >> 3) & 7) is 2 or 3 && Memory(Peek(0));
-            case 0xFE: case 0xFF:
+            case 0xFE:
+            case 0xFF:
                 return ((Peek(0) >> 3) & 7) <= 1 && Memory(Peek(0));
             case 0x0F:
                 int second = Peek(0), modrm = Peek(1);

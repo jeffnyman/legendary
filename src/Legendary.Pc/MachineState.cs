@@ -404,43 +404,43 @@ internal static class MachineState
                     WriteArray((Array)value);
                     break;
                 case KindList or KindQueue or KindSet:
+                {
+                    writer.Write(NameOf(type));
+                    var items = ((IEnumerable)value).Cast<object?>().ToList();
+                    var element = type.GetGenericArguments()[0];
+                    writer.Write(items.Count);
+                    foreach (object? item in items)
                     {
-                        writer.Write(NameOf(type));
-                        var items = ((IEnumerable)value).Cast<object?>().ToList();
-                        var element = type.GetGenericArguments()[0];
-                        writer.Write(items.Count);
-                        foreach (object? item in items)
-                        {
-                            Write(element, item);
-                        }
-
-                        break;
+                        Write(element, item);
                     }
+
+                    break;
+                }
 
                 case KindDictionary:
+                {
+                    writer.Write(NameOf(type));
+                    var arguments = type.GetGenericArguments();
+                    var dictionary = (IDictionary)value;
+                    writer.Write(dictionary.Count);
+                    foreach (DictionaryEntry entry in dictionary)
                     {
-                        writer.Write(NameOf(type));
-                        var arguments = type.GetGenericArguments();
-                        var dictionary = (IDictionary)value;
-                        writer.Write(dictionary.Count);
-                        foreach (DictionaryEntry entry in dictionary)
-                        {
-                            Write(arguments[0], entry.Key);
-                            Write(arguments[1], entry.Value);
-                        }
-
-                        break;
+                        Write(arguments[0], entry.Key);
+                        Write(arguments[1], entry.Value);
                     }
+
+                    break;
+                }
 
                 case KindFile:
-                    {
-                        // an open file: where it is and how far in, to open it again
-                        var file = (FileStream)value;
-                        writer.Write(file.Name);
-                        writer.Write(file.CanWrite);
-                        writer.Write(file.Position);
-                        break;
-                    }
+                {
+                    // an open file: where it is and how far in, to open it again
+                    var file = (FileStream)value;
+                    writer.Write(file.Name);
+                    writer.Write(file.CanWrite);
+                    writer.Write(file.Position);
+                    break;
+                }
 
                 case KindFileInfo or KindDirectoryInfo:
                     writer.Write(((FileSystemInfo)value).FullName);
@@ -585,17 +585,17 @@ internal static class MachineState
             switch (kind)
             {
                 case KindObject:
+                {
+                    var type = Resolve(reader.ReadString());
+                    object value = current is not null && current.GetType() == type ? current : RuntimeHelpers.GetUninitializedObject(type);
+                    _objects[id] = value;
+                    foreach (var field in Fields(type))
                     {
-                        var type = Resolve(reader.ReadString());
-                        object value = current is not null && current.GetType() == type ? current : RuntimeHelpers.GetUninitializedObject(type);
-                        _objects[id] = value;
-                        foreach (var field in Fields(type))
-                        {
-                            field.SetValue(value, Read(field.FieldType, field.GetValue(value)));
-                        }
-
-                        return value;
+                        field.SetValue(value, Read(field.FieldType, field.GetValue(value)));
                     }
+
+                    return value;
+                }
 
                 case KindArray:
                     return ReadArray(id, Resolve(reader.ReadString()), current as Array);
@@ -604,36 +604,36 @@ internal static class MachineState
                 case KindDictionary:
                     return ReadDictionary(id, Resolve(reader.ReadString()), current);
                 case KindFile:
+                {
+                    string name = reader.ReadString();
+                    bool writable = reader.ReadBoolean();
+                    long position = reader.ReadInt64();
+                    FileStream file;
+                    try
                     {
-                        string name = reader.ReadString();
-                        bool writable = reader.ReadBoolean();
-                        long position = reader.ReadInt64();
-                        FileStream file;
-                        try
-                        {
-                            file = new FileStream(name, FileMode.Open, writable ? FileAccess.ReadWrite : FileAccess.Read, FileShare.ReadWrite);
-                        }
-                        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
-                        {
-                            throw new InvalidDataException($"The saved state had {name} open, and it can't be opened again: {ex.Message}", ex);
-                        }
-
-                        file.Position = position;
-                        _objects[id] = file;
-                        return file;
+                        file = new FileStream(name, FileMode.Open, writable ? FileAccess.ReadWrite : FileAccess.Read, FileShare.ReadWrite);
                     }
+                    catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+                    {
+                        throw new InvalidDataException($"The saved state had {name} open, and it can't be opened again: {ex.Message}", ex);
+                    }
+
+                    file.Position = position;
+                    _objects[id] = file;
+                    return file;
+                }
 
                 case KindFileInfo:
                     return _objects[id] = new FileInfo(reader.ReadString());
                 case KindDirectoryInfo:
                     return _objects[id] = new DirectoryInfo(reader.ReadString());
                 case KindText:
-                    {
-                        var text = current as StringBuilder ?? new StringBuilder();
-                        _objects[id] = text;
-                        text.Clear().Append(reader.ReadString());
-                        return text;
-                    }
+                {
+                    var text = current as StringBuilder ?? new StringBuilder();
+                    _objects[id] = text;
+                    text.Clear().Append(reader.ReadString());
+                    return text;
+                }
 
                 default:
                     throw new InvalidDataException("This saved state is damaged.");

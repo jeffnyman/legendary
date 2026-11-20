@@ -1198,7 +1198,7 @@ internal sealed class Synth
     private void WriteSysexGlobal(uint addr, ReadOnlySpan<byte> sysex)
     {
         uint len = (uint)sysex.Length;
-        for (;;)
+        while (true)
         {
             // Find the appropriate memory region
             var region = FindMemoryRegion(addr);

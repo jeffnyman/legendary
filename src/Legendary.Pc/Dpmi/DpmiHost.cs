@@ -783,7 +783,14 @@ internal sealed partial class DpmiHost(Machine machine, DosServices dos)
 
     private uint GetRegister(int number) => number switch
     {
-        0 => Cpu.Eax, 1 => Cpu.Ecx, 2 => Cpu.Edx, 3 => Cpu.Ebx, 4 => Cpu.Esp, 5 => Cpu.Ebp, 6 => Cpu.Esi, _ => Cpu.Edi,
+        0 => Cpu.Eax,
+        1 => Cpu.Ecx,
+        2 => Cpu.Edx,
+        3 => Cpu.Ebx,
+        4 => Cpu.Esp,
+        5 => Cpu.Ebp,
+        6 => Cpu.Esi,
+        _ => Cpu.Edi,
     };
 
     private void SetRegister(int number, uint value)

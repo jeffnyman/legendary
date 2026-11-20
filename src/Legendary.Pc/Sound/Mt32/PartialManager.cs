@@ -176,7 +176,7 @@ internal sealed class PartialManager
             return true;
         }
 
-        for (;;)
+        while (true)
         {
             // Abort releasing polys in non-rhythm parts that have exceeded their partial
             // reservation (working backwards from part 7)
@@ -203,7 +203,7 @@ internal sealed class PartialManager
 
             // Only abort held polys in the target part and parts that have a lower priority
             // (higher part number = lower priority, except for rhythm, which has the highest priority).
-            for (;;)
+            while (true)
             {
                 if (!AbortFirstPolyPreferHeldWhereReserveExceeded(partNum))
                 {
@@ -227,7 +227,7 @@ internal sealed class PartialManager
             // Check all parts from lowest to highest priority to see whether they've exceeded
             // their reserve, and abort their polys until until we have enough free partials or
             // they're within their reserve allocation.
-            for (;;)
+            while (true)
             {
                 if (!AbortFirstPolyPreferHeldWhereReserveExceeded(-1))
                 {
@@ -242,7 +242,7 @@ internal sealed class PartialManager
         }
 
         // Abort polys in the target part until there are enough free partials for the new one
-        for (;;)
+        while (true)
         {
             if (!_parts[partNum].AbortFirstPolyPreferHeld())
             {

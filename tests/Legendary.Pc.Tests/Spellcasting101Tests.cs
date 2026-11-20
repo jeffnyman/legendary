@@ -40,7 +40,11 @@ public sealed class Spellcasting101Tests : IDisposable
 
         var machine = new Machine(folder, _saves)
         {
-            Log = _log.Add, InstructionsPerSecond = 3_000_000, TickCount = 0, Mouse = mouse, DiskBytesPerSecond = disk,
+            Log = _log.Add,
+            InstructionsPerSecond = 3_000_000,
+            TickCount = 0,
+            Mouse = mouse,
+            DiskBytesPerSecond = disk,
         };
         if (adLib)
         {
