@@ -267,8 +267,9 @@ python -m legendary_tools vocab <the game's folder>
   of a kind that isn't known is left out, and counted.
   [*Mission Critical*'s](../docs/mission-critical.md#the-pictures) are packed as LHA packs a
   file, and most are changes to another picture: one is written as what it makes of the
-  picture before it in its file, where there is one it fits in, and as it is where there isn't.
-  Its 2,949 pictures take a minute or so.
+  picture in its file that it makes a picture of and not noise, and as it is where there is
+  none; the listing says which. Finding those takes time: a minute to list the game's
+  pictures, and two and a half to write its 2,949.
 - **`regions`** lists the regions in each `.RGN` file: for each picture that has them, the
   object the rest of the picture is, and each rectangle, in the EGA's pixels, with the object
   that's there. *Gateway II* and *Companions of Xanth* keep a region as a list of points, and

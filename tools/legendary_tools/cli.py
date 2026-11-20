@@ -67,6 +67,7 @@ from .pictures import (
     is_known,
     is_later,
 )
+from .pictures import Entry as PictureEntry
 from .plink86 import Plink86Program
 from .program import Image, Program
 from .regions import read_regions
@@ -1042,6 +1043,21 @@ _PACKINGS = {
 }
 
 
+def _picture_notes(file: PictureFile, entry: PictureEntry) -> tuple[str, str]:
+    """How a picture is packed, and what else there is to say of it."""
+    packing = _PACKINGS.get(entry.packing, f"{entry.kind:#04x}")
+    notes = "" if entry.has_palette and (file.ega or file.sized) else ", no palette"
+    if entry.sized and (entry.across or entry.down):
+        notes += f", a piece at {entry.across},{entry.down}"
+    if entry.sized and entry.kind == 3 and entry.width and file.changed(entry) is not None:
+        notes += f", a change to picture {file.changed(entry)}"
+    elif entry.sized and entry.kind == 3 and entry.width:
+        notes += ", a change to a picture that isn't in this file"
+    if entry.places:
+        notes += f", placed {entry.places} time{'s' if entry.places > 1 else ''}"
+    return packing, notes
+
+
 def pictures(args: argparse.Namespace) -> None:
     """The pictures in the game's .PIC files: listed, or written to a folder as PNG files."""
     folder = GameFolder(args.folder)
@@ -1078,12 +1094,7 @@ def pictures(args: argparse.Namespace) -> None:
                 with open(os.path.join(args.out, f"{name}_{entry.number:03}.png"), "wb") as png:
                     png.write(picture.png())
             else:
-                packing = _PACKINGS.get(entry.packing, f"{entry.kind:#04x}")
-                notes = "" if entry.has_palette and (file.ega or file.sized) else ", no palette"
-                if entry.sized and (entry.across or entry.down):
-                    notes += f", a piece at {entry.across},{entry.down}"
-                if entry.places:
-                    notes += f", placed {entry.places} time{'s' if entry.places > 1 else ''}"
+                packing, notes = _picture_notes(file, entry)
                 print(f"  {entry.number:3}  {entry.width:3} x {entry.height:3}  {packing}{notes}")
     if args.out:
         print(f"written to {args.out}")
