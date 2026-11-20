@@ -74,7 +74,7 @@ from .rtlink import RtlinkProgram, is_rtlink, library_name
 from .scenes import Scene, read_ways
 from .sentence import read_sentence_grammar
 from .sound import read_songs, read_sound, read_speech
-from .speech import speech_texts, speech_texts_32
+from .speech import speech_notes_32, speech_texts, speech_texts_32
 from .timers import (
     EVERY_TURN,
     TIMER_NAMES,
@@ -1098,6 +1098,8 @@ def speech(args: argparse.Namespace) -> None:
     linear = _linear(folder)
     texts = speech_texts_32(linear, text_file) if linear else speech_texts(_program(folder), text_file)
     files = folder.ending(".voc")
+    # for a 32-bit game, what the program does with the lines its talk doesn't name
+    notes = speech_notes_32(linear, text_file, len(read_speech(files[0]))) if linear and files else {}
     every: set[int] = set()
     for path in files:
         lines = read_speech(path)
@@ -1106,10 +1108,20 @@ def speech(args: argparse.Namespace) -> None:
         if len(files) > 1:
             print(os.path.basename(path))
         for line in spoken:
-            said = _shown(texts[line], 90) if line in texts else "(its text isn't known)"
+            if line in texts and line not in notes:
+                said = _shown(texts[line], 90)
+            elif line in notes:
+                said = f"({_shown(notes[line], 110)})"
+            else:
+                said = "(its text isn't known)"
             print(f"{line:4}  {lines.seconds(line):5.1f}s  {said}")
-    known = sum(1 for line in every if line in texts)
+    known = sum(1 for line in every if line in texts and line not in notes)
     print(f"\n{len(every)} lines; the text of {known} is known", file=sys.stderr)
+    if notes:
+        placed = collections.Counter(
+            notes[line].split(":")[0].split(",")[0] for line in every if line in notes
+        )
+        print("; ".join(f"{count} {what}" for what, count in sorted(placed.items())), file=sys.stderr)
 
 
 def tour(args: argparse.Namespace) -> None:

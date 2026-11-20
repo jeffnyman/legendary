@@ -29,10 +29,17 @@ a block and a string of the text file below it, or the address of text in the pr
 And where the program shows a text and speaks a line there and then, the two are side by
 side in the code: the text's number pushed for the routine that shows it, and the line's put
 in EAX for the one that speaks it.
+
+Not every line is speech. The same files hold the game's sounds, an alarm, a door, a hum,
+and the program starts those by other routines of the same part of it, which take a line's
+number as the one that speaks does. And the ship's briefing has a table of its own, eight
+bytes a part: the line that tells it, a picture, and the address of the part's title.
+`speech_notes_32` says of each line it can which of these it is.
 """
 
 from __future__ import annotations
 
+import collections
 import re
 import struct
 
@@ -204,3 +211,70 @@ def speech_texts_32(program: LeExecutable, strings: StringFile) -> dict[int, str
         if target == speak and said:
             found.setdefault(line, said)
     return found
+
+
+# mov eax,<line> / a register or two set / call: a line's number handed to a routine
+_HANDED = re.compile(
+    rb"\xb8(..)\x00\x00(?:\x31[\xd2\xdb]|[\xba\xbb\xbe]....|\x89[\xda\xfa]){0,2}\xe8(....)", re.DOTALL
+)
+# a text's number put in EAX or pushed, some way before
+_TEXT_NEAR = re.compile(rb"[\x68\xb8](...\xf0)", re.DOTALL)
+# mov eax,[esi+table-2] / mov edx,edi / sar eax,16 / call: the briefing's parts, the line of each
+_BRIEFING = re.compile(rb"\x8b\x86(....)\x89\xfa\xc1\xf8\x10\xe8", re.DOTALL)
+
+
+def speech_notes_32(program: LeExecutable, strings: StringFile, lines: int) -> dict[int, str]:
+    """
+    What the program does with a line of Mission Critical's, for the lines its talk doesn't
+    name: speaks it, with the text it shows as it does where there is one, starts it as a
+    sound, or tells a part of the ship's briefing with it.
+    """
+    code_object = next(each for each in program.objects if each.is_code)
+    code = program.contents(code_object)
+    blocks: dict[int, list[str]] = {}
+
+    def named(number: int) -> str | None:
+        block, string = number >> 16 & 0xFF, number & 0xFFFF
+        if number >> 24 != 0xF0 or block >= len(strings.blocks):
+            return None
+        if block not in blocks:
+            blocks[block] = strings.strings(strings.block(block))
+        return blocks[block][string] if string < len(blocks[block]) else None
+
+    # the routine that speaks, by the pairs of a text shown and a line spoken
+    pairs = collections.Counter(
+        code_object.base + found.end() + struct.unpack("<i", found[3])[0]
+        for found in _SHOWN_AND_SPOKEN.finditer(code)
+    )
+    if not pairs:
+        return {}
+    speak = pairs.most_common(1)[0][0]
+    spoken: dict[int, set[str | None]] = {}
+    sounds: dict[int, int] = {}
+    for found in _HANDED.finditer(code):
+        (line,) = struct.unpack("<H", found[1])
+        target = code_object.base + found.end() + struct.unpack("<i", found[2])[0]
+        if not 0 < line < lines:
+            continue
+        if target == speak:
+            # the text shown just before, if one was
+            near = _TEXT_NEAR.findall(code, max(found.start() - 48, 0), found.start())
+            spoken.setdefault(line, set()).add(named(struct.unpack("<I", near[-1])[0]) if near else None)
+        elif speak < target < speak + 0x800:
+            # the routines after it in the same part of the program start, stop and ask after sounds
+            sounds.setdefault(line, code_object.base + found.start())
+    notes = {line: f"a sound, not speech: the program starts it at {at:08x}" for line, at in sounds.items()}
+    for line, texts in spoken.items():
+        only = next(iter(texts)) if len(texts) == 1 else None
+        notes[line] = f"spoken as the game says: {only}" if only else "spoken, by its number in the code"
+    if briefing := _BRIEFING.search(code):
+        at = struct.unpack("<I", briefing[1])[0] + 2
+        while True:
+            line, _, title = struct.unpack("<HHI", program.read(at, 8))
+            where = program.object_at(title)
+            if not 0 < line < lines or where is None or where.is_code:
+                break
+            name = program.read(title, 60).split(b"\0")[0].decode("latin-1")
+            notes[line] = f"the ship's briefing: {name}" if name else "the ship's briefing"
+            at += 8
+    return notes

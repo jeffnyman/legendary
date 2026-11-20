@@ -286,8 +286,9 @@ python -m legendary_tools vocab <the game's folder>
   read *Timequest* too.
 - **`speech`** lists the lines of a game's speech, from its `.VOC` file, each with how long it
   is and the text it speaks, where the program says which: for *Companions of Xanth*, 985 of
-  its 1,222, and for [*Mission Critical*](../docs/mission-critical.md#what-a-line-says), 752
-  of its 1,077, in three files. It is in
+  its 1,222, and for [*Mission Critical*](../docs/mission-critical.md#what-a-line-says), 748
+  of its 1,077, in three files, with 94 more said to be a sound, a line spoken by its number,
+  or a part of the ship's briefing. It is in
   [docs/companions-of-xanth.md](../docs/companions-of-xanth.md#what-a-line-says).
 - **`tour`** lists the guided tours in the `.HLP` files of a game played with the mouse, which
   are recordings of the game being played: the words each shows, and where it clicks. It is
