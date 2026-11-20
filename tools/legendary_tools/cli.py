@@ -16,6 +16,7 @@ import tempfile
 
 from . import data
 from .animations import is_animation, read_animation
+from .battle import read_ship, read_stars
 from .flags import (
     GAME_201,
     GAME_301,
@@ -1208,6 +1209,44 @@ def animations(args: argparse.Namespace) -> None:
         print(f"written to {args.out}")
 
 
+def ships(args: argparse.Namespace) -> None:
+    """The ships of Mission Critical's battle game: each one's points and lines, or drawn as a PNG file."""
+    folder = GameFolder(args.folder)
+    found = 0
+    for path in folder.ending(".dat"):
+        try:
+            ship = read_ship(folder.read(path))
+        except ValueError:
+            continue  # the game's other files of that ending
+        found += 1
+        name = os.path.splitext(os.path.basename(path))[0].lower()
+        across, down, deep = ship.full.extent()
+        print(
+            f"{os.path.basename(path):13} {len(ship.full.points):3} points, {len(ship.full.lines):3} lines;"
+            f" far off {len(ship.far.points):3} and {len(ship.far.lines):3};"
+            f" {across[1] - across[0]} long, {down[1] - down[0]} wide, {deep[1] - deep[0]} high"
+        )
+        if args.out:
+            _write(args.out, f"{name}.png", ship.picture().png())
+    if not found:
+        raise ValueError(f"{args.folder}: no ships are there")
+    if args.out:
+        print(f"written to {args.out}")
+
+
+def stars(args: argparse.Namespace) -> None:
+    """The stars of Mission Critical's map: each one's name, place in the sky, distance and kind."""
+    folder = GameFolder(args.folder)
+    path = folder.find("ftlstars.dat")
+    if path is None:
+        raise ValueError(f"{args.folder}: no FTLSTARS.DAT is there")
+    for number, star in enumerate(read_stars(folder.read(path))):
+        print(
+            f"{number:3}  {star.name:22} {star.right_ascension:12} {star.declination:13}"
+            f" {star.light_years:6.1f} light years  {star.kind}"
+        )
+
+
 def scenes(args: argparse.Namespace) -> None:
     """The filmed scenes in the game's .Q files: listed, or written as animated PNG and WAV files."""
     folder = GameFolder(args.folder)
@@ -1568,6 +1607,10 @@ def _mouse_commands(command) -> None:  # noqa: ANN001: the parser's own maker of
     command(verbs)
     command(tour)
     command(speech)
+    command(ships).add_argument(
+        "--out", metavar="FOLDER", help="draw each there as a PNG file, from three sides"
+    )
+    command(stars)
     sub = command(scenes)
     sub.add_argument("name", nargs="?", help="only this scene, as mc700")
     sub.add_argument(
