@@ -22,8 +22,8 @@ in hex and not a `segment:offset`. Every one of them can be looked at with the
 | `MCnnn.PIC`, `.RGN` and `.FNT` files | 40 files of pictures, 15 of their regions, and 13 fonts |
 | `FM.XMI`, `GM.XMI`, `SF.XMI` | The music, as the Miles drivers' extended MIDI, once each for three kinds of card |
 | `.MDI` and `.DIG` files, `MDI.INI`, `DIG.INI` | The Miles drivers for music and for digital sound, and which of each is chosen |
-| `BATTLE.DAT`, `CRUISE1.DAT`, `DRONE1.DAT` and fourteen more | The ships of the battle game, by the names the program opens them by |
-| `FTLSTARS.DAT`, `FTLLINKS.DAT`, `CSP.DAT` | Stars and the links between them, and one more not looked at |
+| `BATTLE.DAT`, `CRUISE1.DAT`, `DRONE1.DAT` and eleven more | [The ships of the battle game](#the-battle-game), by the names the program opens them by |
+| `FTLSTARS.DAT`, `FTLLINKS.DAT`, `CSP.DAT` | [The stars of the map](#the-battle-game), and two files not read |
 | `LEGEND.INI` | Where the game looks: `PICDATA` and `SAVEDATA` are `C:\MCRITIC\`, `VOCDATA` is `D:\MISSION\` and `QDATA` is `D:\MISSION\Q\` |
 
 `OBJECT.DAT` and `RESTART.DAT` are here as in every game before, so the world is still
@@ -67,8 +67,9 @@ UniVBE 5.1, and a demo of *Shannara*.
 | [The verbs](#the-verbs) | 58, each making an action of its own |
 | [The music](#the-music) | 3 files, 38 songs in each and one more in one, 78 minutes |
 | [The filmed scenes](#the-filmed-scenes) | 529 files, 41,068 frames, 70 minutes |
+| [The battle game's ships](#the-battle-game) | 14, and 166 stars |
 
-That is every kind of file the game has but its battle game's.
+That leaves two small files, `FTLLINKS.DAT` and `CSP.DAT`.
 
 ## How the program is built
 
@@ -457,6 +458,40 @@ exactly the bytes its chunk has, with one exception that is the game's own: a fr
 `MC124.Q` stops two blocks short, and the program draws the last two from the start of
 the chunk after it, as the tools do.
 
+## The battle game
+
+Inside the game is another, a battle between ships, drawn as lines. Each kind of ship has
+a file, fourteen of them: a battleship, three cruisers, a destroyer, a frigate, a corvette,
+a science ship, five drones and a missile.
+
+A file is the ship as lines in space, twice: once in full, and once with fewer lines, for
+when it is far off. It starts with four words, how many points and how many lines the
+first has, and how many the second. Then the first's points, three signed words each with
+the ship's middle at 0; its lines, two words each, the numbers of the two points a line
+joins; and the second's the same way. Every one of the fourteen is exactly as long as its
+four counts make it, and no line joins a point its ship hasn't got.
+
+| File | In full | Far off | Its size |
+|---|---|---|---|
+| `BATTLE.DAT` | 414 points, 614 lines | 150 and 203 | 375 long, 114 wide, 130 high |
+| `CRUISE2.DAT` | 366, 570 | 82 and 91 | 300 by 40 by 102 |
+| `FRIGATE.DAT` | 206, 266 | 46 and 59 | 122 by 48 by 50 |
+| `DRONE1.DAT` | 66, 77 | 18 and 21 | 52 by 34 by 14 |
+| `MISSILE.DAT` | 17, 24 | 17 and 12 | 35 by 8 by 8 |
+
+`ships` lists them all, and with `--out` draws each as a PNG file: the ship in full and
+the ship far off, each from above, from the side and from ahead.
+
+`FTLSTARS.DAT` is the map a ship is flown across: 166 stars, a hundred bytes each. A star
+has its name, its right ascension and declination as text, the same two as floats in
+degrees with its distance in light years, what kind of star it is as astronomers write
+it, the distance and the two angles again in radians, and a long that goes by the kind,
+176 for a G and 272 for an M. They are real stars, Sol first, then Alpha Centauri at 4.3
+light years and Barnard's Star at 6, out to a hundred light years. `stars` lists them.
+
+`FTLLINKS.DAT`, 2,773 bytes, by its name says which stars are joined, and `CSP.DAT` is a
+table of 77 offsets and what they point to, short runs of bytes. Neither is read.
+
 ## The speech
 
 Each CD has a file of speech, and `disc --copy` puts all three in the game's folder. They
@@ -670,4 +705,5 @@ how a click becomes an action, and whose routine answered one.
 
 Everything but the above: which picture each change is to, and kind 4; what
 the 325 lines of speech named in the code say; what an action's routine and an object's do, and the
-fields of a record not yet named; six of the flags, and the variables' names; the battle game; and playing it past its first picture.
+fields of a record not yet named; six of the flags, and the variables' names; the battle
+game's rules; and playing it through.
