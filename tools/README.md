@@ -191,6 +191,12 @@ python -m legendary_tools text <the game's folder> [<block>]
 python -m legendary_tools vocab <the game's folder>
 ```
 
+- **`screenshots`** takes a picture of each game at its first place, as the player plays it,
+  into `docs/images` beside the tools: one PNG file a game, named by its short name. Given a
+  folder of games, as `../legend`, it does each it knows the way into, running the player
+  without a window and giving it the keys and clicks the game's own tests give, to get past
+  its titles and story and look round; `--game sc101` does one. It needs `dotnet`, and takes
+  a few minutes for all nine.
 - **`extract`** writes a game's pictures, sounds, music and fonts out to be looked at and
   listened to, in a folder for each: `media/sc101/pictures`, `sounds`, `music` and, for a
   game that has them, `fonts` and `animations`. It is `pictures`, `animations`, `sounds`,

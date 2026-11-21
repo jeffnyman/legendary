@@ -6,6 +6,7 @@ import argparse
 import collections
 import contextlib
 import io
+import math
 import os
 import re
 import shutil
@@ -1644,6 +1645,73 @@ def _adlib_songs(folder: str, into: str) -> str:
     return f"{made} of them as the AdLib plays them"
 
 
+def _enters(start: float, count: int) -> str:
+    """Enter pressed so many times, a little over four seconds apart, as the tests press it."""
+    return ";".join(f"{start + 4.1 * index:.1f}:Enter" for index in range(count))
+
+
+def _route(start: float, count: int) -> tuple[str, float]:
+    """Through a game's titles and story so far by Enter, then a look round its first room."""
+    looked = start + 4.1 * count + 1
+    return f"{_enters(start, count)};{looked:.1f}:type look", looked + 6
+
+
+# how each game is taken to its first place, as its tests take it: the keys and clicks the player
+# is given, and how many seconds of the game's time to run it before the picture is taken
+_SCREENSHOT_ROUTES: dict[str, tuple[str, float]] = {
+    # its launcher's title, and no to its instructions
+    "sc101": ("6:Enter;14:n;19:type look", 25),
+    "tquest": _route(5, 6),
+    "sc201": _route(5, 6),
+    # their story so far is pages that wait for a key once each is written out
+    "gateway": _route(5, 30),
+    "sc301": _route(5, 30),
+    "ericun": _route(5, 44),
+    "gateway2": _route(5, 60),
+    # the demons' wager and the titles, each cut short by Escape
+    "xanth": ("52:Escape;57:Escape", 70),
+    # the opening film's parts, likewise
+    "mcritic": ("6:Escape;10:Escape;14:Escape;18:Escape", 30),
+}
+
+
+# the games that won't start without a mouse
+_BY_THE_MOUSE = ("xanth", "mcritic")
+
+
+def screenshots(args: argparse.Namespace) -> None:
+    """A picture of each game at its first place, as the player plays it, written as a PNG file."""
+    games = _games_in(args.folder)
+    if not games:
+        raise ValueError(f"{args.folder}: no game is there")
+    root = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
+    project = os.path.join(root, "src", "Legendary.Player")
+    if not os.path.isdir(project) or shutil.which("dotnet") is None:
+        raise ValueError("screenshots takes the player, and dotnet to run it")
+    out = args.out or os.path.join(root, "docs", "images")
+    os.makedirs(out, exist_ok=True)
+    for name, folder in games:
+        if args.game and name not in args.game:
+            continue
+        keys, seconds = _SCREENSHOT_ROUTES.get(name, ("", 30))
+        target = os.path.join(out, f"{name}.png")
+        with tempfile.TemporaryDirectory() as scratch:
+            # with settings and saves of its own, so that the user's aren't touched
+            command = ["dotnet", "run", "-c", "Release", "--project", project, "--", folder]
+            command += ["--settings", os.path.join(scratch, "settings.json"), "--saves", scratch]
+            command += ["--headless", "--seconds", str(math.ceil(seconds)), "--screenshot", target]
+            if name in _BY_THE_MOUSE:
+                command.append("--mouse")
+            if keys:
+                command += ["--input", keys]
+            ran = subprocess.run(command, capture_output=True, text=True, check=False)
+        said = (ran.stderr or ran.stdout).strip().splitlines()
+        if not os.path.isfile(target):
+            print(f"{name:10} no picture ({said[-1] if said else 'the player failed'})")
+            continue
+        print(f"{name:10} {os.path.getsize(target):7} bytes  {target}")
+
+
 def strings(args: argparse.Namespace) -> None:
     """The table of string blocks that starts ...STR.DAT, or the words its text is packed with."""
     folder = GameFolder(args.folder)
@@ -1720,6 +1788,11 @@ def _mouse_commands(command) -> None:  # noqa: ANN001: the parser's own maker of
     )
     command(stars)
     command(coolant)
+    sub = command(screenshots)
+    sub.add_argument("--out", metavar="FOLDER", help="write them there (the repository's docs/images)")
+    sub.add_argument(
+        "--game", action="append", metavar="NAME", help="only this game, as sc101; give it again for another"
+    )
     sub = command(scenes)
     sub.add_argument("name", nargs="?", help="only this scene, as mc700")
     sub.add_argument(
