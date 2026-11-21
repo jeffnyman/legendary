@@ -28,6 +28,16 @@ question of what a player is stays open until more of the games is understood.
 
 None of the games are included: Legendary reads, and plays, copies you have.
 
+Each as Legendary plays it, at its first place: the pictures are made by the tools'
+[`screenshots`](tools/README.md), which run the player without a window and take each game
+past its titles.
+
+<table>
+<tr><td align="center"><img src="docs/images/sc101.png" width="260" alt="Spellcasting 101 in Legendary"><br><sub>Spellcasting 101</sub></td><td align="center"><img src="docs/images/tquest.png" width="260" alt="Timequest in Legendary"><br><sub>Timequest</sub></td><td align="center"><img src="docs/images/sc201.png" width="260" alt="Spellcasting 201 in Legendary"><br><sub>Spellcasting 201</sub></td></tr>
+<tr><td align="center"><img src="docs/images/gateway.png" width="260" alt="Gateway in Legendary"><br><sub>Gateway</sub></td><td align="center"><img src="docs/images/sc301.png" width="260" alt="Spellcasting 301 in Legendary"><br><sub>Spellcasting 301</sub></td><td align="center"><img src="docs/images/ericun.png" width="260" alt="Eric the Unready in Legendary"><br><sub>Eric the Unready</sub></td></tr>
+<tr><td align="center"><img src="docs/images/gateway2.png" width="260" alt="Gateway II in Legendary"><br><sub>Gateway II</sub></td><td align="center"><img src="docs/images/xanth.png" width="260" alt="Companions of Xanth in Legendary"><br><sub>Companions of Xanth</sub></td><td align="center"><img src="docs/images/mcritic.png" width="260" alt="Mission Critical in Legendary"><br><sub>Mission Critical</sub></td></tr>
+</table>
+
 ## Playing
 
 With the [.NET 10 SDK](https://dotnet.microsoft.com/download):
