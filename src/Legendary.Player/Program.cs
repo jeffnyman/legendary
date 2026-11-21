@@ -14,7 +14,7 @@ internal static class Program
     private const int Done = 0, NotFound = 1, BadCommandLine = 2, CannotRun = 3;
 
     /// <summary>A mistake on the command line, said in one line.</summary>
-    private sealed class UsageException(string message) : Exception(message);
+    internal sealed class UsageException(string message) : Exception(message);
 
     private static int Main(string[] args)
     {
@@ -59,6 +59,7 @@ internal static class Program
         string settingsPath = Settings.DefaultPath;
         double? seconds = null;
         bool headless = false;
+        ScriptedInput? input = null;
         bool watch = false;
         bool panel = false;
         double panelText = 0;
@@ -173,6 +174,9 @@ internal static class Program
                     break;
                 case "--headless":
                     headless = true;
+                    break;
+                case "--input":
+                    input = ScriptedInput.Parse(Next("--input", "keys and clicks, as 20:Enter;30:click 160,100"));
                     break;
                 case "--watch":
                     watch = true;
@@ -349,7 +353,8 @@ internal static class Program
             // them, at least, depends on a file's taking time to read
             DiskBytesPerSecond = game.Known?.DiskBytesPerSecond ?? 200_000,
             Log = log is null ? null : log.WriteLine,
-            Mouse = (profile.Mouse ?? true) && !headless,
+            // without a window there's no mouse, unless it's asked for or the input given clicks
+            Mouse = (profile.Mouse ?? true) && (!headless || given.Mouse == true || input is { Clicks: true }),
             Composite = profile.Composite ?? false,
         };
 
@@ -475,15 +480,16 @@ internal static class Program
         bool running;
         try
         {
-            if (headless && watching is not null)
+            if (headless && (watching is not null || input is not null))
             {
-                // a sixtieth of a second at a time, with a look after each
+                // a sixtieth of a second at a time, with what input is due before each and a look after
                 long slice = machine.InstructionsPerSecond / 60;
                 running = true;
                 for (long left = (long)(seconds!.Value * machine.InstructionsPerSecond); running && left > 0; left -= slice)
                 {
+                    input?.Apply(machine, machine.Time.TotalSeconds);
                     running = machine.Run(Math.Min(slice, left));
-                    watching.Look();
+                    watching?.Look();
                 }
             }
             else if (headless)
@@ -740,10 +746,11 @@ internal static class Program
               --seconds <n>      stop after n seconds of the game's time
               --screenshot <f>   save the picture as a PNG when stopping
               --headless         no window: run --seconds seconds and stop
+              --input <events>   with --headless, keys and clicks at times in seconds, as
+                                 "20:Enter;25:type look;30:click 160,100"
               --watch            say the game's world on the terminal as it changes: the time,
-                                 the turn, the room and what is in it, and each action (for a
-                                 game whose world is known: Spellcasting 101 and
-                                 Spellcasting 201)
+                                 the turn, the room and what is in it, and each action (for
+                                 every game here)
               --panel            the same in a panel down the window's right side: the world as
                                  it is now, and under it the last of what happened
               --panel-text <n>   the panel, with its text n times its size, from 1 to 4, as in

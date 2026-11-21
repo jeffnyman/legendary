@@ -52,6 +52,10 @@ Ctrl+F10 takes it back. F11 is full screen, F12 full speed on and off, and Ctrl+
 save and load the whole machine's state. The game's folder is never written to: what a game
 saves goes to a folder of its own in your application data.
 
+Without a window, `--headless --seconds 30` runs a game for that much of its own time and
+stops, and `--screenshot <file>` saves the picture it stopped at. `--input` gives it keys
+and clicks along the way, each at a time in seconds: `"6:Enter;14:type look;20:click 160,100"`.
+
 ### Watching the game think
 
 `--watch` has the player say, on the terminal it was started from, what the game has in its
