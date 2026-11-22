@@ -1,6 +1,6 @@
-# Builds and tests on Windows, Linux and macOS, and packs, on every push to main and every pull
-# request, so a break on any of them shows up in the commit that caused it rather than at release
-# time.
+# Builds and tests on Windows, Linux and macOS on every push to main and every pull request, so a
+# break on any of them shows up in the commit that caused it rather than at release time. Publishing
+# is publish.yml, on a tag.
 name: Build
 
 on:
