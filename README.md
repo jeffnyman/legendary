@@ -1,4 +1,10 @@
-# Legendary
+<h1 align="center">
+<img src="https://raw.githubusercontent.com/jeffnyman/legendary/main/assets/legendary-title.png" width="400" alt="Legendary">
+</h1>
+
+<p align="center">
+  <a href="https://github.com/jeffnyman/legendary/actions/workflows/build.yml"><img src="https://img.shields.io/github/actions/workflow/status/jeffnyman/legendary/build.yml?branch=main&style=for-the-badge&label=build" alt="Build"></a>
+</p>
 
 **Legendary** takes Legend Entertainment's adventure games apart, to show how they work: how each is built, what's in its files, and how its parser, its world and its pictures are put together. The notes are in [docs](docs/), a game at a time; the tools that did the digging are in [tools](tools/); and the aim, in the end, is a player that plays the games from their own files.
 
@@ -137,6 +143,54 @@ dotnet test -c Release
 
 The tests that need a game look for it in the folder `LEGENDARY_GAMES` names, or in a `legend` folder above the tests, as `legend/sc101/game` and `legend/tquest/game`. Without a game, its tests pass without checking.
 
+## Author
+
+<p align="center">
+  Made with 🤍 by <a href="https://github.com/jeffnyman">Jeff Nyman</a>
+</p>
+
+<p align="center">
+  <img src="https://img.shields.io/badge/C%23-512BD4?style=for-the-badge&logo=dotnet&logoColor=white" alt="C#">
+</p>
+
+<p align="center">
+  <a href="https://testerstories.com" target="_blank" >
+    <img src="https://img.shields.io/badge/Website-Jeff%20Nyman-000000?style=social&logo=wordpress" alt="Website - Jeff Nyman">
+  </a>
+</p>
+<p align="center">
+  <a href="https://www.linkedin.com/in/jeffnyman/" target="_blank" >
+    <img src="https://img.shields.io/badge/LinkedIn-Jeff%20Nyman-0A66C2?style=social&logo=linkedin" alt="LinkedIn - Jeff Nyman">
+  </a>
+</p>
+
+## Doxazein (δοξάζειν)
+
+<p align="center">
+  חֶסֶד וֶאֱמֶת אַל־יַעַזְבֻךָ קָשְׁרֵם עַל־גַּרְגְּרֹתֶיךָ כָּתְבֵם עַל־לוּחַ לִבֶּךָ
+</p>
+
+<p align="center">
+"Let not mercy and truth forsake thee:<br>
+bind them about thy neck;<br>
+write them upon the table of thine heart."<br>
+<em>Proverbs 3:3</em>
+</p>
+
 ## License
 
-Legendary is free software under the GNU General Public License, version 3: see [LICENSE](LICENSE), and [NOTICE.md](NOTICE.md) for the work it is derived from. The games are their owners', and aren't included.
+**Legendary**, A Player and Reader for Legend Entertainment's Adventure Games\
+Copyright (C) 2026 [Jeff Nyman][owner]
+
+[![GNU General Public License version 3](https://raw.githubusercontent.com/jeffnyman/legendary/main/assets/gplv3-127x51.png)][GNU General Public License]
+
+> This program is free software: you can redistribute it and/or modify it under the terms of the [GNU General Public License] as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.
+>
+> This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the [GNU General Public License] for more details.
+
+[owner]: https://github.com/jeffnyman
+[GNU General Public License]: https://www.gnu.org/licenses/gpl-3.0.en.html
+
+The PC the games run on began as a copy of [Excavate](https://github.com/jeffnyman/excavate)'s core, also by Jeff Nyman. Portions of it are derived from DOSBox, © the DOSBox Team, under the GNU General Public License, version 2 or later, and its MT-32 emulator is a port of Munt, under the GNU Lesser General Public License, version 2.1 or later; see [NOTICE.md](NOTICE.md).
+
+Legend Entertainment's games are not part of Legendary's own work, do not fall under this license, and are not included in this repository: Legendary reads and plays copies you have. Who holds the rights to them today is in [NOTICE.md](NOTICE.md).
