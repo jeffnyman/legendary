@@ -1,19 +1,12 @@
 # Gateway
 
-Legend Entertainment, 1992. Frederik Pohl's *Gateway*, made a game by Glen Dahlgren and Mike
-Verdu, on the system of [*Spellcasting 301*](spellcasting-301.md), which came out the same
-year.
+Legend Entertainment, 1992. Frederik Pohl's *Gateway*, made a game by Glen Dahlgren and Mike Verdu, on the system of [*Spellcasting 301*](spellcasting-301.md), which came out the same year.
 
-This is what the first look found: how the program is built, its objects, flags and
-timers, how it names its text, where a command is parsed and performed, and what of it the
-tools already read. What is known for certain is said plainly; what is inferred says so. Addresses
-are `segment:offset` in hex, with segments relative to where the program loads. Every one of
-them can be looked at with the [tools](../tools/README.md).
+This is what the first look found: how the program is built, its objects, flags and timers, how it names its text, where a command is parsed and performed, and what of it the tools already read. What is known for certain is said plainly; what is inferred says so. Addresses are `segment:offset` in hex, with segments relative to where the program loads. Every one of them can be looked at with the [tools](../tools/README.md).
 
 ## How the program is built
 
-As *Spellcasting 301* is: Microsoft C, linked by .RTLink/Plus 5.02, with a run-time library
-and overlays.
+As *Spellcasting 301* is: Microsoft C, linked by .RTLink/Plus 5.02, with a run-time library and overlays.
 
 | File | What it is |
 |---|---|
@@ -36,14 +29,9 @@ The program starts at `1CF4:076C`, in the overlay manager's segment.
 
 ### The overlay manager
 
-It is *Spellcasting 301*'s, with its table in another place again. The three words that say
-where the table is are found the same way: the count is at `1CF4:0C19` and the entries
-start at `1CF4:0C1F`, six bytes on. That game's are eight bytes on and *Spellcasting 201*'s
-four, so what the manager keeps between the count and the first entry differs from one
-build of it to the next, and the tools take any of the three.
+It is *Spellcasting 301*'s, with its table in another place again. The three words that say where the table is are found the same way: the count is at `1CF4:0C19` and the entries start at `1CF4:0C1F`, six bytes on. That game's are eight bytes on and *Spellcasting 201*'s four, so what the manager keeps between the count and the first entry differs from one build of it to the next, and the tools take any of the three.
 
-An entry is the same 18 bytes, and a thunk the same ten. The thunks come after the
-manager's segment, from `1CF4:12C7`, and every one goes into the overlay it names.
+An entry is the same 18 bytes, and a thunk the same ten. The thunks come after the manager's segment, from `1CF4:12C7`, and every one goes into the overlay it names.
 
 The 58 overlays load at six places:
 
@@ -56,13 +44,9 @@ The 58 overlays load at six places:
 | `3A77` | 7 |
 | `3A9F` | 2 |
 
-The last four are close together, 15, 18 and 40 paragraphs apart, where the earlier games'
-places were each past the biggest overlay of the one before. So an overlay at `3A56`
-would lie over the three places after it, and how the manager keeps them apart, or which
-can be in memory together, hasn't been worked out.
+The last four are close together, 15, 18 and 40 paragraphs apart, where the earlier games' places were each past the biggest overlay of the one before. So an overlay at `3A56` would lie over the three places after it, and how the manager keeps them apart, or which can be in memory together, hasn't been worked out.
 
-`GATEMAIN.OVL` is laid out as before, and is 13 bytes short of where the last overlay's size
-would end it.
+`GATEMAIN.OVL` is laid out as before, and is 13 bytes short of where the last overlay's size would end it.
 
 ## What is already read
 
@@ -70,22 +54,15 @@ These are kept as *Spellcasting 301* keeps them, and are read by what reads that
 
 - **The vocabulary**: 2,644 words.
 - **The text**: 56 blocks and 6,013 strings, 663,324 bytes packed into 335,613.
-- **The grammar**: 402 forms that make 195 actions, with the actions' routines in a table
-  and 18 of them with a routine that comes first.
+- **The grammar**: 402 forms that make 195 actions, with the actions' routines in a table and 18 of them with a routine that comes first.
 - **The parser's own grammar**, the same 46 ways.
-- **The pictures**: [imploded](spellcasting-301.md#the-pictures), 1,519 of them, 15 of no
-  size.
-- **The saved game**: 34 bytes that start it, 20,650 in the records of 734 objects, 1,079 in
-  261 saved variables, and a count of timers, which come to `RESTART.DAT`'s 21,765 bytes
-  exactly. It has no four words before the count, as *Spellcasting 301*'s has.
+- **The pictures**: [imploded](spellcasting-301.md#the-pictures), 1,519 of them, 15 of no size.
+- **The saved game**: 34 bytes that start it, 20,650 in the records of 734 objects, 1,079 in 261 saved variables, and a count of timers, which come to `RESTART.DAT`'s 21,765 bytes exactly. It has no four words before the count, as *Spellcasting 301*'s has.
 - **The music, the sounds, and the pictures' regions.**
 
 ## The objects
 
-734 of them, in the eight types: 110 rooms, 241 things, 46 people, 15 doors, and the rest
-scenery and words. They are kept as *Spellcasting 301*'s are, with their names in
-`OBJECT.DAT`, their flags by a table, lists that end at a word with its top bit set, and
-each record with the number of its routine.
+734 of them, in the eight types: 110 rooms, 241 things, 46 people, 15 doors, and the rest scenery and words. They are kept as *Spellcasting 301*'s are, with their names in `OBJECT.DAT`, their flags by a table, lists that end at a word with its top bit set, and each record with the number of its routine.
 
 | What | Where |
 |---|---|
@@ -99,8 +76,7 @@ each record with the number of its routine.
 | The doors an exit goes by | `27E4:4996` |
 | What an exit says, and the exits a variable opens | `27E4:4AD2`, `4C0B:3BF0` |
 
-The records are that game's with the flags of [*Timequest*](timequest.md#the-objects): four
-bytes of them, where that game had two, for a room, a person and two kinds of scenery.
+The records are that game's with the flags of [*Timequest*](timequest.md#the-objects): four bytes of them, where that game had two, for a room, a person and two kinds of scenery.
 
 | Type | Bytes | Bytes of flags | Its routine's number |
 |---|---|---|---|
@@ -113,41 +89,24 @@ bytes of them, where that game had two, for a room, a person and two kinds of sc
 | 7, a person | 32 | 4 | `1E` |
 | 8 | 24 | 4 | `16` |
 
-A thing's record is four bytes shorter than *Spellcasting 301*'s: it doesn't have the four
-that game added. The other fields follow the flags and the two lists of words in the order
-they have there.
+A thing's record is four bytes shorter than *Spellcasting 301*'s: it doesn't have the four that game added. The other fields follow the flags and the two lists of words in the order they have there.
 
-So do the exits. A room's are rows of the one table, and they are of *Timequest*'s five
-kinds, which the *Spellcasting* games had cut to three: 232 to a room, 35 by a door, 13 that
-only say something, 236 a numbered routine decides, and 2 a variable opens. What an exit
-says is named as a string of the file is, by a far pointer with `F000` for its segment. An
-exit a variable opens has its row another way than *Timequest*'s: the room, a word that
-isn't understood, the variable, and the number of one of the exits' texts for what it says
-while it's shut, where that game had a far pointer to the text. From Below Cave, up leads to
-the Entry Chamber once a byte is set, and until then says there doesn't seem to be any way
-to climb the cliff.
+So do the exits. A room's are rows of the one table, and they are of *Timequest*'s five kinds, which the *Spellcasting* games had cut to three: 232 to a room, 35 by a door, 13 that only say something, 236 a numbered routine decides, and 2 a variable opens. What an exit says is named as a string of the file is, by a far pointer with `F000` for its segment. An exit a variable opens has its row another way than *Timequest*'s: the room, a word that isn't understood, the variable, and the number of one of the exits' texts for what it says while it's shut, where that game had a far pointer to the text. From Below Cave, up leads to the Entry Chamber once a byte is set, and until then says there doesn't seem to be any way to climb the cliff.
 
 ### The routines
 
-709 of the 734 objects have a routine, and there are 696 routines. That is more than a
-table of far pointers in one segment was made to hold, so the table is in two parts of 512,
-at `2F10:0000` and `2F90:0000`. The routine that calls an object's, at `0476:00F8`, takes the
-number's top bits for the part and its low nine for the place in it.
+709 of the 734 objects have a routine, and there are 696 routines. That is more than a table of far pointers in one segment was made to hold, so the table is in two parts of 512, at `2F10:0000` and `2F90:0000`. The routine that calls an object's, at `0476:00F8`, takes the number's top bits for the part and its low nine for the place in it.
 
-The two other kinds of routine [*Spellcasting 301* keeps in
-tables](spellcasting-301.md#two-more-kinds-of-routine) are here too: 44 objects have one that
-gives their own text, and 209 one that says which object a phrase means.
+The two other kinds of routine [*Spellcasting 301* keeps in tables](spellcasting-301.md#two-more-kinds-of-routine) are here too: 44 objects have one that gives their own text, and 209 one that says which object a phrase means.
 
 With the routines named, the tools find the timers and every use of a flag:
 
-- **The timers**: 108, numbered, kept by the same six routines, in segment `02E3`. 106 are
-  started, stopped or asked about by number, in 594 calls.
+- **The timers**: 108, numbered, kept by the same six routines, in segment `02E3`. 106 are started, stopped or asked about by number, in 594 calls.
 - **The flags**: 42, in the game's table, with 1,300 calls about one read.
 
 ## What each timer does
 
-108 timers, by number. A timer's routine mostly prints, and what it prints is named where
-it's used, so the names are from the text beside each routine.
+108 timers, by number. A timer's routine mostly prints, and what it prints is named where it's used, so the names are from the text beside each routine.
 
 | Timer | What it is | Timer | What it is |
 |---|---|---|---|
@@ -206,23 +165,15 @@ it's used, so the names are from the text beside each routine.
 | 53 | the portal disappears | 107 | Becker wakes |
 | 54 | the Hydra lair's rock and path, every ten turns | 108 | the tan, every sixty turns |
 
-Named from what they change or move, having no text that was found: 5, 6 and 43, which only
-set or clear variables; 9, 30, 39, 40, 42, 54, 57, 66, 83, 103 and 105. Timers 32 and 77
-are a return and nothing else. Timers 77, 86, 99 and 101 aren't started by number.
+Named from what they change or move, having no text that was found: 5, 6 and 43, which only set or clear variables; 9, 30, 39, 40, 42, 54, 57, 66, 83, 103 and 105. Timers 32 and 77 are a return and nothing else. Timers 77, 86, 99 and 101 aren't started by number.
 
-Many restart themselves with a count of 1 and so run every turn while a scene lasts: the
-poker game, the roulette wheel, the demon, the program that insists.
+Many restart themselves with a count of 1 and so run every turn while a scene lasts: the poker game, the roulette wheel, the demon, the program that insists.
 
 ## The flags
 
-42 flags, each with a bit and the types that have it, in the table at `27E4:0018`. Three
-routines in segment `0157` do everything with them: `03A6` tests one, `03E0` sets it and
-`0413` clears it.
+42 flags, each with a bit and the types that have it, in the table at `27E4:0018`. Three routines in segment `0157` do everything with them: `03A6` tests one, `03E0` sets it and `0413` clears it.
 
-They are the things [*Timequest*'s flags](timequest.md#the-flags) are, more than the
-*Spellcasting* games': a thing that can be taken has one flag before it has been and another
-after, and a person can be one who can't answer. The names are from the code that asks
-about each, or from what has it.
+They are the things [*Timequest*'s flags](timequest.md#the-flags) are, more than the *Spellcasting* games': a thing that can be taken has one flag before it has been and another after, and a person can be one who can't answer. The names are from the code that asks about each, or from what has it.
 
 | Flag | What it is | From |
 |---|---|---|
@@ -263,20 +214,13 @@ about each, or from what has it.
 | 41 | a person, and not you or a monster | everyone but you, the hydra and the demons |
 | 42 | can't answer | `ask`, `tell`, `attack` |
 
-Flag 16 is new. An exit by a door that isn't open asks it of the door: with it, the game
-says `[Opening the door first.]`, opens it, and lets you through; without, the door isn't
-open and you stay. Six doors have it, the ones to rooms.
+Flag 16 is new. An exit by a door that isn't open asks it of the door: with it, the game says `[Opening the door first.]`, opens it, and lets you through; without, the door isn't open and you stay. Six doors have it, the ones to rooms.
 
-Flags 17, 21, 37 and 41 are named from what has them. Not named: 3, which the ripe berries
-alone have; 9, which nothing starts with and the objects' routines test 231 times and set
-119, each for a purpose of its own; 11, which 56 objects of scenery have; 25, which 29 things
-to carry have; and 32. Flag 20 is in the table and nothing has it or asks about it.
+Flags 17, 21, 37 and 41 are named from what has them. Not named: 3, which the ripe berries alone have; 9, which nothing starts with and the objects' routines test 231 times and set 119, each for a purpose of its own; 11, which 56 objects of scenery have; 25, which 29 things to carry have; and 32. Flag 20 is in the table and nothing has it or asks about it.
 
 ## How the program names a string
 
-As [*Spellcasting 301* does](spellcasting-301.md#how-the-program-names-a-string): as a far
-pointer with `F000` for its segment and, for its offset, the block times 1,024 and the
-string's place in it. The routine that prints is at `189C:1069`.
+As [*Spellcasting 301* does](spellcasting-301.md#how-the-program-names-a-string): as a far pointer with `F000` for its segment and, for its offset, the block times 1,024 and the string's place in it. The routine that prints is at `189C:1069`.
 
 | How | Places |
 |---|---|
@@ -284,11 +228,9 @@ string's place in it. The routine that prints is at `189C:1069`.
 | Made in code for something else | 324 |
 | Kept as data | 1,389 |
 
-That is 6,181 places, and 5,948 of the file's 6,013 strings. Far more of them are kept as
-data than in that game, which had 231; what the tables of them are for hasn't been looked at.
+That is 6,181 places, and 5,948 of the file's 6,013 strings. Far more of them are kept as data than in that game, which had 231; what the tables of them are for hasn't been looked at.
 
-The first look had this wrong. With the overlays not yet read, only the root's code was
-searched, and it found 140 strings and took the game to name the rest some other way.
+The first look had this wrong. With the overlays not yet read, only the root's code was searched, and it found 140 strings and took the game to name the rest some other way.
 
 ## Where a command is parsed and performed
 
@@ -307,26 +249,17 @@ searched, and it found 140 strings and took the game to name the rest some other
 | The objects found for a lot of phrases | `3569:0295`, in overlay 2 |
 | The two lots, twelve bytes each, and how many | `3DA4:02C4`, `3DA4:02BE` |
 
-The routine that performs an action is *Spellcasting 301*'s to the byte of where its calls
-are: the ten places a routine has answered are the same ten offsets. Going somewhere is
-action 152.
+The routine that performs an action is *Spellcasting 301*'s to the byte of where its calls are: the ten places a routine has answered are the same ten offsets. Going somewhere is action 152.
 
 Three things differ:
 
-- **The game counts no turns.** It has a clock, in minutes, and a count of days, which the
-  routine at `031A:044C` moves on by what an action took: a minute for most, and thirty for
-  `wait`. Whether a timer's count goes down by turns or by
-  minutes hasn't been checked.
-- **The call that finds a phrase's objects is in an overlay**, with the routine that
-  gathers the tokens, where the earlier games had it in the root. The player takes the place
-  to be that call's return only while the call is what's before it.
-- **What is found is kept another way**: four bytes a phrase, a count and where the objects
-  are in the stack's segment, where it was six with a far pointer.
+- **The game counts no turns.** It has a clock, in minutes, and a count of days, which the routine at `031A:044C` moves on by what an action took: a minute for most, and thirty for `wait`. Whether a timer's count goes down by turns or by minutes hasn't been checked.
+- **The call that finds a phrase's objects is in an overlay**, with the routine that gathers the tokens, where the earlier games had it in the root. The player takes the place to be that call's return only while the call is what's before it.
+- **What is found is kept another way**: four bytes a phrase, a count and where the objects are in the stack's segment, where it was six with a far pointer.
 
 ## The game as it runs
 
-The game starts and plays on [the PC](the-pc.md), with its pictures and music, and the player's `--watch` and
-`--panel` follow it:
+The game starts and plays on [the PC](the-pc.md), with its pictures and music, and the player's `--watch` and `--panel` follow it:
 
 ```
 world: 12:00 pm, day 1, in Your Quarters (238)
@@ -342,8 +275,7 @@ world:   action 152: go out
 world:   you (211) moved: from Your Quarters (238) to Heecheetown (241)
 ```
 
-What an exit says is given by the player as a string's number, since `Legendary.Core`
-doesn't read the file of text for it.
+What an exit says is given by the player as a string's number, since `Legendary.Core` doesn't read the file of text for it.
 
 ## Still to do
 

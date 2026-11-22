@@ -2,18 +2,11 @@
 
 Legend Entertainment, 1992. The third *Spellcasting*, by Steve Meretzky.
 
-This is what the first look found: how the program is built and loaded, its vocabulary, its
-grammar, its objects and flags, which routine is whose, its timers, its text, its pictures,
-and where a command is parsed and performed. What is
-known for certain is said plainly; what is inferred says so. Addresses are `segment:offset`
-in hex, with segments relative to where the program loads. Every one of them can be looked
-at with the [tools](../tools/README.md).
+This is what the first look found: how the program is built and loaded, its vocabulary, its grammar, its objects and flags, which routine is whose, its timers, its text, its pictures, and where a command is parsed and performed. What is known for certain is said plainly; what is inferred says so. Addresses are `segment:offset` in hex, with segments relative to where the program loads. Every one of them can be looked at with the [tools](../tools/README.md).
 
 ## How the program is built
 
-As [*Spellcasting 201*](spellcasting-201.md#how-the-program-is-built) is: Microsoft C, linked
-by **.RTLink/Plus**, a year newer. Its header has `01F6` for the version, which is 502 and
-so, by the same reading, 5.02.
+As [*Spellcasting 201*](spellcasting-201.md#how-the-program-is-built) is: Microsoft C, linked by **.RTLink/Plus**, a year newer. Its header has `01F6` for the version, which is 502 and so, by the same reading, 5.02.
 
 | File | What it is |
 |---|---|
@@ -25,9 +18,7 @@ so, by the same reading, 5.02.
 
 ### The file is the older version's
 
-Nothing in how the program is kept changed. The header is the same, field for field; the
-records are the same; and every fixup's flags are bits the older version's reader already
-knew. Read as a 4.10 program, with nothing but the version let through:
+Nothing in how the program is kept changed. The header is the same, field for field; the records are the same; and every fixup's flags are bits the older version's reader already knew. Read as a 4.10 program, with nothing but the version let through:
 
 | What | How many |
 |---|---|
@@ -40,22 +31,14 @@ knew. Read as a 4.10 program, with nothing but the version let through:
 
 The program starts at `232A:0956`, with its stack at `555C:2000`.
 
-This was checked against the game itself. Run on [the PC](the-pc.md), the game was stopped
-at its first instruction, after the startup code had done all its loading and before the
-program had changed anything. Every byte of every record, 136,552 of the program's and
-104,238 of the library's, is in memory as the tools put it.
+This was checked against the game itself. Run on [the PC](the-pc.md), the game was stopped at its first instruction, after the startup code had done all its loading and before the program had changed anything. Every byte of every record, 136,552 of the program's and 104,238 of the library's, is in memory as the tools put it.
 
 ### The overlay manager is not
 
 What changed is the manager, which is the program's own code and not the linker's format.
 
-- **Its table is found the same way**, by the three words that say where the count is,
-  where the entries start and an entry's size. The count is at `232A:0E69` and the entries
-  start at `232A:0E71`, eight bytes on, where the older one's were four. An entry is the
-  same 18 bytes.
-- **The thunks are no longer in its segment.** They come after it, from `232A:138D` to
-  `232A:389F`, in segments that belong to the manager's group, and are still called through
-  its segment. A thunk is the same ten bytes.
+- **Its table is found the same way**, by the three words that say where the count is, where the entries start and an entry's size. The count is at `232A:0E69` and the entries start at `232A:0E71`, eight bytes on, where the older one's were four. An entry is the same 18 bytes.
+- **The thunks are no longer in its segment.** They come after it, from `232A:138D` to `232A:389F`, in segments that belong to the manager's group, and are still called through its segment. A thunk is the same ten bytes.
 - **It has its own messages now**, numbered `eov0001` and up: `Cannot find overlay file`.
 
 There are 36 overlays, in three areas, and 949 thunks:
@@ -66,20 +49,13 @@ There are 36 overlays, in three areas, and 949 thunks:
 | `37B7` | 6 to 13 | 12,832 bytes |
 | `3AD9` | 14 to 36 | 14,816 bytes |
 
-Overlay 10 is empty. `S301MAIN.OVL` is laid out as before: each overlay's relocations, and
-then its contents on a paragraph, and the file is eight bytes short of where the last one's
-size would end it.
+Overlay 10 is empty. `S301MAIN.OVL` is laid out as before: each overlay's relocations, and then its contents on a paragraph, and the file is eight bytes short of where the last one's size would end it.
 
 ## The vocabulary
 
-`VOCAB.DAT` is [*Spellcasting 201*'s](spellcasting-201.md#the-vocabulary) with one word
-meaning something else: a tree, the words' text packed by Huffman's codes, a table of the
-words in alphabetical order, and the synonyms.
+`VOCAB.DAT` is [*Spellcasting 201*'s](spellcasting-201.md#the-vocabulary) with one word meaning something else: a tree, the words' text packed by Huffman's codes, a table of the words in alphabetical order, and the synonyms.
 
-The word before the text was the text's size there, unpacked. Here it is how many bytes the
-text is packed into: 6,959, for 12,845 bytes of text. So the reader of the older file stopped
-partway through the words and found nothing where it looked for the table. The tools take
-the word either way, whichever leaves the rest of the file ending where the file does.
+The word before the text was the text's size there, unpacked. Here it is how many bytes the text is packed into: 6,959, for 12,845 bytes of text. So the reader of the older file stopped partway through the words and found nothing where it looked for the table. The tools take the word either way, whichever leaves the rest of the file ending where the file does.
 
 | What | How many |
 |---|---|
@@ -91,15 +67,11 @@ the word either way, whichever leaves the rest of the file ending where the file
 
 ## The grammar
 
-458 forms that make 249 actions, in *Spellcasting 201*'s wider table. It is found and read
-as that game's is, with nothing changed.
+458 forms that make 249 actions, in *Spellcasting 201*'s wider table. It is found and read as that game's is, with nothing changed.
 
 ## The objects
 
-517 of them, in the eight types: 84 rooms, 205 things, 46 people, 3 doors, and the rest
-scenery and words. They are kept as
-[*Spellcasting 201*'s](spellcasting-201.md#the-objects) are, with their names in
-`OBJECT.DAT`, their flags by a table, and every room's exits in one.
+517 of them, in the eight types: 84 rooms, 205 things, 46 people, 3 doors, and the rest scenery and words. They are kept as [*Spellcasting 201*'s](spellcasting-201.md#the-objects) are, with their names in `OBJECT.DAT`, their flags by a table, and every room's exits in one.
 
 | What | Where |
 |---|---|
@@ -112,8 +84,7 @@ scenery and words. They are kept as
 | The exits, four bytes each: 332 rows | `2BDB:1F36` |
 | The doors an exit goes by | `4934:48B4` |
 
-A record is that game's with a word more at its end, and a thing's has four bytes more
-besides:
+A record is that game's with a word more at its end, and a thing's has four bytes more besides:
 
 | Type | Bytes | In *201* | The new word |
 |---|---|---|---|
@@ -125,39 +96,24 @@ besides:
 | 7, a person | 30 | 28 | `1C` |
 | 8 | 20 | 18 | `12` |
 
-Everything before it is where *Spellcasting 201* has it: a thing's place at `0E`, its
-relation at `10`, the next at `12` and its three lists from `14`, and so on for the rest.
+Everything before it is where *Spellcasting 201* has it: a thing's place at `0E`, its relation at `10`, the next at `12` and its three lists from `14`, and so on for the rest.
 
-**The new word is the number of the object's routine.** The game before had a `switch`
-for each type of object, with a case for each object that had a routine. Here there is a
-table of routines, 458 far pointers at `3098:0000`, and each record says which is its own.
-The routine at `067E:00F2` calls an object's: it has `0305:0E9F` read the number from the
-record, whatever the type, and calls that entry of the table with the reason it's asking.
+**The new word is the number of the object's routine.** The game before had a `switch` for each type of object, with a case for each object that had a routine. Here there is a table of routines, 458 far pointers at `3098:0000`, and each record says which is its own. The routine at `067E:00F2` calls an object's: it has `0305:0E9F` read the number from the record, whatever the type, and calls that entry of the table with the reason it's asking.
 
-507 of the 517 objects have a routine, and the ten without have 0: of the six that are only
-words, `sandwich`, `hotel room` and `sleep` have one and `number`, `love` and `sex` don't. A
-room's number is at `0E`, in a word its record already had. In *Spellcasting 201* that word
-is something else, and still isn't understood.
+507 of the 517 objects have a routine, and the ten without have 0: of the six that are only words, `sandwich`, `hotel room` and `sleep` have one and `number`, `love` and `sex` don't. A room's number is at `0E`, in a word its record already had. In *Spellcasting 201* that word is something else, and still isn't understood.
 
 Two more things changed, both in how a list ends:
 
-- **A list of words ends at a word with its top bit set**, not at a zero after it. The
-  Beach's nouns are one word, `806A`: `beach`, and the end.
-- **A room's rows of what's also there end the same way**, at a row whose object has its
-  top bit set.
+- **A list of words ends at a word with its top bit set**, not at a zero after it. The Beach's nouns are one word, `806A`: `beach`, and the end.
+- **A room's rows of what's also there end the same way**, at a row whose object has its top bit set.
 
 The exits are of three kinds: 191 to a room, 137 a numbered routine decides, and 4 by a door.
 
-The code is compiled another way here, without the call that checks the stack at the start
-of every routine, and that is all that kept the tools from finding these tables as they
-find *Spellcasting 201*'s. The routines that read a record's fields are in segment `0305`,
-and switch on the type as before. Four of them keep the flags: `0305:030F` finds a flag's
-byte and bit from the table, `03A8` tests it, `03E2` sets it and `0415` clears it.
+The code is compiled another way here, without the call that checks the stack at the start of every routine, and that is all that kept the tools from finding these tables as they find *Spellcasting 201*'s. The routines that read a record's fields are in segment `0305`, and switch on the type as before. Four of them keep the flags: `0305:030F` finds a flag's byte and bit from the table, `03A8` tests it, `03E2` sets it and `0415` clears it.
 
 ### What the flags are
 
-51 flags, each with a bit and the types that have it, in the table at `2BDB:0018`. The names
-are from the code that asks about each, which the tools list, or from what has it.
+51 flags, each with a bit and the types that have it, in the table at `2BDB:0018`. The names are from the code that asks about each, which the tools list, or from what has it.
 
 | Flag | What it is | From |
 |---|---|---|
@@ -197,21 +153,13 @@ are from the code that asks about each, which the tools list, or from what has i
 | 47 | someone other than you | everyone has it but you |
 | 48 | female | what has it |
 
-They are the same things as *Spellcasting 201*'s flags, in another order: `open` was 13
-there and `locked` 14. The trophy case, as the game starts, is locked, a container, and can
-be seen through.
+They are the same things as *Spellcasting 201*'s flags, in another order: `open` was 13 there and `locked` 14. The trophy case, as the game starts, is locked, a container, and can be seen through.
 
-Flags 20, 24 and 17 are named from what has them more than from a test that settles it. Not
-named: 13, which the Crawl Space alone has; 22, 25, 34, 42 and 43, which nothing starts
-with and the game sets and clears; 28 and 29, of places; 36, 40 and 44, of one or a few
-things each; and 50, which the banker has. Flags 21, 49 and 51 are in the table and nothing
-has them or asks about them.
+Flags 20, 24 and 17 are named from what has them more than from a test that settles it. Not named: 13, which the Crawl Space alone has; 22, 25, 34, 42 and 43, which nothing starts with and the game sets and clears; 28 and 29, of places; 36, 40 and 44, of one or a few things each; and 50, which the banker has. Flags 21, 49 and 51 are in the table and nothing has them or asks about them.
 
 ## Which routine is whose
 
-The actions' routines are in a table too. The earlier games had a `switch` on the action,
-found by its table of jumps. Here segment `2E2A`, the one the grammar's forms are in, starts
-with the routines:
+The actions' routines are in a table too. The earlier games had a `switch` on the action, found by its table of jumps. Here segment `2E2A`, the one the grammar's forms are in, starts with the routines:
 
 | At | What |
 |---|---|
@@ -219,29 +167,19 @@ with the routines:
 | `2E2A:0050` | 249 entries of six bytes, one for each action |
 | `2E2A:0626` | the grammar's forms |
 
-An action's entry is a byte of flags, a byte that is the number of the routine that comes
-before its own, or 0, and a far pointer to its own. Two routines in segment `067E` use it:
-`067E:0002` calls the one before an action's, and `067E:0040` the action's.
+An action's entry is a byte of flags, a byte that is the number of the routine that comes before its own, or 0, and a far pointer to its own. Two routines in segment `067E` use it: `067E:0002` calls the one before an action's, and `067E:0040` the action's.
 
-The byte of flags is the one the earlier games kept apart, before the forms, a byte an
-action: its bit 0 is still that the action takes no turn, and the 30 that have it are the
-ones that would, `inventory`, `look`, `quit`, `restart`. The other bits aren't the earlier
-games': the four ways of asking have 20 here, and had 08.
+The byte of flags is the one the earlier games kept apart, before the forms, a byte an action: its bit 0 is still that the action takes no turn, and the 30 that have it are the ones that would, `inventory`, `look`, `quit`, `restart`. The other bits aren't the earlier games': the four ways of asking have 20 here, and had 08.
 
-So every routine is named: 249 actions, 61 of them with one of the 20 that come first, and
-[507 objects](#the-objects). All but one of the actions' routines are in overlays 6 to 9.
+So every routine is named: 249 actions, 61 of them with one of the 20 that come first, and [507 objects](#the-objects). All but one of the actions' routines are in overlays 6 to 9.
 
-The routine that performs an action is at `0000:01A4`, and asks them in the order the
-earlier games do.
+The routine that performs an action is at `0000:01A4`, and asks them in the order the earlier games do.
 
 ### Two more kinds of routine
 
-An object can have two routines beside its own. Each kind is in a table of six bytes an
-entry, an object's number and a far pointer, which a routine in segment `067E` goes down
-looking for the object.
+An object can have two routines beside its own. Each kind is in a table of six bytes an entry, an object's number and a far pointer, which a routine in segment `067E` goes down looking for the object.
 
-**Its own text**, 46 objects, at `2E2A:25CC`. `067E:00B0` is given the object and what is
-wanted, and the object's routine answers with a far pointer to the text, or nothing:
+**Its own text**, 46 objects, at `2E2A:25CC`. `067E:00B0` is given the object and what is wanted, and the object's routine answers with a far pointer to the text, or nothing:
 
 | Asked for | What |
 |---|---|
@@ -250,29 +188,15 @@ wanted, and the object's routine answers with a far pointer to the text, or noth
 | 18 | its line in a room's description |
 | 19 | its line there before it has been touched |
 
-The routines that print an object's name ask first, and use the name in its record when
-they get nothing; so an object whose name changes has no name there at all, and six of the
-46 have none. The routine that describes a room asks for 19 when the object doesn't have
-the flag for touched, and then for 18. The beer keg answers 19 with `Here's the keg you
-threw off the flying carpet!`, and 18 only in one room. They are Infocom's first description
-and long description, as routines.
+The routines that print an object's name ask first, and use the name in its record when they get nothing; so an object whose name changes has no name there at all, and six of the 46 have none. The routine that describes a room asks for 19 when the object doesn't have the flag for touched, and then for 18. The beer keg answers 19 with `Here's the keg you threw off the flying carpet!`, and 18 only in one room. They are Infocom's first description and long description, as routines.
 
-**Which object is meant**, 139 entries for 138 objects, in 42 routines, at `2E2A:228A`.
-When the words of a phrase fit more than one object, the routine that finds them, in overlay
-2, calls `067E:0065` with each object found, the phrase, and the list of what was found. An
-object's routine can answer with the object the phrase is to mean, and the list is cut to
-that one. The coin's looks for another coin in the list and picks between them by the
-action being performed. It is Infocom's `GENERIC`.
+**Which object is meant**, 139 entries for 138 objects, in 42 routines, at `2E2A:228A`. When the words of a phrase fit more than one object, the routine that finds them, in overlay 2, calls `067E:0065` with each object found, the phrase, and the list of what was found. An object's routine can answer with the object the phrase is to mean, and the list is cut to that one. The coin's looks for another coin in the list and picks between them by the action being performed. It is Infocom's `GENERIC`.
 
-With the routines named, the tool that finds every test of a flag works: 1,243 calls about
-a flag are read, and 146 more aren't.
+With the routines named, the tool that finds every test of a flag works: 1,243 calls about a flag are read, and 146 more aren't.
 
 ## The timers
 
-65 of them, numbered, and kept as
-[*Spellcasting 201*'s](spellcasting-201.md#the-timers) are: a table of sixteen, four bytes
-each, a timer's number in a byte and its count in a word two bytes on, and a second table
-with a far pointer to each number's routine.
+65 of them, numbered, and kept as [*Spellcasting 201*'s](spellcasting-201.md#the-timers) are: a table of sixteen, four bytes each, a timer's number in a byte and its count in a word two bytes on, and a second table with a far pointer to each number's routine.
 
 | What | Where |
 |---|---|
@@ -296,15 +220,11 @@ The routines that keep the table are in segment `02D3`, the same six in the same
 
 Starting a seventeenth says `[ERROR: Queue overflow]`.
 
-62 of the 65 are started, stopped or asked about by number, in 305 calls; 15 more calls give
-a number that is worked out. 21 calls start one to run every turn. All but six of the
-routines are in overlays. Timers 20, 32 and 51 aren't named by any call.
+62 of the 65 are started, stopped or asked about by number, in 305 calls; 15 more calls give a number that is worked out. 21 calls start one to run every turn. All but six of the routines are in overlays. Timers 20, 32 and 51 aren't named by any call.
 
 ### What each timer does
 
-A timer's routine mostly prints, and since [a string is named where it's
-used](#how-the-program-names-a-string), what each prints can be read beside it. These names
-are from that.
+A timer's routine mostly prints, and since [a string is named where it's used](#how-the-program-names-a-string), what each prints can be read beside it. These names are from that.
 
 | Timer | What it is | Timer | What it is |
 |---|---|---|---|
@@ -342,23 +262,15 @@ are from that.
 | 32 | the Yus swagger onto the beach | 65 | you feel filled with vigor |
 | 33 | the showdown on the boulevard, turn by turn |  |  |
 
-Timers 2 and 3 clear variables and print nothing, as the timers called `a word forgotten`
-do in the games before; 6 and 52 count a byte down and start themselves again. Timers 37 to
-42 are six of one kind, each handing one of your fraternity brothers to a routine they
-share, and what that does hasn't been read. Timers 25 and 30 print nothing that was found
-and are named from what they move: you, to the cell, with the Sheriff.
+Timers 2 and 3 clear variables and print nothing, as the timers called `a word forgotten` do in the games before; 6 and 52 count a byte down and start themselves again. Timers 37 to 42 are six of one kind, each handing one of your fraternity brothers to a routine they share, and what that does hasn't been read. Timers 25 and 30 print nothing that was found and are named from what they move: you, to the cell, with the Sheriff.
 
-Much of the game is its contests, and each is one timer that runs every turn and steps
-through the event: the sand castles, the soda-barfing, the volleyball, the drawing of
-straws.
+Much of the game is its contests, and each is one timer that runs every turn and steps through the event: the sand castles, the soda-barfing, the volleyball, the drawing of straws.
 
 ## The text
 
-`S301STR.DAT` has 37 blocks and 4,777 strings: 512,066 bytes of text packed into 269,161. *Spellcasting 201*'s file had 1,815 strings, 292,504 bytes of text, and left most of the game's
-text in its overlays.
+`S301STR.DAT` has 37 blocks and 4,777 strings: 512,066 bytes of text packed into 269,161. *Spellcasting 201*'s file had 1,815 strings, 292,504 bytes of text, and left most of the game's text in its overlays.
 
-The packing is that game's: a Huffman tree in the form its vocabulary's has, 217 nodes, with
-128 common words that a code can stand for. What changed is how a string is found.
+The packing is that game's: a Huffman tree in the form its vocabulary's has, 217 nodes, with 128 common words that a code can stand for. What changed is how a string is found.
 
 | The file | What |
 |---|---|
@@ -369,20 +281,13 @@ The packing is that game's: a Huffman tree in the form its vocabulary's has, 217
 | The words | a count, where each starts, and each with a zero |
 | The blocks | each string's codes, one string after another |
 
-The older file had six bytes for a block, with its size unpacked, and nothing for a string:
-strings ran on from one to the next, a bit after the last, and the tenth was reached by
-unpacking the nine before it. Here every string starts on a byte and the file says how long
-each is, so one can be gone to directly. The lengths of a block's strings add up to the
-block's size, for every block, which is how the form is known to be read right.
+The older file had six bytes for a block, with its size unpacked, and nothing for a string: strings ran on from one to the next, a bit after the last, and the tenth was reached by unpacking the nine before it. Here every string starts on a byte and the file says how long each is, so one can be gone to directly. The lengths of a block's strings add up to the block's size, for every block, which is how the form is known to be read right.
 
 *Gateway*'s text is kept the same way, and is read: 6,013 strings.
 
 ### How the program names a string
 
-*Spellcasting 201* had two routines that took a string's number, one to give its text and
-one to print it. Here there are none. A string is named as a far pointer, wherever a far
-pointer to text could be, with `F000` for its segment and the string's number for its
-offset:
+*Spellcasting 201* had two routines that took a string's number, one to give its text and one to print it. Here there are none. A string is named as a far pointer, wherever a far pointer to text could be, with `F000` for its segment and the string's number for its offset:
 
 ```
 3ad9:01ef  mov ax, 0x240b  ; string 9.11: \tYou suddenly feel filled with vigor.\n
@@ -392,21 +297,11 @@ offset:
 3ad9:01f7  lcall 0x1d3a, 0x10c6
 ```
 
-No text is ever at segment `F000`, which is the PC's ROM, so the pointer can't be mistaken
-for a real one. The number is the block times 1,024, and the string's place in the block: a
-block can have more than 256 strings now, and one has 284, so the eight bits the older
-number gave the place aren't enough.
+No text is ever at segment `F000`, which is the PC's ROM, so the pointer can't be mistaken for a real one. The number is the block times 1,024, and the string's place in the block: a block can have more than 256 strings now, and one has 284, so the eight bits the older number gave the place aren't enough.
 
-The routine at `03F8:05B7` makes a pointer of either kind into text. One whose segment isn't
-`F000` is given back as it is. For one that is, it looks in a list of the strings it has
-unpacked lately, six bytes each at `280A:032E`, and unpacks the string from the file if it
-isn't there. So every routine that takes text takes a string's number as well, with no code
-of its own for it, and the game's writers could move a string out of the program and into
-the file by changing only how it was named.
+The routine at `03F8:05B7` makes a pointer of either kind into text. One whose segment isn't `F000` is given back as it is. For one that is, it looks in a list of the strings it has unpacked lately, six bytes each at `280A:032E`, and unpacks the string from the file if it isn't there. So every routine that takes text takes a string's number as well, with no code of its own for it, and the game's writers could move a string out of the program and into the file by changing only how it was named.
 
-Nearly every string is named by a constant, though half don't look it. Where a routine
-prints one of several strings, the compiler loaded each number where it was chosen and
-jumped to the one place that does the rest:
+Nearly every string is named by a constant, though half don't look it. Where a routine prints one of several strings, the compiler loaded each number where it was chosen and jumped to the one place that does the rest:
 
 ```
 37b7:1bd5  mov ax, 0x429  ; string 1.41: %s to be locked.\n
@@ -417,11 +312,7 @@ jumped to the one place that does the rest:
 37b7:1b94  push ax
 ```
 
-So the number and its `F000` can be far apart, and a search for the two together finds only
-the strings that are a routine's one message. Following the jump finds the rest. The tools
-take a string to be named where its number is loaded and `F000` is given at once or where a
-jump from there lands; where the two are put by as a far pointer, in a routine's variables
-or in the data; and where a far pointer of the kind is in the program's data as it starts.
+So the number and its `F000` can be far apart, and a search for the two together finds only the strings that are a routine's one message. Following the jump finds the rest. The tools take a string to be named where its number is loaded and `F000` is given at once or where a jump from there lands; where the two are put by as a far pointer, in a routine's variables or in the data; and where a far pointer of the kind is in the program's data as it starts.
 
 | How | Places |
 |---|---|
@@ -429,16 +320,11 @@ or in the data; and where a far pointer of the kind is in the program's data as 
 | Made in code for something else | 386 |
 | Kept as data | 231 |
 
-That is 4,811 places, and 4,737 of the file's 4,777 strings. The 40 left are a few the
-tools miss, where the segment is given before the number, and some nothing names at all:
-notes to the game's testers, `Welcome to the Gamma test version of S301!`, and messages for
-faults, `Bug: set_spell_verb`.
+That is 4,811 places, and 4,737 of the file's 4,777 strings. The 40 left are a few the tools miss, where the segment is given before the number, and some nothing names at all: notes to the game's testers, `Welcome to the Gamma test version of S301!`, and messages for faults, `Bug: set_spell_verb`.
 
 ## The pictures
 
-649 of them, in 17 files, and kept a third way. The directory is still twelve bytes to a
-picture, with the same things in the same places. The byte that says how a picture is kept
-is read anew, and the pixels are packed by a method none of the earlier games used.
+649 of them, in 17 files, and kept a third way. The directory is still twelve bytes to a picture, with the same things in the same places. The byte that says how a picture is kept is read anew, and the pixels are packed by a method none of the earlier games used.
 
 ### The byte
 
@@ -448,41 +334,26 @@ is read anew, and the pixels are packed by a method none of the earlier games us
 | `10` | it starts with a palette |
 | `20` or `40` | its pixels follow, imploded |
 
-Every picture has `20` or `40`, and both are packed the same way. Most of the `40`s are small
-pieces drawn at a place; what the bit says isn't known.
+Every picture has `20` or `40`, and both are packed the same way. Most of the `40`s are small pieces drawn at a place; what the bit says isn't known.
 
-The files go by display too. `S301_100.PIC` and `101` are the EGA's, `102` to `109` and
-`200` and `201` the VGA's in 16 colors, `300` to `302` the VGA's in 256, and `400` and
-`401` are the fourth display's, in 16 colors.
+The files go by display too. `S301_100.PIC` and `101` are the EGA's, `102` to `109` and `200` and `201` the VGA's in 16 colors, `300` to `302` the VGA's in 256, and `400` and `401` are the fourth display's, in 16 colors.
 
 ### The palette
 
-For the EGA it is what the earlier games had, 16 bytes, each one of the EGA's 64 colors by
-number. For the VGA it is three bytes a color, red, green and blue from 0 to 63, as the
-VGA's own registers take them: 48 bytes for 16 colors, 768 for 256.
+For the EGA it is what the earlier games had, 16 bytes, each one of the EGA's 64 colors by number. For the VGA it is three bytes a color, red, green and blue from 0 to 63, as the VGA's own registers take them: 48 bytes for 16 colors, 768 for 256.
 
-A picture without one is still a piece of the picture before it that has one, in its
-colors, as in [*Timequest*](timequest.md#the-pictures).
+A picture without one is still a piece of the picture before it that has one, in its colors, as in [*Timequest*](timequest.md#the-pictures).
 
 ### The pixels
 
-They are packed by **PKWARE's implode**, the method of its Data Compression Library, which
-the game has linked in: the routine that unpacks is at `154A:0CA6`, and takes two routines
-of the game's, one to read more of the file and one to take what's unpacked. The file is
-read 2,048 bytes at a time.
+They are packed by **PKWARE's implode**, the method of its Data Compression Library, which the game has linked in: the routine that unpacks is at `154A:0CA6`, and takes two routines of the game's, one to read more of the file and one to take what's unpacked. The file is read 2,048 bytes at a time.
 
-Imploded data starts with two bytes: 0, for bytes kept as they are and not by a code, and
-6, the size of the window as a power of two, 4,096 bytes. Then bits, from each byte's low
-bit up:
+Imploded data starts with two bytes: 0, for bytes kept as they are and not by a code, and 6, the size of the window as a power of two, 4,096 bytes. Then bits, from each byte's low bit up:
 
 - a 0 bit, and a byte as it is;
-- or a 1 bit, a length, and a distance back, for that many bytes copied from that far back
-  in what has been unpacked. The length is a Huffman code and up to eight bits more. The
-  distance is a Huffman code for its high bits, and six bits as they are for its low ones,
-  or two when the length is 2.
+- or a 1 bit, a length, and a distance back, for that many bytes copied from that far back in what has been unpacked. The length is a Huffman code and up to eight bits more. The distance is a Huffman code for its high bits, and six bits as they are for its low ones, or two when the length is 2.
 
-A length of 519 ends it. The two Huffman codes are the method's own, the same for every
-file, and aren't kept in it.
+A length of 519 ends it. The two Huffman codes are the method's own, the same for every file, and aren't kept in it.
 
 Unpacked, the pixels are rows, each starting on a byte:
 
@@ -492,16 +363,11 @@ Unpacked, the pixels are rows, each starting on a byte:
 | 16 | two, the left one in its low half |
 | 2 | eight, the left one in its top bit |
 
-The tools take which it is from how many bytes there are, since one picture for the EGA has
-a 0 for its display. Every one of the 649 unpacks to exactly the bytes its width and height
-need, and so do all 1,504 of *Gateway*'s, which are kept the same way. Those looked at are
-right: a chapter's title in 256 colors, a room in 16 with its pieces in its colors, and
-*Gateway*'s titles for the EGA and the VGA.
+The tools take which it is from how many bytes there are, since one picture for the EGA has a 0 for its display. Every one of the 649 unpacks to exactly the bytes its width and height need, and so do all 1,504 of *Gateway*'s, which are kept the same way. Those looked at are right: a chapter's title in 256 colors, a room in 16 with its pieces in its colors, and *Gateway*'s titles for the EGA and the VGA.
 
 ## The fonts
 
-The `.FNT` files are the game's fonts, nineteen of them, and *Gateway* has twenty-one kept
-the same way. A file is ten bytes and then its letters:
+The `.FNT` files are the game's fonts, nineteen of them, and *Gateway* has twenty-one kept the same way. A file is ten bytes and then its letters:
 
 | At | What |
 |---|---|
@@ -514,27 +380,17 @@ the same way. A file is ten bytes and then its letters:
 | 8 | `FF` when the second table below is there, as it is in every font here whose letters differ |
 | 9 | Zero |
 
-A font whose letters differ in width then has two tables of 128 bytes, one for each
-character's code from 0: its width in pixels, and a byte whose two halves are 0 or 1 in
-nearly every font, which isn't understood. A font of one width has neither table. Then come
-each character's rows, a bit a pixel from each byte's top bit, the first character first.
+A font whose letters differ in width then has two tables of 128 bytes, one for each character's code from 0: its width in pixels, and a byte whose two halves are 0 or 1 in nearly every font, which isn't understood. A font of one width has neither table. Then come each character's rows, a bit a pixel from each byte's top bit, the first character first.
 
-Every file in the two games, and in *Gateway II*, is exactly as long as that makes it. The
-fonts looked at are right: letters from 7 rows high to 26, drawn as the game's text is.
-Byte 5 is read as the gap because a line set with it looks right and a font of one width
-has 0 there; the program's own use of it hasn't been read.
+Every file in the two games, and in *Gateway II*, is exactly as long as that makes it. The fonts looked at are right: letters from 7 rows high to 26, drawn as the game's text is. Byte 5 is read as the gap because a line set with it looks right and a font of one width has 0 there; the program's own use of it hasn't been read.
 
-Not every one is of letters. Some of the fonts of one width, as *Gateway*'s `GATE_106.FNT`,
-are the pieces of the map: each character is a square with lines out of it in some of the
-eight directions.
+Not every one is of letters. Some of the fonts of one width, as *Gateway*'s `GATE_106.FNT`, are the pieces of the map: each character is a square with lines out of it in some of the eight directions.
 
-The tools' `fonts` command lists them, and with `--out` writes each as two PNG files: all
-its characters, and a line set in it.
+The tools' `fonts` command lists them, and with `--out` writes each as two PNG files: all its characters, and a line set in it.
 
 ## A saved game
 
-`RESTART.DAT` is the game's state as it starts, 15,866 bytes, and a saved game is the same
-thing. It is [*Spellcasting 201*'s](spellcasting-201.md#a-saved-game) with one part more:
+`RESTART.DAT` is the game's state as it starts, 15,866 bytes, and a saved game is the same thing. It is [*Spellcasting 201*'s](spellcasting-201.md#a-saved-game) with one part more:
 
 | Bytes | What |
 |---|---|
@@ -547,13 +403,9 @@ thing. It is [*Spellcasting 201*'s](spellcasting-201.md#a-saved-game) with one p
 
 The parts add up to the file exactly.
 
-The saved variables are listed in a table at `284D:022C`, six bytes each, where a variable
-is and how long, with their count at `4934:392E`. The four words are at `3E77:4BFA` to
-`4C00`, beside the parser's own variables; what they are isn't known. For two of the kinds
-of saving the routine can be asked for, it fills them from four words of the data first.
+The saved variables are listed in a table at `284D:022C`, six bytes each, where a variable is and how long, with their count at `4934:392E`. The four words are at `3E77:4BFA` to `4C00`, beside the parser's own variables; what they are isn't known. For two of the kinds of saving the routine can be asked for, it fills them from four words of the data first.
 
-The routine that saves is in overlay 4, at `350B:042C`, where the earlier games had it in
-the root, which is all that kept the tools from finding it.
+The routine that saves is in overlay 4, at `350B:042C`, where the earlier games had it in the root, which is all that kept the tools from finding it.
 
 ## Where a command is parsed and performed
 
@@ -574,19 +426,13 @@ The steps are the earlier games', and the places the player watches are these:
 | The objects found for a lot of phrases | `0166:0A63` |
 | The two lots, twelve bytes each, and how many | `3E77:0226`, `3E77:0220` |
 
-The ten places where a routine asked about an action has answered are at `0000:0370`,
-`03A2`, `03DA`, `03F9`, `0416`, `044F`, `046E`, `04A4`, `04C0` and `04DA`. Going somewhere
-is action 236. The clock is in steps of five minutes, as in the other *Spellcasting* games.
+The ten places where a routine asked about an action has answered are at `0000:0370`, `03A2`, `03DA`, `03F9`, `0416`, `044F`, `046E`, `04A4`, `04C0` and `04DA`. Going somewhere is action 236. The clock is in steps of five minutes, as in the other *Spellcasting* games.
 
-Two things are placed differently here. The objects a phrase could be are found from a
-segment of their own, `0166`, and not from the main loop's. And the routine that gathers a
-command's tokens is in an overlay with the routine that takes each word off the line, where
-*Spellcasting 201* had the one in an overlay and the other in the root.
+Two things are placed differently here. The objects a phrase could be are found from a segment of their own, `0166`, and not from the main loop's. And the routine that gathers a command's tokens is in an overlay with the routine that takes each word off the line, where *Spellcasting 201* had the one in an overlay and the other in the root.
 
 ## The game as it runs
 
-The game starts and plays on [the PC](the-pc.md), with its pictures and music, and the player's `--watch` and
-`--panel` follow it as they do the other three.
+The game starts and plays on [the PC](the-pc.md), with its pictures and music, and the player's `--watch` and `--panel` follow it as they do the other three.
 
 ```
 world: 1:10 pm, turn 0, in Beach (1)
@@ -601,25 +447,18 @@ world:     answered by eyeglasses (89), asked as the object: 1
 world: 1:15 pm, turn 1, in Beach (1)
 ```
 
-Watching it found one thing about every game. In a phrase of a command, the count of its
-adjectives is a byte, with the byte after it left as it was. The earlier games happen to
-leave a zero there, and the count had been read as a word; this one doesn't.
+Watching it found one thing about every game. In a phrase of a command, the count of its adjectives is a byte, with the byte after it left as it was. The earlier games happen to leave a zero there, and the count had been read as a word; this one doesn't.
 
-`Legendary.Core` reads the newer linker's programs, the vocabulary whose size is of its
-packed text, and this game's world.
+`Legendary.Core` reads the newer linker's programs, the vocabulary whose size is of its packed text, and this game's world.
 
 ## Still to do
 
-- Which screen display 4 is, and what the `40` in a picture's kind says. Its pictures are 24, the
-  same in each game that has them, and one is 713 across, so it is no screen of 640: by
-  that, the Super VGA's 800 by 600 in 16 colors, which hasn't been confirmed from the
-  program.
+- Which screen display 4 is, and what the `40` in a picture's kind says. Its pictures are 24, the same in each game that has them, and one is 713 across, so it is no screen of 640: by that, the Super VGA's 800 by 600 in 16 colors, which hasn't been confirmed from the program.
 - The second table of a font, and which font the game uses for what.
 - What starts a saved game, and the four words before its timers.
 - Twelve flags aren't named, and timers 37 to 42 are named only by whose they are.
 - The four bytes a thing's record has more than *Spellcasting 201*'s.
 
-The parser's own grammar is read, and is the first game's 46 ways. The music and the sounds
-are read as they are.
+The parser's own grammar is read, and is the first game's 46 ways. The music and the sounds are read as they are.
 
 The game hasn't been played through.

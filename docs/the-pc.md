@@ -1,19 +1,10 @@
 # The PC
 
-The games are PC programs, and Legendary has a PC for them to run on: `src/Legendary.Pc`, an
-x86 processor, the EGA, VGA and CGA, the timer and interrupt hardware, the speaker, FM and
-MT-32 sound, and a BIOS and DOS answered in C#. It has no window of its own:
-`src/Legendary.Player` gives it one, with the keyboard, the mouse and sound, and the tests run
-it with none. Besides playing the games, it is a place to run one where it can be watched, so
-that what these notes say a program does can be checked against what it does.
+The games are PC programs, and Legendary has a PC for them to run on: `src/Legendary.Pc`, an x86 processor, the EGA, VGA and CGA, the timer and interrupt hardware, the speaker, FM and MT-32 sound, and a BIOS and DOS answered in C#. It has no window of its own: `src/Legendary.Player` gives it one, with the keyboard, the mouse and sound, and the tests run it with none. Besides playing the games, it is a place to run one where it can be watched, so that what these notes say a program does can be checked against what it does.
 
-It began as a copy of the core of [Excavate](https://github.com/jeffnyman/excavate), which
-plays other DOS games, and Excavate's began as a copy of Confederation's. It is copied whole.
-Most of it is more than these games need, the 386's protected mode for one, but it is one
-machine and comes apart badly. Where it came from before that is in [NOTICE.md](../NOTICE.md).
+It began as a copy of the core of [Excavate](https://github.com/jeffnyman/excavate), which plays other DOS games, and Excavate's began as a copy of Confederation's. It is copied whole. Most of it is more than these games need, the 386's protected mode for one, but it is one machine and comes apart badly. Where it came from before that is in [NOTICE.md](../NOTICE.md).
 
-A machine of this kind answers what its games ask and stops at anything else, so each new game
-finds what the others didn't need. *Spellcasting 101* found four:
+A machine of this kind answers what its games ask and stops at anything else, so each new game finds what the others didn't need. *Spellcasting 101* found four:
 
 | What the game did | What the PC now does |
 |---|---|
@@ -26,79 +17,37 @@ finds what the others didn't need. *Spellcasting 101* found four:
 | Left its pointer to the mouse's driver to draw, INT 33h functions 1 and 2 | Draws Microsoft's arrow over the picture when the driver has been asked to show it, and gives the mouse the rows of the mode it's in |
 | Freed its memory by hand, through the list of lists, and had DOS load the game over it as an overlay, INT 21h function 4Bh with 3 | Gives the first memory block's segment before the list of lists, joins free blocks that are side by side before it resizes one, and loads overlays |
 
-Music asked for more. The game's FM music is played by AdLib's own driver, `SOUND.COM`, a
-program that is run before the game, takes an interrupt, and stays in memory when it ends.
-For that the PC learned three things: to load a `.COM` program, which is a file with no header
-loaded as it is; to let a program end and stay, by INT 27h or INT 21h function 31h, and to
-load the next one above it and not over it; and to run a list of commands one after another,
-as a batch file would, without there being a file. The player gives it the list: the driver,
-when the game's folder has it, and then the game.
+Music asked for more. The game's FM music is played by AdLib's own driver, `SOUND.COM`, a program that is run before the game, takes an interrupt, and stays in memory when it ends. For that the PC learned three things: to load a `.COM` program, which is a file with no header loaded as it is; to let a program end and stay, by INT 27h or INT 21h function 31h, and to load the next one above it and not over it; and to run a list of commands one after another, as a batch file would, without there being a file. The player gives it the list: the driver, when the game's folder has it, and then the game.
 
-With those, the launcher draws its title, the same pixel for pixel as Legendary's own reader
-of the picture file makes it, and the game starts, asks whether to restore a saved game, and
-plays. The tests in `tests/Legendary.Pc.Tests` do all of it.
+With those, the launcher draws its title, the same pixel for pixel as Legendary's own reader of the picture file makes it, and the game starts, asks whether to restore a saved game, and plays. The tests in `tests/Legendary.Pc.Tests` do all of it.
 
 ## A laugh and a disk
 
-Joey Rottenwood laughs in the game's first scene, and on this PC he didn't. The file with the
-laugh was opened, read, and played for less than a tenth of a second.
+Joey Rottenwood laughs in the game's first scene, and on this PC he didn't. The file with the laugh was opened, read, and played for less than a tenth of a second.
 
-The game stops a recorded sound [at any interrupt from the keyboard](spellcasting-101.md#the-sounds),
-a key let go as well as a key pressed, and the laugh comes straight after a key: the scene
-stops at a prompt for more, the player presses a key, and the game reads `ROTTEN3.RS` and
-plays it. On a PC of 1990 the file was a fraction of a second coming off the disk. By then the
-key was up, its interrupt had come and gone while DOS waited for the disk, and the laugh
-played to its end. Here a file took no time at all to read, so the laugh started while the key
-was still down, and letting go of the key ended it.
+The game stops a recorded sound [at any interrupt from the keyboard](spellcasting-101.md#the-sounds), a key let go as well as a key pressed, and the laugh comes straight after a key: the scene stops at a prompt for more, the player presses a key, and the game reads `ROTTEN3.RS` and plays it. On a PC of 1990 the file was a fraction of a second coming off the disk. By then the key was up, its interrupt had come and gone while DOS waited for the disk, and the laugh played to its end. Here a file took no time at all to read, so the laugh started while the key was still down, and letting go of the key ended it.
 
-Nothing in the game's code says it depends on a slow disk, and its writers surely never knew
-it did. So the PC's disk can now be given a speed, `DiskBytesPerSecond`: opening a file and
-reading from one then take the machine's time, with the program waiting in DOS and interrupts
-on, as they were. The player gives it 200 KB a second, a hard disk of the day as DOS got bytes
-off one. The tests play the scene both ways: with the speed, 2.8 seconds of laugh; without,
-none.
+Nothing in the game's code says it depends on a slow disk, and its writers surely never knew it did. So the PC's disk can now be given a speed, `DiskBytesPerSecond`: opening a file and reading from one then take the machine's time, with the program waiting in DOS and interrupts on, as they were. The player gives it 200 KB a second, a hard disk of the day as DOS got bytes off one. The tests play the scene both ways: with the speed, 2.8 seconds of laugh; without, none.
 
 ## An arrow nobody drew
 
-Clicks worked in the game from the start, and there was no pointer to click with. The game
-has none of its own. A mouse's driver draws the arrow, and the game only asks it to
-[show it and hide it](spellcasting-101.md#the-mouse). This PC's driver answered where the
-mouse was and what its buttons were doing, and drew nothing, since the programs it had run
-before all drew their own.
+Clicks worked in the game from the start, and there was no pointer to click with. The game has none of its own. A mouse's driver draws the arrow, and the game only asks it to [show it and hide it](spellcasting-101.md#the-mouse). This PC's driver answered where the mouse was and what its buttons were doing, and drew nothing, since the programs it had run before all drew their own.
 
-So the PC's driver now draws: Microsoft's arrow, black edged around white, with its tip where
-the mouse is, laid over the picture when it's shown to the player and never written into the
-video card's memory, so a program that reads its own screen back doesn't find an arrow in it.
-It's drawn in the graphics modes, when the program has asked for it as many times as it has
-asked for it to be hidden.
+So the PC's driver now draws: Microsoft's arrow, black edged around white, with its tip where the mouse is, laid over the picture when it's shown to the player and never written into the video card's memory, so a program that reads its own screen back doesn't find an arrow in it. It's drawn in the graphics modes, when the program has asked for it as many times as it has asked for it to be hidden.
 
-The driver also thought every screen had 200 rows, as the CGA's and the VGA's 320 by 200 have.
-The game's EGA screen has 350, and the mouse couldn't reach the bottom of it, where the
-prompt is. A reset now gives the mouse the rows of the mode: 350 for modes 0Fh and 10h, 480
-for 11h and 12h, and 200 for the others.
+The driver also thought every screen had 200 rows, as the CGA's and the VGA's 320 by 200 have. The game's EGA screen has 350, and the mouse couldn't reach the bottom of it, where the prompt is. A reset now gives the mouse the rows of the mode: 350 for modes 0Fh and 10h, 480 for 11h and 12h, and 200 for the others.
 
 ## No mouse, and no driver either
 
-With no mouse, the game went past its own first two pages without waiting, and played none
-of its music. This PC answered INT 33h whether it had a mouse or not, and with none said so
-in the way a driver does that has looked for its mouse and not found one. That isn't a PC
-with no mouse. Nobody loaded a mouse's driver on a PC without one, and there INT 33h points
-at nothing, or at an `IRET`.
+With no mouse, the game went past its own first two pages without waiting, and played none of its music. This PC answered INT 33h whether it had a mouse or not, and with none said so in the way a driver does that has looked for its mouse and not found one. That isn't a PC with no mouse. Nobody loaded a mouse's driver on a PC without one, and there INT 33h points at nothing, or at an `IRET`.
 
-The game [looks at the vector](spellcasting-101.md#the-mouse) before it calls. Finding one
-that wasn't an `IRET`, it took the driver for real, was told there was no mouse, and went on
-asking it for the buttons anyway. The PC, having no mouse, left the registers alone, and
-what was in BX from before read as a button held down: a click, at every page that waits for
-a key or a click. Why the music went with it hasn't been followed; it came back with the pages.
+The game [looks at the vector](spellcasting-101.md#the-mouse) before it calls. Finding one that wasn't an `IRET`, it took the driver for real, was told there was no mouse, and went on asking it for the buttons anyway. The PC, having no mouse, left the registers alone, and what was in BX from before read as a button held down: a click, at every page that waits for a key or a click. Why the music went with it hasn't been followed; it came back with the pages.
 
-Now the PC with no mouse has INT 33h pointing at the BIOS's `IRET`, the game sees no driver,
-and it is played by the keyboard as it was meant to be: the pages wait, and the music plays.
+Now the PC with no mouse has INT 33h pointing at the BIOS's `IRET`, the game sees no driver, and it is played by the keyboard as it was meant to be: the pages wait, and the music plays.
 
 ## A program in protected mode
 
-*Mission Critical* is a 32-bit program, and brings DOS/4GW with it. The 386's protected
-mode and the DPMI host were here from the start, unused, and DOS/4GW ran on them the first
-time it was tried. [The game needed more](mission-critical.md#running-it):
+*Mission Critical* is a 32-bit program, and brings DOS/4GW with it. The 386's protected mode and the DPMI host were here from the start, unused, and DOS/4GW ran on them the first time it was tried. [The game needed more](mission-critical.md#running-it):
 
 | What the game did | What the PC now does |
 |---|---|
@@ -112,10 +61,7 @@ time it was tried. [The game needed more](mission-critical.md#running-it):
 
 ## The notes, checked
 
-A game running where its memory can be read is a way to check what was worked out by taking
-it apart, and the first three commands typed into *Spellcasting 101* were chosen for that.
-The test reads the game's own variables, at the addresses
-[its notes](spellcasting-101.md) give, after each:
+A game running where its memory can be read is a way to check what was worked out by taking it apart, and the first three commands typed into *Spellcasting 101* were chosen for that. The test reads the game's own variables, at the addresses [its notes](spellcasting-101.md) give, after each:
 
 | Typed | What the notes said | What the game's memory had |
 |---|---|---|
@@ -124,24 +70,10 @@ The test reads the game's own variables, at the addresses
 | `climb chimney` | `climb OBJECT` is action 25, but the chimney's routine, with the fire in the fireplace, starts over with action 27 on the fireplace, object 62 | Action 27, object 62; and the game said `It would be a shame to see your young, healthy body reduced to a pile of charred bones!` |
 | `n` | North from the Bedchamber is the Potty Chamber, object 2; going is action 197 | Action 197, room 2, and 2 in your record |
 
-After the third, the picture on the screen is picture 51 of the first picture file as
-Legendary unpacks it, to the pixel. The count of moves went 0, 1, 2, 3.
+After the third, the picture on the screen is picture 51 of the first picture file as Legendary unpacks it, to the pixel. The count of moves went 0, 1, 2, 3.
 
-The run also showed what hadn't been found. The word after the count of moves, at
-`4517:0048`, is the clock: 187 as the game starts, when the screen says 3:35p, and one more
-for each move, which the screen shows as five minutes. And the list of objects the game puts
-beside the list of verbs, for the mouse, is the objects its parser would find: the Bedchamber's
-has the rat and the fire from the tree, and the chimney, the cobweb and `my house` from the
-room's row of what is also there.
+The run also showed what hadn't been found. The word after the count of moves, at `4517:0048`, is the clock: 187 as the game starts, when the screen says 3:35p, and one more for each move, which the screen shows as five minutes. And the list of objects the game puts beside the list of verbs, for the mouse, is the objects its parser would find: the Bedchamber's has the rat and the fire from the tree, and the chimney, the cobweb and `my house` from the room's row of what is also there.
 
-One thing didn't match. The Bedchamber's picture on the screen differs from picture 45 in
-3,585 pixels of 63,672. Something is drawn over it, and what hasn't been looked at.
+One thing didn't match. The Bedchamber's picture on the screen differs from picture 45 in 3,585 pixels of 63,672. Something is drawn over it, and what hasn't been looked at.
 
-The first of those took two tries, and the second try is worth telling. With the state given
-as 64 bytes that were mostly zero, the launcher drew its title for the EGA and the game it
-loaded then drew for the CGA. Both ask Microsoft's graphics library for the EGA's 640 by 350;
-the game [takes the CGA's mode when the library won't set that one](spellcasting-101.md#what-the-launcher-is-told),
-and the library won't when the state says the card can't. A real VGA says how much memory it
-has, how many lines and colors its mode has, and, by a pointer, which modes its BIOS knows.
-With those filled in the game draws for the EGA. A program doesn't only ask whether a thing is
-there; the answer has to be one it can believe.
+The first of those took two tries, and the second try is worth telling. With the state given as 64 bytes that were mostly zero, the launcher drew its title for the EGA and the game it loaded then drew for the CGA. Both ask Microsoft's graphics library for the EGA's 640 by 350; the game [takes the CGA's mode when the library won't set that one](spellcasting-101.md#what-the-launcher-is-told), and the library won't when the state says the card can't. A real VGA says how much memory it has, how many lines and colors its mode has, and, by a pointer, which modes its BIOS knows. With those filled in the game draws for the EGA. A program doesn't only ask whether a thing is there; the answer has to be one it can believe.

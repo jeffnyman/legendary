@@ -1,28 +1,18 @@
 # Eric the Unready
 
-Legend Entertainment, 1993. Bob Bates's comedy of a knight who is not up to it, on the
-system of [*Gateway*](gateway.md) and [*Spellcasting 301*](spellcasting-301.md).
+Legend Entertainment, 1993. Bob Bates's comedy of a knight who is not up to it, on the system of [*Gateway*](gateway.md) and [*Spellcasting 301*](spellcasting-301.md).
 
-This is what the first look found: how the program is built, what of it the tools already
-read, its objects, flags and timers, and where a command is parsed and performed. What is known for certain is said plainly; what is inferred says so.
-Addresses are `segment:offset` in hex, with segments relative to where the program loads.
-Every one of them can be looked at with the [tools](../tools/README.md).
+This is what the first look found: how the program is built, what of it the tools already read, its objects, flags and timers, and where a command is parsed and performed. What is known for certain is said plainly; what is inferred says so. Addresses are `segment:offset` in hex, with segments relative to where the program loads. Every one of them can be looked at with the [tools](../tools/README.md).
 
 ## The copy looked at
 
-The game came on floppy disks and, later, on a CD. The copy here has both beside the
-installed game: its folder has `floppy`, the disks' files; `CD`, an image of the disc; and
-`ERIC`, the game as installed, which is what is read. So the game's files are a folder
-deeper than the other games', and the tools look there for them.
+The game came on floppy disks and, later, on a CD. The copy here has both beside the installed game: its folder has `floppy`, the disks' files; `CD`, an image of the disc; and `ERIC`, the game as installed, which is what is read. So the game's files are a folder deeper than the other games', and the tools look there for them.
 
-It is run as `ERIC XGA XMOUSE BLASTER 7 220`, with `MT32 2 330` after it for a Roland
-MT-32. `XGA` is new: the earlier games were told `VGA` at the most.
+It is run as `ERIC XGA XMOUSE BLASTER 7 220`, with `MT32 2 330` after it for a Roland MT-32. `XGA` is new: the earlier games were told `VGA` at the most.
 
 ## How the program is built
 
-As *Gateway* is: Microsoft C, linked by .RTLink/Plus 5.02, with a run-time library and
-overlays in files of their own. The linker's files are the same, and the tools read them
-with nothing changed.
+As *Gateway* is: Microsoft C, linked by .RTLink/Plus 5.02, with a run-time library and overlays in files of their own. The linker's files are the same, and the tools read them with nothing changed.
 
 | File | What it is |
 |---|---|
@@ -41,9 +31,7 @@ with nothing changed.
 | Overlays | 29 |
 | Thunks | 990 |
 
-The program starts at `2307:076C`, in the overlay manager's segment, and its memory ends
-at `572B`. The 29 overlays load at three places, each past the biggest overlay of the one
-before, as in the games before *Gateway*:
+The program starts at `2307:076C`, in the overlay manager's segment, and its memory ends at `572B`. The 29 overlays load at three places, each past the biggest overlay of the one before, as in the games before *Gateway*:
 
 | Place | Overlays |
 |---|---|
@@ -86,23 +74,15 @@ There are 537, in the eight types the system has had since *Spellcasting 101*:
 
 What each type is for is said from the objects that are of it, and not from the code.
 
-The table of them, six bytes an object, and the tables beside it are found by the same
-code as in *Gateway*, in segment `2B79`: the nouns at `2B79:0D4E`, the adjectives at
-`2B79:183C`, the exits at `2B79:1CF2` and the doors at `2B79:2006`. The lists end at a
-word with its top bit set, as from *Spellcasting 301*.
+The table of them, six bytes an object, and the tables beside it are found by the same code as in *Gateway*, in segment `2B79`: the nouns at `2B79:0D4E`, the adjectives at `2B79:183C`, the exits at `2B79:1CF2` and the doors at `2B79:2006`. The lists end at a word with its top bit set, as from *Spellcasting 301*.
 
 A record is *Gateway*'s, in three types changed:
 
-- **A room** is *Spellcasting 301*'s, 24 bytes with two bytes of flags, where *Gateway*'s
-  had four.
+- **A room** is *Spellcasting 301*'s, 24 bytes with two bytes of flags, where *Gateway*'s had four.
 - **A door** is two bytes longer, 26, with four bytes of flags.
 - **Something fixed** is two bytes shorter, 22.
 
-Each was read off the records themselves: a record ends with the number of the object's
-routine, which counts up through the objects, and the words before it fall into place from
-there. They are right by what they give. Every object on a list says it is in the object
-whose list it is, for all 537; a room's exits start where the room before's end; and
-`RESTART.DAT` is as long, to the byte, as the records make it.
+Each was read off the records themselves: a record ends with the number of the object's routine, which counts up through the objects, and the words before it fall into place from there. They are right by what they give. Every object on a list says it is in the object whose list it is, for all 537; a room's exits start where the room before's end; and `RESTART.DAT` is as long, to the byte, as the records make it.
 
 | What | How many |
 |---|---|
@@ -111,15 +91,11 @@ whose list it is, for all 537; a room's exits start where the room before's end;
 | Flags | 40, of which 33 are set on something as the game starts |
 | Exits | 197 |
 
-The exits are of three of the five kinds *Gateway* has: 88 to a room, 6 through a door, and
-103 that are a routine's to decide, more than half, where *Gateway* had under half.
+The exits are of three of the five kinds *Gateway* has: 88 to a room, 6 through a door, and 103 that are a routine's to decide, more than half, where *Gateway* had under half.
 
 ## The pictures
 
-There are 1,309 entries in 39 files, 24 of them a palette alone and 1,285 with a picture,
-kept as [*Spellcasting 301*'s](spellcasting-301.md) are:
-packed by PKWARE's implode, each saying the display it is for. The file's number says it
-too, `ERIC_1nn.PIC` for display 1 and so on.
+There are 1,309 entries in 39 files, 24 of them a palette alone and 1,285 with a picture, kept as [*Spellcasting 301*'s](spellcasting-301.md) are: packed by PKWARE's implode, each saying the display it is for. The file's number says it too, `ERIC_1nn.PIC` for display 1 and so on.
 
 | Display | What | Entries | The biggest |
 |---|---|---|---|
@@ -129,22 +105,13 @@ too, `ERIC_1nn.PIC` for display 1 and so on.
 | 4 | A screen of 16 colors wider than the VGA's | 24 | 713 by 108 |
 | 5 | The Super VGA, 256 colors | 347 | 640 by 480 |
 
-**Display 5 is new**, and is what the `XGA` the game is run with asks for: 640 by 480 in
-256 colors. The title's picture for it says so in its own letters, `256 Color Super VGA`.
-It is kept as display 3 is, a palette of 256 colors, three bytes each, and a byte a pixel.
-The reader took its palette for one of 16, and so started unpacking in the middle of the
-colors; told it is 256, all 347 unpack to exactly the bytes their sizes need. Those looked
-at are right: the title, filling the screen, and a man in a green tunic.
+**Display 5 is new**, and is what the `XGA` the game is run with asks for: 640 by 480 in 256 colors. The title's picture for it says so in its own letters, `256 Color Super VGA`. It is kept as display 3 is, a palette of 256 colors, three bytes each, and a byte a pixel. The reader took its palette for one of 16, and so started unpacking in the middle of the colors; told it is 256, all 347 unpack to exactly the bytes their sizes need. Those looked at are right: the title, filling the screen, and a man in a green tunic.
 
-**Display 4** is in *Spellcasting 301* and *Gateway* too, the same 24 pictures in each: the
-compass and its pieces, and `LEGEND ENTERTAINMENT COMPANY presents`, which is 713 across.
-So it is for a screen wider than 640, in 16 colors. That would be the Super VGA's 800 by
-600, which hasn't been confirmed from the program.
+**Display 4** is in *Spellcasting 301* and *Gateway* too, the same 24 pictures in each: the compass and its pieces, and `LEGEND ENTERTAINMENT COMPANY presents`, which is 713 across. So it is for a screen wider than 640, in 16 colors. That would be the Super VGA's 800 by 600, which hasn't been confirmed from the program.
 
 ## The flags
 
-There are 40, kept as *Gateway* keeps them: a table says, for each flag, which bit it is
-and which types have it. They are *Gateway*'s flags under other numbers, and 36 have names:
+There are 40, kept as *Gateway* keeps them: a table says, for each flag, which bit it is and which types have it. They are *Gateway*'s flags under other numbers, and 36 have names:
 
 | Flag | What it says | Has it at the start | By what |
 |---|---|---|---|
@@ -189,24 +156,13 @@ and which types have it. They are *Gateway*'s flags under other numbers, and 36 
 | 39 | can be worn | 17 | a cloak, earmuffs, gloves |
 | 40 | can be spoken to | 54 | `greet` tests it first: 54 of the 58 people and creatures |
 
-Each name is from the objects that have the flag as the game starts and from the actions
-that test it, with what those actions say when they do. Three were settled by the code.
-The root's routine for taking a thing, at `05E3:0EC2`, clears 11 and 10 of it and sets 5,
-26 and 8: no longer left out of a room's list, no longer untaken, touched, takeable and
-seen. And a routine that runs before three of the actions says `You'll have to take off` of a
-thing worn that has 10 or lacks 26.
+Each name is from the objects that have the flag as the game starts and from the actions that test it, with what those actions say when they do. Three were settled by the code. The root's routine for taking a thing, at `05E3:0EC2`, clears 11 and 10 of it and sets 5, 26 and 8: no longer left out of a room's list, no longer untaken, touched, takeable and seen. And a routine that runs before three of the actions says `You'll have to take off` of a thing worn that has 10 or lacks 26.
 
-Four aren't named. Flag 9 is on 70 of the 74 rooms and on scenery, and is set and cleared
-by routines as things come and go: the dragon's parts, a sign, a bean in a cloak. Flag 3
-is on the berries alone, 38 on the nectar machine alone, and 30 on nothing as the game
-starts, tested 11 times by objects' routines in two overlays.
+Four aren't named. Flag 9 is on 70 of the 74 rooms and on scenery, and is set and cleared by routines as things come and go: the dragon's parts, a sign, a bean in a cloak. Flag 3 is on the berries alone, 38 on the nectar machine alone, and 30 on nothing as the game starts, tested 11 times by objects' routines in two overlays.
 
 ## How a string is named
 
-As [*Spellcasting 301*](spellcasting-301.md) and *Gateway* name theirs, with nothing
-changed: by a far pointer that is no pointer, whose segment is `F000` and whose offset is
-the string's block times 1,024 and its place in the block. The routine most are handed
-to, which prints, is at `1C8A:10F7`. The tools' `loads` finds them as it is.
+As [*Spellcasting 301*](spellcasting-301.md) and *Gateway* name theirs, with nothing changed: by a far pointer that is no pointer, whose segment is `F000` and whose offset is the string's block times 1,024 and its place in the block. The routine most are handed to, which prints, is at `1C8A:10F7`. The tools' `loads` finds them as it is.
 
 | What | How many |
 |---|---|
@@ -216,17 +172,11 @@ to, which prints, is at `1C8A:10F7`. The tools' `loads` finds them as it is.
 | Kept in data, as an object's text is | 1,380 |
 | Strings named, of the file's 4,923 | 4,870 |
 
-Of the 53 no place names, 25 are all of block 22, which is the help: the keys and what
-the mouse does, shown a screen at a time, so by its block and not string by string. The
-other 28 are 17 in block 17 and a few in six others. *Spellcasting 301* has strings named
-by a number worked out as the game runs, and these may be the same; they haven't been
-looked at.
+Of the 53 no place names, 25 are all of block 22, which is the help: the keys and what the mouse does, shown a screen at a time, so by its block and not string by string. The other 28 are 17 in block 17 and a few in six others. *Spellcasting 301* has strings named by a number worked out as the game runs, and these may be the same; they haven't been looked at.
 
 ## The timers
 
-There are 72, numbered, and found as in *Gateway*: the tools list each with the routine it
-runs and the places that start it, stop it and ask about it. 71 are started somewhere the
-tools read; the other, 60, is one of the few calls they don't.
+There are 72, numbered, and found as in *Gateway*: the tools list each with the routine it runs and the places that start it, stop it and ask about it. 71 are started somewhere the tools read; the other, 60, is one of the few calls they don't.
 
 ### What each timer does
 
@@ -271,24 +221,13 @@ Each is named from what its routine prints when it runs:
 | 35 | a god greets you | 71 | something is tossed to the jugglers |
 | 36 | the cork pops | 72 | the clock strikes noon, and the quest is over |
 
-Timer 3 prints nothing: it clears one word of the data, and 21 places start it, most of them actions, with
-a count of 1, so the word lasts a turn. Timers 50 and 70 print nothing either, and are
-named for whose routines start and stop them. Timer 14 prints what someone says and plays
-`RASP1.RS`. Timer 65's routine wasn't read to its end; `listen` asks whether it is going,
-in the Village Square, with the bard's timers around it.
+Timer 3 prints nothing: it clears one word of the data, and 21 places start it, most of them actions, with a count of 1, so the word lasts a turn. Timers 50 and 70 print nothing either, and are named for whose routines start and stop them. Timer 14 prints what someone says and plays `RASP1.RS`. Timer 65's routine wasn't read to its end; `listen` asks whether it is going, in the Village Square, with the bard's timers around it.
 
-The last timer is a clock: a routine of the root's starts 72 with a count of 180, and when
-it runs a small voice says the clock has struck noon and the quest is over. The same
-routine starts four others, so it looks to be what begins a part of the game; that
-hasn't been confirmed.
+The last timer is a clock: a routine of the root's starts 72 with a count of 180, and when it runs a small voice says the clock has struck noon and the quest is over. The same routine starts four others, so it looks to be what begins a part of the game; that hasn't been confirmed.
 
 ## Where a command is parsed and performed
 
-The routines are *Spellcasting 301*'s, nearly instruction for instruction, and not
-*Gateway*'s where the two differ: the call that finds a phrase's objects is in the root
-again, and what is found is kept that game's way. So the addresses were found by setting
-this game's code beside that one's, a routine at a time, and reading across: of the first
-2,600 instructions of the root, 2,519 are the same but for the addresses in them.
+The routines are *Spellcasting 301*'s, nearly instruction for instruction, and not *Gateway*'s where the two differ: the call that finds a phrase's objects is in the root again, and what is found is kept that game's way. So the addresses were found by setting this game's code beside that one's, a routine at a time, and reading across: of the first 2,600 instructions of the root, 2,519 are the same but for the addresses in them.
 
 | What | Where |
 |---|---|
@@ -307,21 +246,15 @@ this game's code beside that one's, a routine at a time, and reading across: of 
 | The timers' table, how many are going, and which is run | `3C53:834A`, `495D:38C2`, `38C4` |
 | The timers' routines: start, stop, and the call that runs one | `028D:002A`, `009C`, `0208` |
 
-The ten places a routine has answered are at the same ten offsets as in *Spellcasting
-301* and *Gateway*. Going somewhere is action 159.
+The ten places a routine has answered are at the same ten offsets as in *Spellcasting 301* and *Gateway*. Going somewhere is action 159.
 
-**The game counts turns and minutes both.** It starts at noon, 720 minutes, on turn 0. A
-command that takes a turn takes a minute and a turn; `wait` takes ten minutes and no turn.
-*Gateway* counted minutes alone and *Spellcasting 301* turns of five minutes.
+**The game counts turns and minutes both.** It starts at noon, 720 minutes, on turn 0. A command that takes a turn takes a minute and a turn; `wait` takes ten minutes and no turn. *Gateway* counted minutes alone and *Spellcasting 301* turns of five minutes.
 
-**A timer's count goes down with the clock**, and not with the turns: after three turns
-and a `wait`, 13 minutes, the farmer's 660 is 647. So the farmer fires you at eleven at
-night.
+**A timer's count goes down with the clock**, and not with the turns: after three turns and a `wait`, 13 minutes, the farmer's 660 is 647. So the farmer fires you at eleven at night.
 
 ## The game as it runs
 
-The game starts on [the PC](the-pc.md) and takes commands, and the player's `--watch` and
-`--panel` follow it:
+The game starts on [the PC](the-pc.md) and takes commands, and the player's `--watch` and `--panel` follow it:
 
 ```
 world: 12:00 pm, turn 0, in Farmyard (259)
@@ -340,24 +273,11 @@ world:   action 159: go west
 world:   you (284) moved: from Farmyard (259) to Barn (260)
 ```
 
-Run with no arguments, as here, it picks the VGA in 256 colors, and its opening shows: a
-castle on a hill, and `And it came to pass that Sir Eric rode out`. Its pictures are seen,
-and its music and sounds heard.
+Run with no arguments, as here, it picks the VGA in 256 colors, and its opening shows: a castle on a hill, and `And it came to pass that Sir Eric rode out`. Its pictures are seen, and its music and sounds heard.
 
-**Its music needs a PC no faster than it expects.** The launcher looks for an AdLib card
-as it starts, and the test is a loop that counts on how fast the machine is. At 3,000
-instructions a millisecond, an AT, and at 6,000, it finds the card, opens `ERIC_001.MUS`
-and plays: 4,956 writes to the FM chip in the first minute. At 12,000 and above it doesn't
-find it, never opens the file, and the game is silent but for its sounds; told `ADLIB`
-there, it stops as it starts. So the player runs this game at an AT's speed, as it runs
-the others. DOSBox runs the same copy at 12,500 with music, so something here differs
-from DOSBox. The likely cause is that reading a port takes no more time on this PC than any
-other instruction, where on a real one it takes about a millionth of a second however
-fast the processor; that hasn't been confirmed, or changed.
+**Its music needs a PC no faster than it expects.** The launcher looks for an AdLib card as it starts, and the test is a loop that counts on how fast the machine is. At 3,000 instructions a millisecond, an AT, and at 6,000, it finds the card, opens `ERIC_001.MUS` and plays: 4,956 writes to the FM chip in the first minute. At 12,000 and above it doesn't find it, never opens the file, and the game is silent but for its sounds; told `ADLIB` there, it stops as it starts. So the player runs this game at an AT's speed, as it runs the others. DOSBox runs the same copy at 12,500 with music, so something here differs from DOSBox. The likely cause is that reading a port takes no more time on this PC than any other instruction, where on a real one it takes about a millionth of a second however fast the processor; that hasn't been confirmed, or changed.
 
-**With `XGA` it stops at once**: the game asks the video BIOS for function `6F`, which is
-a Super VGA card's own and which the PC here doesn't have. So the 640 by 480 pictures in
-256 colors can be [read](#the-pictures) and not yet shown.
+**With `XGA` it stops at once**: the game asks the video BIOS for function `6F`, which is a Super VGA card's own and which the PC here doesn't have. So the 640 by 480 pictures in 256 colors can be [read](#the-pictures) and not yet shown.
 
 ## A saved game
 

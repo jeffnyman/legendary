@@ -1,15 +1,8 @@
 # Legendary
 
-**Legendary** takes Legend Entertainment's adventure games apart, to show how they work: how
-each is built, what's in its files, and how its parser, its world and its pictures are put
-together. The notes are in [docs](docs/), a game at a time; the tools that did the digging are
-in [tools](tools/); and the aim, in the end, is a player that plays the games from their own
-files.
+**Legendary** takes Legend Entertainment's adventure games apart, to show how they work: how each is built, what's in its files, and how its parser, its world and its pictures are put together. The notes are in [docs](docs/), a game at a time; the tools that did the digging are in [tools](tools/); and the aim, in the end, is a player that plays the games from their own files.
 
-It is to these games what a Z-machine interpreter and its documents are to Infocom's, with one
-difference found on the first day: Legend's games have no virtual machine. Each is a C program,
-compiled for the PC, with its story in its code. So the work here is disassembly, and the
-question of what a player is stays open until more of the games is understood.
+It is to these games what a Z-machine interpreter and its documents are to Infocom's, with one difference found on the first day: Legend's games have no virtual machine. Each is a C program, compiled for the PC, with its story in its code. So the work here is disassembly, and the question of what a player is stays open until more of the games is understood.
 
 ## The games
 
@@ -28,9 +21,7 @@ question of what a player is stays open until more of the games is understood.
 
 None of the games are included: Legendary reads, and plays, copies you have.
 
-Each as Legendary plays it, at its first place: the pictures are made by the tools'
-[`screenshots`](tools/README.md), which run the player without a window and take each game
-past its titles.
+Each as Legendary plays it, at its first place: the pictures are made by the tools' [`screenshots`](tools/README.md), which run the player without a window and take each game past its titles.
 
 <table>
 <tr><td align="center"><img src="docs/images/sc101.png" width="260" alt="Spellcasting 101 in Legendary"><br><sub>Spellcasting 101</sub></td><td align="center"><img src="docs/images/tquest.png" width="260" alt="Timequest in Legendary"><br><sub>Timequest</sub></td><td align="center"><img src="docs/images/sc201.png" width="260" alt="Spellcasting 201 in Legendary"><br><sub>Spellcasting 201</sub></td></tr>
@@ -46,35 +37,21 @@ With the [.NET 10 SDK](https://dotnet.microsoft.com/download):
 dotnet run --project src/Legendary.Player -c Release -- "<the game's folder>"
 ```
 
-The game's folder is the one with its programs in it, `S101.EXE` and `S101MAIN.EXE` for
-*Spellcasting 101*. A folder given once is remembered, and the game is then played by its
-short name:
+The game's folder is the one with its programs in it, `S101.EXE` and `S101MAIN.EXE` for *Spellcasting 101*. A folder given once is remembered, and the game is then played by its short name:
 
 ```
 dotnet run --project src/Legendary.Player -c Release -- sc101
 ```
 
-With no game named, a menu lists them. `--help` lists the options, and `--args "cga"` hands
-the game [a word it knows](docs/spellcasting-101.md#what-the-launcher-is-told).
+With no game named, a menu lists them. `--help` lists the options, and `--args "cga"` hands the game [a word it knows](docs/spellcasting-101.md#what-the-launcher-is-told).
 
-The keyboard is the PC's, key for key. A click in the window gives the game the mouse, and
-Ctrl+F10 takes it back. F11 is full screen, F12 full speed on and off, and Ctrl+F5 and Ctrl+F9
-save and load the whole machine's state. The game's folder is never written to: what a game
-saves goes to a folder of its own in your application data.
+The keyboard is the PC's, key for key. A click in the window gives the game the mouse, and Ctrl+F10 takes it back. F11 is full screen, F12 full speed on and off, and Ctrl+F5 and Ctrl+F9 save and load the whole machine's state. The game's folder is never written to: what a game saves goes to a folder of its own in your application data.
 
-Without a window, `--headless --seconds 30` runs a game for that much of its own time and
-stops, and `--screenshot <file>` saves the picture it stopped at. `--input` gives it keys
-and clicks along the way, each at a time in seconds: `"6:Enter;14:type look;20:click 160,100"`.
+Without a window, `--headless --seconds 30` runs a game for that much of its own time and stops, and `--screenshot <file>` saves the picture it stopped at. `--input` gives it keys and clicks along the way, each at a time in seconds: `"6:Enter;14:type look;20:click 160,100"`.
 
 ### Watching the game think
 
-`--watch` has the player say, on the terminal it was started from, what the game has in its
-memory as it's played: the time, the turn and the room, what is in the room and what those
-things hold, the room's exits, each action as the game performs it, and what the action
-changed, any object anywhere that moved or had a flag set or cleared, by the numbers
-[the notes](docs/spellcasting-101.md#the-objects) use. An action is a number to the game; the
-watch names it by the first command in the game's grammar that makes it, so `LOOK AT RAT` is
-said as `examine`, which is the same action.
+`--watch` has the player say, on the terminal it was started from, what the game has in its memory as it's played: the time, the turn and the room, what is in the room and what those things hold, the room's exits, each action as the game performs it, and what the action changed, any object anywhere that moved or had a flag set or cleared, by the numbers [the notes](docs/spellcasting-101.md#the-objects) use. An action is a number to the game; the watch names it by the first command in the game's grammar that makes it, so `LOOK AT RAT` is said as `examine`, which is the same action.
 
 ```
 world: 3:35 pm, turn 0, in Bedchamber (1)
@@ -108,33 +85,9 @@ world:   action 197: go north
 world:   you (153) moved: from Bedchamber (1) to Potty Chamber (2)
 ```
 
-That is `EXAMINE RAT`, `CLIMB CHIMNEY`, `OPEN DESK`, `TAKE NOTE` and `N`, and it shows things the game hasn't told you:
-what the desk has in it, and that climbing the chimney, with the fire lit,
-[is turned into entering the fireplace](docs/spellcasting-101.md#from-an-action-to-what-happens).
-Before each action are the command's words as the parser took them, each with the parts of
-speech such a word can be: `desk` is an adjective or a noun, and the game's grammar settles
-which. A word the game doesn't know is said as `[not known]`. After the words come the form
-of the game's grammar that they fit, which is what makes them an action, and then each phrase
-with the objects the parser found it could be and where the form let it look: `TAKE` doesn't
-look in your hands, and `ASK RAT ABOUT SWORD` looks everywhere, and finds a sword that is in a
-shop a long way off. The sample has those lines for `OPEN DESK` alone.
-Every action is said, as the game gets to its routine that performs one: the PC tells the
-watch each time the program is there. The game then asks a row of routines about the action,
-the room's, the actor's, the objects' and at last the action's own, and stops at the first
-that answers; the watch says which that was. The rat has its own answer to being examined.
-Climbing the chimney is never answered at all: the chimney's routine started the turn over,
-by a jump back to the game's main loop, and the watch says that too. Going somewhere ends
-the same way, with a jump, once you've been moved. The game's timers are said as well, each as it
-is started, as it runs at a turn's end, and as it is stopped: things the story has put by to
-happen later, such as the two the Bedchamber starts before you have typed anything. The flags are the way into what the game
-means by them: opening the desk sets its flag 12, so 12 is open. The room and its contents are looked at once a frame,
-so a turn can be seen half done, the room changed and the turn not yet counted. The watch
-reads the game's memory and changes nothing. For now it knows *Spellcasting 101*.
+That is `EXAMINE RAT`, `CLIMB CHIMNEY`, `OPEN DESK`, `TAKE NOTE` and `N`, and it shows things the game hasn't told you: what the desk has in it, and that climbing the chimney, with the fire lit, [is turned into entering the fireplace](docs/spellcasting-101.md#from-an-action-to-what-happens). Before each action are the command's words as the parser took them, each with the parts of speech such a word can be: `desk` is an adjective or a noun, and the game's grammar settles which. A word the game doesn't know is said as `[not known]`. After the words come the form of the game's grammar that they fit, which is what makes them an action, and then each phrase with the objects the parser found it could be and where the form let it look: `TAKE` doesn't look in your hands, and `ASK RAT ABOUT SWORD` looks everywhere, and finds a sword that is in a shop a long way off. The sample has those lines for `OPEN DESK` alone. Every action is said, as the game gets to its routine that performs one: the PC tells the watch each time the program is there. The game then asks a row of routines about the action, the room's, the actor's, the objects' and at last the action's own, and stops at the first that answers; the watch says which that was. The rat has its own answer to being examined. Climbing the chimney is never answered at all: the chimney's routine started the turn over, by a jump back to the game's main loop, and the watch says that too. Going somewhere ends the same way, with a jump, once you've been moved. The game's timers are said as well, each as it is started, as it runs at a turn's end, and as it is stopped: things the story has put by to happen later, such as the two the Bedchamber starts before you have typed anything. The flags are the way into what the game means by them: opening the desk sets its flag 12, so 12 is open. The room and its contents are looked at once a frame, so a turn can be seen half done, the room changed and the turn not yet counted. The watch reads the game's memory and changes nothing. For now it knows *Spellcasting 101*.
 
-`--panel` shows the same beside the game, in a column down the right of the window: the time,
-the turn and the room at the top, what is in the room with each thing under what holds it,
-the exits, the timers that are going, and under those the last of what happened, the newest
-at the bottom.
+`--panel` shows the same beside the game, in a column down the right of the window: the time, the turn and the room at the top, what is in the room with each thing under what holds it, the exits, the timers that are going, and under those the last of what happened, the newest at the bottom.
 
 ```
 3:55 pm   turn 4
@@ -159,44 +112,18 @@ you (153) moved: from Bedchamber (1) to Potty
   Chamber (2)
 ```
 
-The cloak is on your second list, which is what you wear. `--watch` and `--panel` can be given
-together, for the panel and the terminal's full record of the play.
+The cloak is on your second list, which is what you wear. `--watch` and `--panel` can be given together, for the panel and the terminal's full record of the play.
 
-*Spellcasting 201*, *Timequest*, *Spellcasting 301*, *Gateway*, *Eric the Unready* and
-*Gateway II* can be watched the same way, with all of it: the room,
-each command's words, form and objects, each action and who answered it, the timers, and
-what changed. For *Timequest* the room comes with the place and the year, as `Rome, 44 BC`. *Companions of Xanth*,
-which has no parser, is watched by its clicks in place of a command's words, as `a click at
-235,71 on Post-It(tm) (44), with Take chosen`, and each action is said by its verb, as
-`action 68: Take Post-It(tm) (44)`.
+*Spellcasting 201*, *Timequest*, *Spellcasting 301*, *Gateway*, *Eric the Unready* and *Gateway II* can be watched the same way, with all of it: the room, each command's words, form and objects, each action and who answered it, the timers, and what changed. For *Timequest* the room comes with the place and the year, as `Rome, 44 BC`. *Companions of Xanth*, which has no parser, is watched by its clicks in place of a command's words, as `a click at 235,71 on Post-It(tm) (44), with Take chosen`, and each action is said by its verb, as `action 68: Take Post-It(tm) (44)`.
 
-The panel's text is small: 8 pixels, doubled once the window is 960 high. `--panel-text 1.5`
-asks for the panel with its text one and a half times that size, and any size from 1 to 4 can
-be asked for. While playing, Ctrl+plus makes the text half a size bigger and Ctrl+minus half a size
-smaller, and the window widens or narrows with the panel. The size the text ends at is kept in
-the settings, and is the size the panel has the next time, for any game. The panel stays 46
-characters wide, so bigger text makes a wider panel. On a screen that isn't high-density, whole
-sizes are the sharpest.
+The panel's text is small: 8 pixels, doubled once the window is 960 high. `--panel-text 1.5` asks for the panel with its text one and a half times that size, and any size from 1 to 4 can be asked for. While playing, Ctrl+plus makes the text half a size bigger and Ctrl+minus half a size smaller, and the window widens or narrows with the panel. The size the text ends at is kept in the settings, and is the size the panel has the next time, for any game. The panel stays 46 characters wide, so bigger text makes a wider panel. On a screen that isn't high-density, whole sizes are the sharpest.
 
 ## What's here
 
-- **`src/Legendary.Player`** is the player: a window, the keyboard, the mouse and sound around
-  the PC, by SDL3. It began as a copy of Excavate's.
-- **`src/Legendary.Pc`** is [a PC for the games to run on](docs/the-pc.md), in C#: a copy of
-  Excavate's core. *Spellcasting 101* plays on it, from its title through commands typed
-  at it.
-- **`src/Legendary.Core`** reads the games' files, in C#. So far: a DOS program's MZ header, and
-  a program linked by PLINK86 or by .RTLink/Plus, with its overlays loaded into the memory it
-  would have, the packed text of a string file, the pictures of a picture file and their regions, the songs of a music file, and a
-  RealSound recording, and the words of a vocabulary. It also reads a game's world from its
-  memory as it runs: the room, the clock, the action, the tree of objects, and the grammar.
-  And it plays a song for the AdLib card as the games' driver does, into what is written to
-  the FM chip: the player's `--songs` records every song of a game that way, as WAV files.
-- **`tools`** has the same in Python, as commands to explore a game with: the overlays, the
-  ways into them, memory in hex and as instructions, the text, the objects, the grammar, the
-  pictures as PNG files, and the sounds as WAV files. Its `extract` writes all of a game's
-  pictures, sounds, music and fonts to a folder, with a page to look through them. See
-  [tools/README.md](tools/README.md).
+- **`src/Legendary.Player`** is the player: a window, the keyboard, the mouse and sound around the PC, by SDL3. It began as a copy of Excavate's.
+- **`src/Legendary.Pc`** is [a PC for the games to run on](docs/the-pc.md), in C#: a copy of Excavate's core. *Spellcasting 101* plays on it, from its title through commands typed at it.
+- **`src/Legendary.Core`** reads the games' files, in C#. So far: a DOS program's MZ header, and a program linked by PLINK86 or by .RTLink/Plus, with its overlays loaded into the memory it would have, the packed text of a string file, the pictures of a picture file and their regions, the songs of a music file, and a RealSound recording, and the words of a vocabulary. It also reads a game's world from its memory as it runs: the room, the clock, the action, the tree of objects, and the grammar. And it plays a song for the AdLib card as the games' driver does, into what is written to the FM chip: the player's `--songs` records every song of a game that way, as WAV files.
+- **`tools`** has the same in Python, as commands to explore a game with: the overlays, the ways into them, memory in hex and as instructions, the text, the objects, the grammar, the pictures as PNG files, and the sounds as WAV files. Its `extract` writes all of a game's pictures, sounds, music and fonts to a folder, with a page to look through them. See [tools/README.md](tools/README.md).
 - **`docs`** has what was found, and how.
 
 ## Building
@@ -208,12 +135,8 @@ dotnet build -c Release
 dotnet test -c Release
 ```
 
-The tests that need a game look for it in the folder `LEGENDARY_GAMES` names, or in a `legend`
-folder above the tests, as `legend/sc101/game` and `legend/tquest/game`. Without a game, its
-tests pass without checking.
+The tests that need a game look for it in the folder `LEGENDARY_GAMES` names, or in a `legend` folder above the tests, as `legend/sc101/game` and `legend/tquest/game`. Without a game, its tests pass without checking.
 
 ## License
 
-Legendary is free software under the GNU General Public License, version 3: see
-[LICENSE](LICENSE), and [NOTICE.md](NOTICE.md) for the work it is derived from. The games are
-their owners', and aren't included.
+Legendary is free software under the GNU General Public License, version 3: see [LICENSE](LICENSE), and [NOTICE.md](NOTICE.md) for the work it is derived from. The games are their owners', and aren't included.
