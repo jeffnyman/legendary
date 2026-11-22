@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "legendary-tools"
-version = "0.1.0"
+version = "1.0.0"
 description = "Scripts for taking Legend Entertainment's games apart: their programs, overlays and data files."
 readme = "README.md"
 requires-python = ">=3.9"
